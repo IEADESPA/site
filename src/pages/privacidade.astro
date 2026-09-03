@@ -1,0 +1,58 @@
+---
+import { getCollection } from "astro:content";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getCollection("posts"));
+---
+
+<BaseLayout title="Privacidade" description={`Política de privacidade da ${siteConfig.name}.`}>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Privacidade</p>
+        <h1 class="pagehead-title">Política de privacidade</h1>
+        <p class="pagehead-description">
+          Texto inicial descrevendo o que este site pode coletar e como é utilizado. Substitua pelo
+          texto definitivo da igreja antes de publicar oficialmente.
+        </p>
+      </header>
+
+      <div class="prose">
+        <h2>O que é coletado</h2>
+        <p>
+          Este site é gerado de forma estática e não define cookies próprios. Se o formulário de
+          avisos ou o de contato forem conectados a um provedor externo, esse provedor recebe os
+          dados que você enviar (nome, e-mail e mensagem).
+        </p>
+
+        <h2>Como é utilizado</h2>
+        <p>
+          Os dados enviados são usados apenas para responder a você ou para enviar os avisos que
+          você solicitou. Não são vendidos nem compartilhados para fins de publicidade.
+        </p>
+
+        <h2>Sua preferência de leitura</h2>
+        <p>
+          O modo claro ou escuro que você escolhe fica salvo no armazenamento local do seu
+          navegador, na chave <code>ieadespa-theme</code>. Essa informação nunca sai do seu
+          dispositivo e pode ser apagada a qualquer momento.
+        </p>
+
+        <h2>Contato</h2>
+        {
+          siteConfig.email ? (
+            <p>Para solicitações relacionadas à privacidade, escreva para <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>.</p>
+          ) : (
+            <p>Adicione um e-mail de contato para privacidade em <code>src/config/site.ts</code> antes de publicar.</p>
+          )
+        }
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>

@@ -1,0 +1,85 @@
+---
+import { getCollection } from "astro:content";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getCollection("posts"));
+
+/**
+ * Eventos de exemplo. Substitua pelas datas e programações reais da igreja —
+ * cada item pode virar um formulário simples ou uma coleção de conteúdo no
+ * futuro, se a agenda crescer.
+ */
+const events = [
+  {
+    title: "Culto de Celebração",
+    date: "Todo domingo, 18h",
+    description: "Nosso culto principal, com louvor, ministração da Palavra e comunhão.",
+  },
+  {
+    title: "Culto de Oração e Doutrina",
+    date: "Toda quarta-feira, 19h30",
+    description: "Momento de oração e estudo aprofundado da Palavra de Deus.",
+  },
+  {
+    title: "Culto de Jovens",
+    date: "Toda sexta-feira, 19h30",
+    description: "Encontro dedicado aos jovens, com louvor e mensagens direcionadas.",
+  },
+  {
+    title: "Escola Bíblica Dominical",
+    date: "Todo domingo, antes do culto",
+    description: "Aulas por faixa etária para aprofundar o conhecimento bíblico.",
+  },
+];
+---
+
+<BaseLayout title="Eventos" description={`Agenda de cultos e eventos da ${siteConfig.name}.`}>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Agenda</p>
+        <h1 class="pagehead-title">Eventos e cultos</h1>
+        <p class="pagehead-description">
+          Confira nossa programação semanal e os próximos eventos especiais. Datas de eventos
+          extraordinários são divulgadas com antecedência aqui e nas nossas redes sociais.
+        </p>
+      </header>
+
+      <ul class="grid gap-5">
+        {
+          events.map((event) => (
+            <li class="event-card">
+              <div class="flex flex-wrap items-baseline justify-between gap-3">
+                <h2 class="text-lg font-semibold tracking-tight">{event.title}</h2>
+                <span class="pill shrink-0">{event.date}</span>
+              </div>
+              <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{event.description}</p>
+            </li>
+          ))
+        }
+      </ul>
+
+      <div class="prose mt-16">
+        <h2>Fique por dentro</h2>
+        <p>
+          Siga nosso Instagram <a href="https://instagram.com/adsetaparauapebas" target="_blank" rel="noreferrer">@adsetaparauapebas</a>{" "}
+          para avisos de eventos especiais, ou cadastre seu e-mail na <a href="/#newsletter">página inicial</a>.
+        </p>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>
+
+<style>
+  .event-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem 1.6rem;
+  }
+</style>

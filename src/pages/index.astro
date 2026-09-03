@@ -1,0 +1,183 @@
+---
+import { getCollection } from "astro:content";
+import NewsletterSignup from "@/components/NewsletterSignup.astro";
+import PostCard from "@/components/PostCard.astro";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { categoryHref, getCategoryList, getFeatured, visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getCollection("posts"));
+const feed = allPosts.slice(0, 6);
+const featured = getFeatured(allPosts, 4);
+const categoryList = getCategoryList(allPosts);
+
+const quickLinks = [
+  {
+    label: "Ministérios",
+    description: "Conheça os grupos e departamentos da igreja.",
+    href: "/ministerios/",
+  },
+  {
+    label: "Eventos",
+    description: "Programação de cultos especiais e atividades.",
+    href: "/eventos/",
+  },
+  {
+    label: "Doações",
+    description: "Como contribuir com dízimos e ofertas.",
+    href: "/doacoes/",
+  },
+  {
+    label: "Galeria",
+    description: "Fotos dos cultos e eventos da igreja.",
+    href: "/galeria/",
+  },
+];
+---
+
+<BaseLayout>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="inner">
+      <section class="hero pt-10 pb-14 md:pt-16 md:pb-20" aria-label="Apresentação">
+        <p class="eyebrow">{siteConfig.name} &middot; Parauapebas/PA</p>
+        <h1 class="hero-title">{siteConfig.tagline}</h1>
+        <p class="hero-description">{siteConfig.about}</p>
+
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <a href="/mensagens/" class="btn btn-solid">Ouvir mensagens</a>
+          <a href="/contato/" class="btn btn-outline">Como chegar</a>
+        </div>
+
+        <ul class="hero-services mt-10 grid gap-4 sm:grid-cols-3">
+          {
+            siteConfig.serviceTimes.map((service) => (
+              <li class="hero-service">
+                <span class="block text-xs font-semibold tracking-wide text-accent uppercase">{service.day}</span>
+                <span class="mt-1 block text-lg font-semibold tracking-tight">{service.time}</span>
+                <span class="mt-1 block text-sm text-muted-foreground">{service.label}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="pb-[var(--space-section)]" aria-labelledby="quick-links">
+        <h2 id="quick-links" class="section-title">Acesso rápido</h2>
+        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {
+            quickLinks.map((link) => (
+              <a href={link.href} class="quick-link link-title">
+                <span class="link-title__text block text-lg font-semibold tracking-tight">{link.label}</span>
+                <span class="mt-2 block text-sm leading-relaxed text-muted-foreground">{link.description}</span>
+              </a>
+            ))
+          }
+        </div>
+      </section>
+
+      <div class="grid gap-[var(--space-section)] pb-[var(--space-section)] lg:grid-cols-[minmax(0,4fr)_minmax(0,2fr)] lg:gap-12">
+        <section aria-labelledby="latest-messages">
+          <h2 id="latest-messages" class="section-title">Últimas mensagens</h2>
+
+          {feed.length > 0 ? (
+            <div class="feed">
+              {feed.map((post, index) => (
+                <PostCard post={post} variant={index === 0 ? "lead" : "feed"} dateLabel={index === 0 ? "Mais recente" : undefined} />
+              ))}
+            </div>
+          ) : (
+            <p class="text-muted-foreground">Novas mensagens em breve.</p>
+          )}
+
+          {allPosts.length > feed.length && (
+            <a href="/mensagens/" class="btn btn-outline btn-block mt-16">Ver todas as mensagens</a>
+          )}
+        </section>
+
+        <aside class="sidebar">
+          <section aria-labelledby="about-heading">
+            <h2 id="about-heading" class="section-title">Sobre</h2>
+            <p class="text-lg font-semibold tracking-tight">{siteConfig.name}</p>
+            <p class="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">{siteConfig.about}</p>
+            <p class="mt-3 text-sm leading-relaxed text-muted-foreground">{siteConfig.address.full}</p>
+            <div class="mt-7 border-t border-border pt-6">
+              <NewsletterSignup />
+            </div>
+          </section>
+
+          {featured.length > 0 && (
+            <section aria-labelledby="featured-heading">
+              <h2 id="featured-heading" class="section-title">Destaques</h2>
+              <div class="grid gap-7">
+                {featured.map((post) => <PostCard post={post} variant="compact" headingLevel="h3" />)}
+              </div>
+            </section>
+          )}
+
+          {categoryList.length > 0 && (
+            <section aria-labelledby="categories-heading">
+              <h2 id="categories-heading" class="section-title">Temas</h2>
+              <ul class="grid gap-4">
+                {categoryList.map((category) => (
+                  <li>
+                    <a href={categoryHref(category.name)} class="link-title flex items-center justify-between gap-3">
+                      <span class="link-title__text text-base font-semibold tracking-tight">{category.name}</span>
+                      <span class="pill shrink-0">
+                        {category.count} {category.count === 1 ? "mensagem" : "mensagens"}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </aside>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>
+
+<style>
+  .hero-title {
+    margin: 0.75rem 0 0;
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 6vw, 3.75rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+
+  .hero-description {
+    max-width: 40rem;
+    margin: 1.25rem 0 0;
+    color: var(--muted-foreground);
+    font-size: clamp(1.0625rem, 2vw, 1.25rem);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .hero-service {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.25rem;
+  }
+
+  .quick-link {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.4rem;
+    text-decoration: none;
+    transition: border-color var(--duration) var(--ease-out);
+  }
+
+  .quick-link:hover,
+  .quick-link:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  }
+</style>
