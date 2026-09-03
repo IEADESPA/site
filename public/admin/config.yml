@@ -2,6 +2,7 @@ backend:
   name: github
   repo: IEADESPA/site
   branch: main
+  base_url: /api
 
 locale: "pt"
 

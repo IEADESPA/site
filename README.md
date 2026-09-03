@@ -83,6 +83,8 @@ abaixo.
 - **Prestação de Contas**: cada relatório salva em `src/content/relatorios/<slug>.md` e aparece
   automaticamente em [`/transparencia/`](./src/pages/transparencia.astro).
 - **Mídia**: fotos e PDFs enviados pelo painel vão para `public/uploads/`.
+- **Autenticação**: [api/](./api) — Azure Functions que fazem o login do GitHub sem depender de
+  terceiros (detalhes em [Segurança e usuários](#segurança-e-usuários)).
 
 ## Pendências antes de publicar
 
@@ -94,7 +96,7 @@ abaixo.
   [src/pages/galeria.astro](./src/pages/galeria.astro)
 - Revisar os nomes de pregadores de exemplo no conteúdo em `src/content/posts`
 - Definir `siteUrl` definitivo e trocar `og-image.png` em `public/`
-- Configurar a autenticação do painel administrativo — ver
+- Criar o aplicativo OAuth do GitHub e configurar as variáveis de ambiente da autenticação — ver
   [Segurança e usuários](#segurança-e-usuários) abaixo
 
 ## Regras Operacionais e Convivência do Projeto
@@ -142,11 +144,16 @@ git push
   GitHub** e ser adicionado como colaborador do repositório `IEADESPA/site` (em Settings →
   Collaborators, no GitHub). Ninguém deve compartilhar login nem senha de administrador — o
   acesso é individual e pode ser removido a qualquer momento sem afetar os demais.
-- **Configuração pendente antes do primeiro uso do painel**: o backend `github` do Decap CMS
-  exige um aplicativo OAuth do GitHub (ou um provedor de autenticação equivalente) para permitir
-  o login pelo navegador — isso ainda não está configurado. Sem esse passo, a tela de login do
-  `/admin` não completa a autenticação. É uma configuração única, feita nas configurações do
-  repositório no GitHub.
+- **Autenticação do painel (auto-hospedada no Azure)**: o login do `/admin` não depende de nenhum
+  serviço de terceiros — é atendido pela nossa própria API em [api/](./api), publicada junto com o
+  site pelo mesmo Azure Static Web Apps. `api/auth` inicia o login do GitHub e `api/callback`
+  troca o código pelo token e o devolve ao painel. Antes do primeiro uso, é preciso, uma única vez:
+  1. Criar um **OAuth App** no GitHub (Settings → Developer settings → OAuth Apps → New OAuth App)
+     com **Authorization callback URL** = `https://[domínio-do-site]/api/callback`.
+  2. Em Azure Static Web Apps → Configuration → Application settings, cadastrar `OAUTH_CLIENT_ID` e
+     `OAUTH_CLIENT_SECRET` com o Client ID e o Client Secret gerados nesse OAuth App.
+  Sem essas duas variáveis configuradas no Azure, a tela de login do `/admin` não completa a
+  autenticação.
 
 ### Integração com Azure
 
