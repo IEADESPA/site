@@ -1,0 +1,83 @@
+backend:
+  name: github
+  repo: IEADESPA/site
+  branch: main
+
+locale: "pt"
+
+media_folder: "public/uploads"
+public_folder: "/uploads"
+
+collections:
+  - name: "noticias"
+    label: "Notícias e Avisos"
+    label_singular: "Notícia"
+    description: "Comunicados, avisos e notícias publicados no site."
+    folder: "src/content/posts"
+    create: true
+    slug: "{{slug}}"
+    path: "{{slug}}/index"
+    format: "frontmatter"
+    fields:
+      - { label: "Título", name: "title", widget: "string" }
+      - {
+          label: "Data",
+          name: "date",
+          widget: "datetime",
+          format: "YYYY-MM-DD",
+          date_format: "DD/MM/YYYY",
+          time_format: false,
+          picker_utc: true,
+        }
+      - {
+          label: "Foto de Capa",
+          name: "cover",
+          widget: "image",
+          required: false,
+          hint: "Aparece no topo da notícia. Deixe em branco se não houver foto.",
+        }
+      - {
+          label: "Resumo",
+          name: "excerpt",
+          widget: "text",
+          hint: "Um ou dois parágrafos curtos, aparece na listagem e no compartilhamento.",
+        }
+      - {
+          label: "Corpo",
+          name: "body",
+          widget: "markdown",
+          hint: "Texto principal da notícia. Use o botão de imagem na barra de ferramentas para intercalar fotos no meio do texto.",
+        }
+
+  - name: "relatorios"
+    label: "Prestação de Contas"
+    label_singular: "Relatório"
+    description: "Relatórios e balancetes financeiros publicados para a congregação."
+    folder: "src/content/relatorios"
+    create: true
+    slug: "{{slug}}"
+    format: "frontmatter"
+    fields:
+      - { label: "Título", name: "title", widget: "string" }
+      - {
+          label: "Período/Trimestre",
+          name: "period",
+          widget: "string",
+          hint: "Ex.: \"1º Trimestre de 2026\" ou \"Janeiro a Março de 2026\".",
+        }
+      - {
+          label: "Data",
+          name: "date",
+          widget: "datetime",
+          format: "YYYY-MM-DD",
+          date_format: "DD/MM/YYYY",
+          time_format: false,
+          picker_utc: true,
+        }
+      - { label: "Resumo", name: "excerpt", widget: "text", required: false }
+      - {
+          label: "Anexo (PDF)",
+          name: "file",
+          widget: "file",
+          hint: "Envie o arquivo PDF do relatório ou balancete.",
+        }

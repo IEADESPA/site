@@ -16,11 +16,10 @@ const board = [
   { role: "Tesoureiro(a)", name: "A definir" },
 ];
 
-/**
- * Nenhum relatório foi publicado ainda. Adicione um PDF em `public/relatorios/`
- * e liste-o aqui com título, período e o caminho do arquivo.
- */
-const reports: { title: string; period: string; href: string }[] = [];
+/** Publicados pela diretoria através do painel administrativo em /admin. */
+const reports = (await getCollection("relatorios")).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
 ---
 
 <BaseLayout
@@ -60,9 +59,14 @@ const reports: { title: string; period: string; href: string }[] = [];
             <ul class="grid gap-4">
               {reports.map((report) => (
                 <li class="report-card">
-                  <a href={report.href} class="link-title flex items-baseline justify-between gap-4">
-                    <span class="link-title__text text-base font-semibold tracking-tight">{report.title}</span>
-                    <span class="pill shrink-0">{report.period}</span>
+                  <a href={report.data.file} target="_blank" rel="noreferrer" class="link-title flex items-baseline justify-between gap-4">
+                    <span>
+                      <span class="link-title__text block text-base font-semibold tracking-tight">{report.data.title}</span>
+                      {report.data.excerpt && (
+                        <span class="mt-1 block text-sm text-muted-foreground">{report.data.excerpt}</span>
+                      )}
+                    </span>
+                    <span class="pill shrink-0">{report.data.period}</span>
                   </a>
                 </li>
               ))}
@@ -70,8 +74,9 @@ const reports: { title: string; period: string; href: string }[] = [];
           ) : (
             <div class="gallery-empty">
               <p class="text-sm leading-relaxed text-muted-foreground">
-                Nenhum relatório publicado ainda. Assim que a diretoria disponibilizar o relatório
-                anual de prestação de contas em <code>public/relatorios/</code>, ele aparecerá aqui.
+                Nenhum relatório publicado ainda. Assim que a diretoria publicar um relatório de
+                prestação de contas pelo <a href="/admin/">painel administrativo</a>, ele aparecerá
+                aqui.
               </p>
             </div>
           )

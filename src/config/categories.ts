@@ -14,6 +14,7 @@ export const categories = [
   "Discipulado",
   "Louvor e Adoração",
   "Testemunhos",
+  "Notícias e Avisos",
 ] as const;
 
 export type Category = (typeof categories)[number];
@@ -36,4 +37,5 @@ export const categoryDescriptions: Record<Category, string> = {
   Discipulado: "Crescimento espiritual, formação de discípulos e vida de oração.",
   "Louvor e Adoração": "Reflexões sobre adoração, música e a vida de louvor do crente.",
   Testemunhos: "Histórias reais de transformação e da fidelidade de Deus na vida da igreja.",
+  "Notícias e Avisos": "Comunicados oficiais, avisos e notícias publicados pela secretaria.",
 };
