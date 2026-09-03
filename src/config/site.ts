@@ -76,4 +76,5 @@ export const footerNavigation = [
   { label: "Transparência", href: "/transparencia/" },
   { label: "Pregadores", href: "/pregadores/" },
   { label: "Privacidade", href: "/privacidade/" },
+  { label: "Painel administrativo", href: "/admin/" },
 ];
