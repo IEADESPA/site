@@ -17,6 +17,31 @@ conta no GitHub nem entender de código.
   o conteúdo é editado. Trocar o domínio ou mexer no Static Web App não afeta o Directus, e
   vice-versa.
 
+## Progresso da migração para Directus
+
+Histórico das fases já concluídas (a decisão e o motivo de cada uma estão registrados no
+histórico de commits do Git, se precisar relembrar os detalhes):
+
+- [x] **Fase 1** — Provisionar os recursos no Azure (App Service + PostgreSQL Flexible Server,
+      Brazil South)
+- [x] **Fase 2** — Subir o Directus no App Service, conectado ao banco e ao Azure Blob Storage
+- [x] **Fase 3** — Criar as coleções no Directus (Mensagens, Relatórios, Ministérios, Eventos,
+      Galeria, Congregações)
+- [x] **Fase 4** — Migrar o conteúdo que já existia nos arquivos locais para dentro do Directus
+- [x] **Fase 5** — Reescrever todas as páginas do site em Astro para buscar do Directus (nada mais
+      lê arquivo local de conteúdo; painel do Sveltia removido)
+- [x] **Automação de deploy** — Publicar no Directus dispara sozinho um novo build do site (ver
+      [Integração com Azure](#integração-com-azure))
+
+**Pendências em aberto** (não bloqueiam o uso, mas valem atenção — lista completa em
+[Pendências antes de publicar](#pendências-antes-de-publicar)):
+
+- Trocar as 4 congregações fictícias pelos dados reais
+- Preencher os nomes reais da diretoria em `/transparencia/`
+- Aplicar para o Open Innovation Grant do Directus antes de passar de 3 contas de usuário
+- Ligar o botão "Meu Painel" a um sistema de verdade (hoje aponta pra `app.ieadespa.org.br`, ainda
+  em desenvolvimento à parte)
+
 ## Requisitos
 
 - Node.js `22.12.0` ou mais recente
@@ -144,15 +169,24 @@ Directus (driver `azure` de armazenamento, configurado como variáveis de ambien
 
 ## Integração com Azure
 
-Qualquer `git push` no repositório aciona automaticamente o workflow do GitHub Actions
-(`.github/workflows/azure-static-web-apps-*.yml`), que busca o conteúdo mais recente do Directus,
+O site atualiza sozinho, automaticamente, nos dois casos abaixo — ninguém precisa disparar nada
+manualmente:
+
+1. Um `git push` no repositório (edição feita no VS Code).
+2. Uma publicação, edição ou exclusão de item em qualquer coleção do Directus (Mensagens,
+   Relatórios, Ministérios, Eventos, Galeria, Congregações).
+
+Em ambos os casos, o workflow do GitHub Actions
+(`.github/workflows/azure-static-web-apps-*.yml`) roda, busca o conteúdo mais recente do Directus,
 gera a versão de produção do site e atualiza o Azure Static Web Apps. O site no ar reflete a
 alteração em cerca de 1 a 2 minutos.
 
-**Importante**: publicar algo novo pelo painel do Directus (uma notícia, um evento) só atualiza o
-*banco de dados* do Directus na hora — o *site público* só reflete essa mudança depois do próximo
-build. Hoje isso significa esperar o próximo `git push`/deploy. Automatizar isso (o Directus
-disparar um build sozinho a cada publicação, via webhook) é um passo futuro, ainda não configurado.
+**Como o caso 2 funciona**: um Flow no Directus ("Publicar site (avisar GitHub)", ativo nas 6
+coleções do site) chama a API do GitHub (`repository_dispatch`, evento `directus-publish`) sempre
+que um item é criado, editado ou apagado. O workflow do GitHub Actions escuta esse evento além do
+`push` normal. O token usado nessa chamada fica guardado como variável de ambiente no App Service
+do Directus (`GITHUB_DISPATCH_TOKEN`, exposta ao Flow via `FLOWS_ENV_ALLOW_LIST`) — nunca aparece
+em texto puro em nenhuma tela de configuração do Directus.
 
 ## Recursos no Azure (visão geral)
 
