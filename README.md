@@ -217,6 +217,59 @@ pelo painel administrativo — aciona automaticamente o workflow do GitHub Actio
 atualiza o Azure Static Web Apps. O site no ar reflete a alteração em cerca de 1 a 2 minutos, sem
 qualquer ação manual adicional.
 
+## Plano em andamento: migração para Directus (login por e-mail/senha)
+
+O painel administrativo hoje (Sveltia CMS) sempre exige uma conta no GitHub de quem publica, porque
+ele salva o conteúdo como arquivos no repositório. Isso é uma barreira real para colaboradores sem
+familiaridade técnica. A decisão tomada foi migrar para o
+[Directus](https://directus.io/) — um CMS de código aberto e maduro, autoipedado, com login
+próprio por **e-mail e senha** (sem GitHub), suporte **oficial** a Azure Blob Storage para mídia, e
+um construtor de coleções mais flexível que o YAML do Sveltia.
+
+**Por que essa mudança é maior do que parece**: o conteúdo passa a morar num banco de dados de
+verdade (PostgreSQL), não mais em arquivos Git. Isso exige um servidor rodando 24h (Azure App
+Service) e um banco de dados (Azure Database for PostgreSQL) — ambos pagos, ao contrário do site
+estático atual, que é gratuito. Custo estimado (setembro de 2026, pode variar):
+
+| Recurso | Tier | Custo aproximado |
+| --- | --- | --- |
+| Azure App Service (Linux) | Basic B1 (1 vCPU / 1.75 GB) | ~US$ 13/mês |
+| Azure Database for PostgreSQL Flexible Server | Burstable B1ms (1 vCore / 2 GB) + ~32 GB | ~US$ 15–18/mês |
+| **Total** | | **~US$ 28–31/mês** (checar se os créditos de ONG da Azure cobrem) |
+
+**Região escolhida**: Brazil South (São Paulo) — mesma região da América do Sul usada hoje,
+suporta tanto o App Service quanto o PostgreSQL Flexible Server.
+
+### Fases do plano
+
+1. **Provisionar os recursos no Azure** (só o usuário consegue fazer — exige acesso ao Portal):
+   - Criar um **Azure Database for PostgreSQL Flexible Server** (Burstable B1ms, região Brazil
+     South), com um banco vazio para o Directus.
+   - Criar um **Azure App Service** (Linux, plano Basic B1, região Brazil South), configurado para
+     rodar um contêiner Docker (a imagem oficial `directus/directus`).
+2. **Subir o Directus** nesse App Service, apontando para o banco criado no passo 1, com as
+   variáveis de ambiente de conexão, um usuário administrador inicial, e o driver de
+   armazenamento configurado para o Azure Blob Storage (`storageigrejaportal`, contêiner
+   `imagens`) — reaproveita a mesma conta de armazenamento já usada pelo Sveltia.
+3. **Modelar as coleções** no próprio painel do Directus (sem código): Mensagens, Relatórios,
+   Ministérios, Eventos, Galeria, e os dados institucionais da igreja (hoje em
+   [src/config/site.ts](./src/config/site.ts)).
+4. **Migrar o conteúdo existente**: um script lê os arquivos atuais (`src/content/posts`,
+   `src/content/relatorios`, `src/data/*.yml`) e os envia para o Directus pela API dele, uma
+   única vez.
+5. **Reescrever as páginas do site** em Astro para buscar o conteúdo da API do Directus no lugar
+   dos arquivos/coleções locais atuais.
+6. **Criar os logins de e-mail/senha** dos colaboradores diretamente no Directus, com papéis e
+   permissões por pessoa (sem precisar de conta no GitHub).
+7. **Decidir o fluxo de publicação**: manter o site estático (uma alteração no Directus dispara,
+   via webhook, um novo build no GitHub Actions — o site atualiza em 1–2 minutos, como hoje) ou
+   passar o Astro para modo servidor (SSR), onde a alteração aparece na hora, mas exige mais um
+   recurso rodando no Azure. Tendência é manter estático por simplicidade, a menos que a demora de
+   1–2 minutos incomode no uso real.
+
+O Sveltia CMS continua no ar normalmente enquanto esse plano avança — a troca só acontece quando
+as fases acima estiverem prontas e testadas.
+
 ## Licença
 
 MIT — ver [LICENSE](./LICENSE), que também lista as licenças das fontes, ícones e imagens
