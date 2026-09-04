@@ -71,6 +71,7 @@ export const navigation = [
 
 /** Navegação secundária exibida no rodapé. */
 export const footerNavigation = [
+  { label: "Congregações", href: "/congregacoes/" },
   { label: "Doações", href: "/doacoes/" },
   { label: "Galeria", href: "/galeria/" },
   { label: "Transparência", href: "/transparencia/" },
