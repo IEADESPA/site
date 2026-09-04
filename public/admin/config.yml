@@ -97,3 +97,66 @@ collections:
           widget: "file",
           hint: "Envie o arquivo PDF do relatório ou balancete.",
         }
+
+  - name: "ministerios"
+    label: "Ministérios"
+    description: "Lista de ministérios e departamentos exibida em /ministerios/."
+    files:
+      - name: "lista"
+        label: "Lista de ministérios"
+        file: "src/data/ministerios.yml"
+        fields:
+          - label: "Ministérios"
+            name: "ministerios"
+            widget: "list"
+            label_singular: "Ministério"
+            summary: "{{name}}"
+            fields:
+              - { label: "Nome", name: "name", widget: "string" }
+              - { label: "Descrição", name: "description", widget: "text" }
+
+  - name: "eventos"
+    label: "Eventos"
+    description: "Agenda de cultos e eventos exibida em /eventos/."
+    files:
+      - name: "lista"
+        label: "Lista de eventos"
+        file: "src/data/eventos.yml"
+        fields:
+          - label: "Eventos"
+            name: "eventos"
+            widget: "list"
+            label_singular: "Evento"
+            summary: "{{title}}"
+            fields:
+              - { label: "Título", name: "title", widget: "string" }
+              - {
+                  label: "Quando",
+                  name: "date",
+                  widget: "string",
+                  hint: "Texto livre, ex.: \"Todo domingo, 18h\".",
+                }
+              - { label: "Descrição", name: "description", widget: "text" }
+
+  - name: "galeria"
+    label: "Galeria"
+    description: "Fotos exibidas em /galeria/."
+    files:
+      - name: "lista"
+        label: "Fotos da galeria"
+        file: "src/data/galeria.yml"
+        fields:
+          - label: "Fotos"
+            name: "fotos"
+            widget: "list"
+            label_singular: "Foto"
+            summary: "{{alt}}"
+            fields:
+              - { label: "Foto", name: "src", widget: "image" }
+              - {
+                  label: "Descrição da foto",
+                  name: "alt",
+                  widget: "string",
+                  hint: "Texto curto descrevendo a foto (acessibilidade).",
+                }
+              - { label: "Legenda", name: "caption", widget: "string", required: false }

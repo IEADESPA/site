@@ -49,6 +49,10 @@ RSS, sitemap, imagens sociais e dados estruturados derivam dele.
   ---
   ```
 
+- **Ministérios, Eventos e Galeria**: cada um é um arquivo único em
+  [src/data](./src/data) (`ministerios.yml`, `eventos.yml`, `galeria.yml`), editável tanto no
+  VS Code quanto pelo painel administrativo — os dois editam exatamente o mesmo arquivo.
+
 ## Páginas do site
 
 | Rota                 | Conteúdo                                          |
@@ -89,6 +93,8 @@ GitHub, direto no navegador, sem nenhum servidor nosso no meio.
   padrão em [src/content.config.ts](./src/content.config.ts).
 - **Prestação de Contas**: cada relatório salva em `src/content/relatorios/<slug>.md` e aparece
   automaticamente em [`/transparencia/`](./src/pages/transparencia.astro).
+- **Ministérios, Eventos e Galeria**: coleções de "arquivo único" ([src/data](./src/data)) — dá
+  para adicionar, editar e remover itens da lista, mas não criar páginas novas separadas.
 - **Mídia**: fotos e PDFs enviados pelo painel vão direto para o Azure Blob Storage (contêiner
   `imagens`), não para o repositório — o GitHub guarda só o link. É um recurso nativo do Sveltia,
   sem nenhum código customizado nosso (detalhes em
@@ -138,18 +144,30 @@ git push
 
 ### Fluxo da equipe não técnica (dia a dia)
 
-1. **Acesso**: entre em `https://www.ieadespa.org.br/admin` e clique em **"Sign In with Token"**.
-   Na primeira vez, o painel mostra um link para gerar um token no GitHub, já com as permissões
-   certas pré-selecionadas — é só gerar, copiar e colar de volta no painel. O token fica salvo
-   apenas no navegador de quem fez login.
-2. **Publicar uma notícia ou aviso**: abra a coleção "Notícias e Avisos", clique em "Novo", e
+1. **Gerar o token de acesso** (uma única vez por pessoa, refazer só quando expirar):
+   1. No GitHub, clique na sua foto (canto superior direito) → **Settings** → role até o fim do
+      menu esquerdo → **Developer settings** → **Personal access tokens** → **Tokens (classic)** →
+      **Generate new token** → **Generate new token (classic)**.
+   2. Em "Note", dê um nome (ex.: "Painel do site"). Em "Expiration", escolha um prazo (ex.:
+      90 dias ou 1 ano).
+   3. Marque a caixa **`repo`** (é a única necessária — ela já marca todas as caixinhas abaixo
+      dela junto). Não marque mais nada.
+   4. Clique em **Generate token** no fim da página e **copie o token** — ele só aparece uma vez.
+2. **Acesso ao painel**: entre em `https://www.ieadespa.org.br/admin`, clique em **"Sign In with
+   Token"** e cole o token gerado acima. Ele fica salvo apenas no navegador de quem fez login.
+3. **Publicar uma notícia ou aviso**: abra a coleção "Notícias e Avisos", clique em "Novo", e
    preencha título, data, foto de capa (opcional) e resumo. No campo de corpo do texto (o editor
    Markdown), use o botão de imagem na barra de ferramentas para inserir fotos no meio do texto,
    intercaladas com os parágrafos — não é necessário escrever código para isso. Ao salvar, o
    painel publica direto no site.
-3. **Publicar um relatório/balancete em PDF**: abra a coleção "Prestação de Contas", clique em
+4. **Publicar um relatório/balancete em PDF**: abra a coleção "Prestação de Contas", clique em
    "Novo", preencha título, período/trimestre, data e um resumo opcional, e anexe o arquivo PDF no
    campo de anexo. Ele aparece automaticamente na página `/transparencia/` do site.
+5. **Editar Ministérios, Eventos ou Galeria**: essas três aparecem no painel como coleções de um
+   arquivo só (não dá pra criar "nova página" nelas, só editar a lista existente). Abra a
+   coleção, clique em "Adicionar" para incluir um item novo (um ministério, um evento ou uma
+   foto) ou no item existente para editar/remover. Cada alteração já aparece direto na página
+   correspondente do site.
 
 ### Segurança e usuários
 

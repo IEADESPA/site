@@ -7,34 +7,7 @@ import { siteConfig } from "@/config/site";
 import { visiblePosts } from "@/lib/posts";
 
 const allPosts = visiblePosts(await getCollection("posts"));
-
-/**
- * Eventos de exemplo. Substitua pelas datas e programações reais da igreja —
- * cada item pode virar um formulário simples ou uma coleção de conteúdo no
- * futuro, se a agenda crescer.
- */
-const events = [
-  {
-    title: "Culto de Celebração",
-    date: "Todo domingo, 18h",
-    description: "Nosso culto principal, com louvor, ministração da Palavra e comunhão.",
-  },
-  {
-    title: "Culto de Oração e Doutrina",
-    date: "Toda quarta-feira, 19h30",
-    description: "Momento de oração e estudo aprofundado da Palavra de Deus.",
-  },
-  {
-    title: "Culto de Jovens",
-    date: "Toda sexta-feira, 19h30",
-    description: "Encontro dedicado aos jovens, com louvor e mensagens direcionadas.",
-  },
-  {
-    title: "Escola Bíblica Dominical",
-    date: "Todo domingo, antes do culto",
-    description: "Aulas por faixa etária para aprofundar o conhecimento bíblico.",
-  },
-];
+const events = (await getCollection("eventos")).map((entry) => entry.data);
 ---
 
 <BaseLayout title="Eventos" description={`Agenda de cultos e eventos da ${siteConfig.name}.`}>

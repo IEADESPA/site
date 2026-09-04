@@ -7,12 +7,7 @@ import { siteConfig } from "@/config/site";
 import { visiblePosts } from "@/lib/posts";
 
 const allPosts = visiblePosts(await getCollection("posts"));
-
-/**
- * Nenhuma foto real foi adicionada ainda. Coloque os arquivos em
- * `public/galeria/` e liste-os aqui com `src`, `alt` e uma legenda opcional.
- */
-const photos: { src: string; alt: string; caption?: string }[] = [];
+const photos = (await getCollection("galeria")).map((entry) => entry.data);
 ---
 
 <BaseLayout title="Galeria" description={`Fotos de cultos e eventos da ${siteConfig.name}.`}>
@@ -41,7 +36,7 @@ const photos: { src: string; alt: string; caption?: string }[] = [];
           <div class="gallery-empty">
             <p class="text-sm leading-relaxed text-muted-foreground">
               Ainda não há fotos publicadas. Assim que novas fotos de cultos e eventos forem
-              adicionadas em <code>public/galeria/</code>, elas aparecerão aqui.
+              adicionadas pelo <a href="/admin/">painel administrativo</a>, elas aparecerão aqui.
             </p>
           </div>
         )

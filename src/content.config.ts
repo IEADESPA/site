@@ -1,6 +1,7 @@
 import { defineCollection } from "astro:content";
-import { glob } from "astro/loaders";
+import { file, glob } from "astro/loaders";
 import { z } from "astro/zod";
+import { parse } from "yaml";
 import { categories } from "@/config/categories";
 
 const posts = defineCollection({
@@ -56,4 +57,44 @@ const relatorios = defineCollection({
   }),
 });
 
-export const collections = { posts, relatorios };
+/**
+ * Extrai a lista aninhada sob `key` de um arquivo YAML de dados (formato
+ * gerado pelo widget "list" do painel administrativo) e garante um `id`
+ * único por item, exigido pelo loader `file()` do Astro.
+ */
+const dataListParser = (key: string) => (text: string) => {
+  const parsed = parse(text) as Record<string, unknown[]> | null;
+  const items = (parsed?.[key] as Record<string, unknown>[] | undefined) ?? [];
+  return items.map((item, index) => ({ id: String(index), ...item }));
+};
+
+/** Ministérios e departamentos, editáveis pelo painel administrativo. */
+const ministerios = defineCollection({
+  loader: file("src/data/ministerios.yml", { parser: dataListParser("ministerios") }),
+  schema: z.object({
+    name: z.string(),
+    description: z.string(),
+  }),
+});
+
+/** Agenda de cultos e eventos, editável pelo painel administrativo. */
+const eventos = defineCollection({
+  loader: file("src/data/eventos.yml", { parser: dataListParser("eventos") }),
+  schema: z.object({
+    title: z.string(),
+    date: z.string(),
+    description: z.string(),
+  }),
+});
+
+/** Fotos da galeria, editáveis pelo painel administrativo. */
+const galeria = defineCollection({
+  loader: file("src/data/galeria.yml", { parser: dataListParser("fotos") }),
+  schema: z.object({
+    src: z.string(),
+    alt: z.string(),
+    caption: z.string().optional(),
+  }),
+});
+
+export const collections = { posts, relatorios, ministerios, eventos, galeria };
