@@ -1,19 +1,17 @@
 ---
-import { getCollection, render } from "astro:content";
+import { marked } from "marked";
 import LocalIcon from "@/components/LocalIcon.astro";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import Callout from "@/components/mdx/Callout.astro";
-import CodeGroup from "@/components/mdx/CodeGroup.astro";
-import CodeGroupItem from "@/components/mdx/CodeGroupItem.astro";
 import { siteConfig } from "@/config/site";
 import {
   authorSlug,
   categoryHref,
   formatDate,
   getAdjacent,
+  getAllMensagens,
   getRelated,
   postHref,
   postSlug,
@@ -23,7 +21,7 @@ import {
 } from "@/lib/posts";
 
 export async function getStaticPaths() {
-  const allPosts = visiblePosts(await getCollection("posts"));
+  const allPosts = visiblePosts(await getAllMensagens());
   return allPosts.map((post) => ({
     params: { slug: postSlug(post) },
     props: { post, allPosts },
@@ -36,8 +34,7 @@ interface Props {
 }
 
 const { post, allPosts } = Astro.props;
-const { Content } = await render(post);
-const mdxComponents = { Callout, CodeGroup, CodeGroupItem };
+const bodyHtml = await marked.parse(post.body);
 const data = post.data;
 const related = getRelated(allPosts, post);
 const { newer, older } = getAdjacent(allPosts, post);
@@ -151,9 +148,7 @@ const structuredData = {
         </figure>
       )}
 
-      <div class="prose canvas mt-12">
-        <Content components={mdxComponents} />
-      </div>
+      <div class="prose canvas mt-12" set:html={bodyHtml} />
 
       {(newer || older) && (
         <footer class="canvas mt-16 border-t border-border pt-8">

@@ -1,14 +1,13 @@
 ---
-import { getCollection } from "astro:content";
 import NewsletterSignup from "@/components/NewsletterSignup.astro";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { categoryHref, getCategoryList, getFeatured, visiblePosts } from "@/lib/posts";
+import { categoryHref, getCategoryList, getFeatured, getAllMensagens, visiblePosts } from "@/lib/posts";
 
-const allPosts = visiblePosts(await getCollection("posts"));
+const allPosts = visiblePosts(await getAllMensagens());
 const feed = allPosts.slice(0, 6);
 const featured = getFeatured(allPosts, 4);
 const categoryList = getCategoryList(allPosts);

@@ -1,5 +1,4 @@
 ---
-import { getCollection } from "astro:content";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
@@ -10,13 +9,13 @@ import {
   categories,
   categorySlug,
   getPostsByCategory,
-  visiblePosts,
+  getAllMensagens, visiblePosts,
   type Category,
   type Post,
 } from "@/lib/posts";
 
 export async function getStaticPaths() {
-  const allPosts = visiblePosts(await getCollection("posts"));
+  const allPosts = visiblePosts(await getAllMensagens());
 
   return categories
     .filter((category) => getPostsByCategory(allPosts, category).length > 0)

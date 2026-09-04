@@ -1,15 +1,14 @@
 ---
-import { getCollection } from "astro:content";
 import type { GetStaticPaths, Page } from "astro";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { visiblePosts, type Post } from "@/lib/posts";
+import { getAllMensagens, visiblePosts, type Post } from "@/lib/posts";
 
 export const getStaticPaths = (async ({ paginate }) => {
-  const posts = visiblePosts(await getCollection("posts"));
+  const posts = visiblePosts(await getAllMensagens());
   return paginate(posts, { pageSize: 10 });
 }) satisfies GetStaticPaths;
 
@@ -18,7 +17,7 @@ interface Props {
 }
 
 const { page } = Astro.props;
-const allPosts = visiblePosts(await getCollection("posts"));
+const allPosts = visiblePosts(await getAllMensagens());
 const title = page.currentPage === 1 ? "Mensagens" : `Mensagens - Página ${page.currentPage}`;
 const description = `Todas as mensagens publicadas por ${siteConfig.name}.`;
 const withTrailingSlash = (url: string | undefined) => (url && !url.endsWith("/") ? `${url}/` : url);

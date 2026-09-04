@@ -5,6 +5,9 @@
  */
 export const DIRECTUS_URL = "https://ieadespa-directus-gae4hfarf4a4ffcf.brazilsouth-01.azurewebsites.net";
 
+/** Painel administrativo (Directus Studio), onde o conteúdo é editado. */
+export const DIRECTUS_ADMIN_URL = `${DIRECTUS_URL}/admin`;
+
 /** Busca itens de uma coleção pública do Directus. Roda em tempo de build. */
 export async function fetchItems<T>(collection: string, query = ""): Promise<T[]> {
   const url = `${DIRECTUS_URL}/items/${collection}${query ? `?${query}` : ""}`;

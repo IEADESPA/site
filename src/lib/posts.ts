@@ -1,9 +1,77 @@
-﻿import type { CollectionEntry } from "astro:content";
-import { categories, categorySlug, type Category } from "@/config/categories";
+﻿import { categories, categorySlug, type Category } from "@/config/categories";
 import { siteConfig } from "@/config/site";
+import { directusAssetUrl, fetchItems } from "@/lib/directus";
 
-export type Post = CollectionEntry<"posts">;
 export { categories, categorySlug, type Category };
+
+/** Formato bruto de uma mensagem, como salva no Directus. */
+interface DirectusMensagem {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string;
+  category: string;
+  date: string;
+  updated_date: string | null;
+  author_name: string;
+  author_role: string;
+  cover: string | null;
+  video_url: string | null;
+  featured: boolean;
+  draft: boolean;
+  body: string;
+}
+
+export interface PostData {
+  title: string;
+  excerpt: string;
+  category: Category;
+  date: Date;
+  updatedDate?: Date;
+  author: { name: string; role: string };
+  cover?: string;
+  videoUrl?: string;
+  featured: boolean;
+  draft: boolean;
+}
+
+/** Continua com a forma `{ id, data, body }` do Astro Content Collections de
+ * propósito — assim as páginas que já liam `post.data.title` etc. não
+ * precisam mudar, só trocam de onde a lista de mensagens vem. */
+export interface Post {
+  id: string;
+  data: PostData;
+  body: string;
+}
+
+let cachedPosts: Post[] | null = null;
+
+function toPost(m: DirectusMensagem): Post {
+  return {
+    id: m.slug,
+    body: m.body ?? "",
+    data: {
+      title: m.title,
+      excerpt: m.excerpt,
+      category: m.category as Category,
+      date: new Date(m.date),
+      updatedDate: m.updated_date ? new Date(m.updated_date) : undefined,
+      author: { name: m.author_name, role: m.author_role },
+      cover: m.cover ? directusAssetUrl(m.cover) : undefined,
+      videoUrl: m.video_url ?? undefined,
+      featured: m.featured,
+      draft: m.draft,
+    },
+  };
+}
+
+/** Busca todas as mensagens do Directus. Roda em tempo de build. */
+export async function getAllMensagens(): Promise<Post[]> {
+  if (cachedPosts) return cachedPosts;
+  const items = await fetchItems<DirectusMensagem>("mensagens");
+  cachedPosts = items.map(toPost);
+  return cachedPosts;
+}
 
 export const authorSlug = (author: string) =>
   author
@@ -17,7 +85,7 @@ export const authorSlug = (author: string) =>
 
 export const categoryHref = (category: string) => `/tema/${categorySlug(category)}/`;
 
-export const postSlug = (post: Post) => post.id.replace(/\/index$/, "");
+export const postSlug = (post: Post) => post.id;
 
 export const postHref = (post: Post) => `/mensagem/${postSlug(post)}/`;
 

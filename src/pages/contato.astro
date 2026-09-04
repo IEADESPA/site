@@ -1,12 +1,11 @@
 ---
-import { getCollection } from "astro:content";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { visiblePosts } from "@/lib/posts";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
 
-const allPosts = visiblePosts(await getCollection("posts"));
+const allPosts = visiblePosts(await getAllMensagens());
 const contact = siteConfig.contact;
 const action = contact.action.trim();
 const isEnabled = contact.enabled;

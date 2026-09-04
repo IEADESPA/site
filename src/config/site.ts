@@ -1,3 +1,5 @@
+import { DIRECTUS_ADMIN_URL } from "@/lib/directus";
+
 export const siteConfig = {
   /** Nome curto exibido no cabeçalho e rodapé. */
   name: "IEADESPA",
@@ -7,7 +9,7 @@ export const siteConfig = {
   title: "IEADESPA — Assembleia de Deus Ministério do Seta em Parauapebas/PA",
   description:
     "Site oficial da IEADESPA, Igreja Evangélica Assembleia de Deus Ministério do Seta, em Parauapebas/PA. Confira horários de culto, ministérios, eventos, mensagens e como chegar.",
-  siteUrl: "https://ieadespa.org",
+  siteUrl: "https://www.ieadespa.org.br",
   authorName: "IEADESPA",
   email: "seta@ieadespa.org",
   language: "pt-BR",
@@ -77,5 +79,5 @@ export const footerNavigation = [
   { label: "Transparência", href: "/transparencia/" },
   { label: "Pregadores", href: "/pregadores/" },
   { label: "Privacidade", href: "/privacidade/" },
-  { label: "Painel administrativo", href: "/admin/" },
+  { label: "Painel administrativo", href: DIRECTUS_ADMIN_URL },
 ];

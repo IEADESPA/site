@@ -1,13 +1,12 @@
 ---
-import { getCollection } from "astro:content";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { categoryDescriptions } from "@/config/categories";
 import { siteConfig } from "@/config/site";
-import { categoryHref, getCategoryList, visiblePosts } from "@/lib/posts";
+import { categoryHref, getCategoryList, getAllMensagens, visiblePosts } from "@/lib/posts";
 
-const allPosts = visiblePosts(await getCollection("posts"));
+const allPosts = visiblePosts(await getAllMensagens());
 const categoryList = getCategoryList(allPosts);
 ---
 

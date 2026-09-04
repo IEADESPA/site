@@ -1,6 +1,5 @@
-import { getCollection } from "astro:content";
 import { siteConfig } from "@/config/site";
-import { postHref, visiblePosts } from "@/lib/posts";
+import { postHref, getAllMensagens, visiblePosts } from "@/lib/posts";
 
 const escapeXml = (value: string) =>
   value
@@ -11,7 +10,7 @@ const escapeXml = (value: string) =>
     .replace(/'/g, "&apos;");
 
 export async function GET() {
-  const posts = visiblePosts(await getCollection("posts")).slice(0, 20);
+  const posts = visiblePosts(await getAllMensagens()).slice(0, 20);
   const items = posts
     .map((post) => {
       const url = new URL(postHref(post), siteConfig.siteUrl).toString();

@@ -1,13 +1,23 @@
 ---
-import { getCollection } from "astro:content";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { visiblePosts } from "@/lib/posts";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { DIRECTUS_ADMIN_URL, directusAssetUrl, fetchItems } from "@/lib/directus";
 
-const allPosts = visiblePosts(await getCollection("posts"));
-const photos = (await getCollection("galeria")).map((entry) => entry.data);
+interface GaleriaItem {
+  photo: string;
+  alt: string;
+  caption: string | null;
+}
+
+const allPosts = visiblePosts(await getAllMensagens());
+const photos = (await fetchItems<GaleriaItem>("galeria", "sort[]=sort")).map((item) => ({
+  src: directusAssetUrl(item.photo),
+  alt: item.alt,
+  caption: item.caption,
+}));
 ---
 
 <BaseLayout title="Galeria" description={`Fotos de cultos e eventos da ${siteConfig.name}.`}>
@@ -36,7 +46,7 @@ const photos = (await getCollection("galeria")).map((entry) => entry.data);
           <div class="gallery-empty">
             <p class="text-sm leading-relaxed text-muted-foreground">
               Ainda não há fotos publicadas. Assim que novas fotos de cultos e eventos forem
-              adicionadas pelo <a href="/admin/">painel administrativo</a>, elas aparecerão aqui.
+              adicionadas pelo <a href={DIRECTUS_ADMIN_URL}>painel administrativo</a>, elas aparecerão aqui.
             </p>
           </div>
         )

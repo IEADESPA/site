@@ -1,10 +1,9 @@
 ---
-import { getCollection } from "astro:content";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { visiblePosts } from "@/lib/posts";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { fetchItems } from "@/lib/directus";
 
 interface Congregacao {
@@ -18,7 +17,7 @@ interface Congregacao {
   schedule: string | null;
 }
 
-const allPosts = visiblePosts(await getCollection("posts"));
+const allPosts = visiblePosts(await getAllMensagens());
 const congregacoes = await fetchItems<Congregacao>("congregacoes", "sort[]=sort");
 ---
 

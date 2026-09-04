@@ -1,8 +1,21 @@
 # Site institucional — IEADESPA
 
 Site oficial da **Igreja Evangélica Assembleia de Deus Ministério do Seta em Parauapebas/PA**
-(IEADESPA), construído com [Astro](https://astro.build/) e Tailwind CSS 4. Estático, rápido e sem
-banco de dados.
+(IEADESPA), construído com [Astro](https://astro.build/) e Tailwind CSS 4. O site em si é
+estático (gerado em build), mas o conteúdo (mensagens, relatórios, ministérios, eventos, galeria,
+congregações) vem de um [Directus](https://directus.io/) — um CMS auto-hospedado com banco de
+dados próprio, onde qualquer pessoa da igreja edita com login por e-mail e senha, sem precisar de
+conta no GitHub nem entender de código.
+
+## Arquitetura em duas partes
+
+- **O site público** (`www.ieadespa.org.br`) — este repositório, hospedado no Azure Static Web
+  Apps. A cada `git push`, o GitHub Actions gera uma nova versão estática buscando o conteúdo mais
+  recente do Directus e publica em 1-2 minutos.
+- **O painel administrativo** (Directus) — um App Service + banco PostgreSQL separados no Azure,
+  em `https://ieadespa-directus-gae4hfarf4a4ffcf.brazilsouth-01.azurewebsites.net/admin`. É onde
+  o conteúdo é editado. Trocar o domínio ou mexer no Static Web App não afeta o Directus, e
+  vice-versa.
 
 ## Requisitos
 
@@ -16,42 +29,35 @@ npm install
 npm run dev
 ```
 
-Gerar a versão de produção e pré-visualizar o resultado:
+Gerar a versão de produção e pré-visualizar o resultado (busca o conteúdo do Directus em tempo de
+build, então precisa de conexão com a internet):
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Antes de publicar, revise `siteUrl` em [src/config/site.ts](./src/config/site.ts) — URLs canônicas,
-RSS, sitemap, imagens sociais e dados estruturados derivam dele.
-
 ## Estrutura do conteúdo
+
+Todo o conteúdo abaixo é editado no [painel do Directus](#painel-administrativo-directus), não em
+arquivos deste repositório. O site busca os dados de lá em tempo de build, através de
+[src/lib/directus.ts](./src/lib/directus.ts).
+
+| Coleção no Directus | Onde aparece no site | Lida em |
+| --- | --- | --- |
+| `mensagens` | `/mensagem/<slug>/`, `/mensagens/`, `/temas/`, `/pregadores/`, home | [src/lib/posts.ts](./src/lib/posts.ts) |
+| `relatorios` | `/transparencia/` | [src/pages/transparencia.astro](./src/pages/transparencia.astro) |
+| `ministerios` | `/ministerios/` | [src/pages/ministerios.astro](./src/pages/ministerios.astro) |
+| `eventos` | `/eventos/` | [src/pages/eventos.astro](./src/pages/eventos.astro) |
+| `galeria` | `/galeria/` | [src/pages/galeria.astro](./src/pages/galeria.astro) |
+| `congregacoes` | `/congregacoes/` | [src/pages/congregacoes.astro](./src/pages/congregacoes.astro) |
+
+O que continua fixo no código (não muda com frequência, editado aqui no VS Code):
 
 - **Dados da igreja** (nome, endereço, horários de culto, e-mail, redes sociais, textos da home e
   navegação): [src/config/site.ts](./src/config/site.ts)
-- **Temas das mensagens**: [src/config/categories.ts](./src/config/categories.ts)
-- **Mensagens/pregações**: cada uma é uma pasta em
-  [src/content/posts](./src/content/posts) com um `index.md` (ou `.mdx`):
-
-  ```yaml
-  ---
-  title: "Título da mensagem"
-  excerpt: "Resumo de uma frase."
-  category: "Fé e Doutrina" # deve existir em src/config/categories.ts
-  date: 2026-08-02
-  author:
-    name: "Nome do pregador"
-    role: "Cargo na igreja"
-  videoUrl: "https://youtube.com/..." # opcional
-  featured: false # true exibe na barra lateral da home
-  draft: false
-  ---
-  ```
-
-- **Ministérios, Eventos e Galeria**: cada um é um arquivo único em
-  [src/data](./src/data) (`ministerios.yml`, `eventos.yml`, `galeria.yml`), editável tanto no
-  VS Code quanto pelo painel administrativo — os dois editam exatamente o mesmo arquivo.
+- **Temas das mensagens** (lista fixa usada no campo "Tema" do Directus):
+  [src/config/categories.ts](./src/config/categories.ts)
 
 ## Páginas do site
 
@@ -61,6 +67,7 @@ RSS, sitemap, imagens sociais e dados estruturados derivam dele.
 | `/sobre/`            | História, missão, visão e liderança                 |
 | `/ministerios/`      | Ministérios e departamentos                         |
 | `/eventos/`          | Agenda de cultos e eventos                          |
+| `/congregacoes/`     | Congregações e pontos de pregação vinculados         |
 | `/mensagens/`        | Arquivo de mensagens (paginado)                     |
 | `/mensagem/<slug>/`  | Uma mensagem                                        |
 | `/temas/`, `/tema/<tema>/` | Mensagens por tema                            |
@@ -72,203 +79,92 @@ RSS, sitemap, imagens sociais e dados estruturados derivam dele.
 | `/busca/`            | Busca por título, tema ou pregador                  |
 | `/privacidade/`      | Política de privacidade                             |
 
-## Painel administrativo (Sveltia CMS)
+## Painel administrativo (Directus)
 
-Quem não mexe em código publica notícias e relatórios pelo painel visual em `/admin` (hoje:
-`https://www.ieadespa.org.br/admin`), sem precisar do VS Code. Veja os detalhes de uso na seção
-[Regras Operacionais e Convivência do Projeto](#regras-operacionais-e-convivência-do-projeto)
-abaixo.
+Quem não mexe em código publica notícias, relatórios, ministérios, eventos, fotos e congregações
+pelo painel visual do Directus, sem precisar do VS Code nem de conta no GitHub — só um login de
+e-mail e senha criado para cada pessoa.
 
-O painel usa o [Sveltia CMS](https://github.com/sveltia/sveltia-cms) — um sucessor moderno do
-Decap CMS, compatível com o mesmo formato de `config.yml`. A troca aconteceu porque o Decap exigia
-um servidor próprio de login (OAuth) rodando como Azure Function, e esse ambiente do Azure se
-mostrou instável (erro 500 persistente, resolvido só depois de regenerar o token de implantação do
-Static Web App). O Sveltia elimina essa peça inteira: faz login com um Token de Acesso Pessoal do
-GitHub, direto no navegador, sem nenhum servidor nosso no meio.
-
-- **Configuração do painel**: [public/admin/config.yml](./public/admin/config.yml)
-- **Notícias e Avisos**: cada publicação salva em `src/content/posts/<slug>/index.md`, na mesma
-  pasta das mensagens/pregações. Como o painel não pede tema nem pregador, essas notícias recebem
-  automaticamente o tema "Notícias e Avisos" e o autor "Secretaria da IEADESPA" — ver os valores
-  padrão em [src/content.config.ts](./src/content.config.ts).
-- **Prestação de Contas**: cada relatório salva em `src/content/relatorios/<slug>.md` e aparece
-  automaticamente em [`/transparencia/`](./src/pages/transparencia.astro).
-- **Ministérios, Eventos e Galeria**: coleções de "arquivo único" ([src/data](./src/data)) — dá
-  para adicionar, editar e remover itens da lista, mas não criar páginas novas separadas.
-- **Mídia**: fotos e PDFs enviados pelo painel vão direto para o Azure Blob Storage (contêiner
-  `imagens`), não para o repositório — o GitHub guarda só o link. É um recurso nativo do Sveltia,
-  sem nenhum código customizado nosso (detalhes em
-  [Azure Blob Storage (mídia)](#azure-blob-storage-mídia)).
-- **Autenticação**: nenhuma peça própria — é o login por token do próprio Sveltia CMS (detalhes em
-  [Segurança e usuários](#segurança-e-usuários)).
+- **Acesso**: `https://ieadespa-directus-gae4hfarf4a4ffcf.brazilsouth-01.azurewebsites.net/admin`
+- **Coleções disponíveis**: Mensagens, Relatórios, Ministérios, Eventos, Galeria, Congregações —
+  todas com leitura pública liberada (política "Public"), para o site conseguir buscar os dados
+  sem precisar de nenhum token secreto.
+- **Mídia**: fotos e PDFs enviados no Directus vão direto para o Azure Blob Storage (conta
+  `storageigrejaportal`, contêiner `imagens`), não para o repositório do GitHub.
+- **Limitação conhecida do plano gratuito ("Core") do Directus**: não permite regras de permissão
+  com filtro condicional (ex.: "mostrar só o que não é rascunho"). Por isso, mensagens marcadas
+  como rascunho (`draft: true`) são filtradas no próprio código do site
+  ([src/lib/posts.ts](./src/lib/posts.ts)), não no Directus. O plano gratuito também tem um limite
+  de **3 contas de usuário** — para mais colaboradores, é preciso aplicar para o
+  [Open Innovation Grant](https://directus.com/pricing) (gratuito para organizações com menos de
+  US$ 5 milhões de receita anual e menos de 50 funcionários — uma igreja se qualifica
+  tranquilamente).
 
 ## Pendências antes de publicar
 
 - Trocar a chave Pix de exemplo em [src/pages/doacoes.astro](./src/pages/doacoes.astro)
 - Preencher os nomes reais da diretoria em
-  [src/pages/transparencia.astro](./src/pages/transparencia.astro) (os relatórios em si já vêm do
-  painel administrativo, não precisam mais ser editados manualmente aqui)
-- Adicionar fotos reais em `public/galeria/` e listá-las em
-  [src/pages/galeria.astro](./src/pages/galeria.astro)
-- Revisar os nomes de pregadores de exemplo no conteúdo em `src/content/posts`
-- Definir `siteUrl` definitivo e trocar `og-image.png` em `public/`
-- Liberar o CORS no contêiner `imagens` do Azure Storage e gerar o token de SAS a ser colado no
-  painel na primeira publicação — ver [Azure Blob Storage (mídia)](#azure-blob-storage-mídia)
-  abaixo
+  [src/pages/transparencia.astro](./src/pages/transparencia.astro)
+- Trocar as 4 congregações fictícias (Cidade Nova, Rio Verde, Beira Rio, Novo Horizonte) pelos
+  dados reais — editar a coleção "Congregações" no Directus
+- Trocar `og-image.png` em `public/` pela imagem social oficial
+- Aplicar para o Open Innovation Grant do Directus quando for preciso mais de 3 contas de usuário
+- Ligar o botão "Meu Painel" (hoje aponta para `app.ieadespa.org.br`, um sistema à parte, em
+  desenvolvimento)
 
-## Regras Operacionais e Convivência do Projeto
+## Segurança e usuários
 
-Este projeto tem duas portas de entrada para o mesmo conteúdo: o **VS Code** (para quem mexe em
-código e layout) e o **painel administrativo em `/admin`** (para quem publica notícias e
-relatórios). As duas escrevem no mesmo repositório GitHub, então seguir esta ordem evita
-conflitos.
+- **VS Code / repositório GitHub**: para quem mexe em código e layout. Cada colaborador técnico
+  deve ter sua própria conta no GitHub e ser adicionado como colaborador do repositório
+  `IEADESPA/site` (Settings → Collaborators). Antes de editar, rode sempre `git pull` primeiro,
+  para não perder nenhuma configuração feita por outra pessoa.
+- **Painel do Directus**: para quem publica conteúdo (secretaria, diretoria). Cada pessoa tem seu
+  próprio login de e-mail e senha, criado por um administrador do Directus (Configurações →
+  Usuários → Criar usuário). Contas podem ser desativadas individualmente a qualquer momento, sem
+  afetar as demais.
+- **Token de administrador da API**: usado só para configuração inicial das coleções (feita via
+  script, não faz parte do dia a dia). Fica salvo no perfil do usuário administrador no Directus —
+  pode ser revogado e gerado de novo a qualquer momento em Account Settings → Token.
 
-### Fluxo de quem edita no VS Code
+## Azure Blob Storage (mídia)
 
-**Regra de ouro: sempre rode `git pull` antes de começar a editar.** A equipe da secretaria e da
-diretoria pode ter publicado notícias ou relatórios pelo painel enquanto você estava offline. Sem
-esse `git pull`, seu editor local fica desatualizado e a próxima tentativa de envio pode gerar
-conflito com o que foi publicado pelo painel.
-
-```bash
-git pull            # sempre primeiro, antes de qualquer edição
-```
-
-Depois de editar, envie as alterações de volta:
-
-```bash
-git add .
-git commit -m "descrição do que mudou"
-git push
-```
-
-### Fluxo da equipe não técnica (dia a dia)
-
-1. **Gerar o token de acesso** (uma única vez por pessoa, refazer só quando expirar):
-   1. No GitHub, clique na sua foto (canto superior direito) → **Settings** → role até o fim do
-      menu esquerdo → **Developer settings** → **Personal access tokens** → **Tokens (classic)** →
-      **Generate new token** → **Generate new token (classic)**.
-   2. Em "Note", dê um nome (ex.: "Painel do site"). Em "Expiration", escolha um prazo (ex.:
-      90 dias ou 1 ano).
-   3. Marque a caixa **`repo`** (é a única necessária — ela já marca todas as caixinhas abaixo
-      dela junto). Não marque mais nada.
-   4. Clique em **Generate token** no fim da página e **copie o token** — ele só aparece uma vez.
-2. **Acesso ao painel**: entre em `https://www.ieadespa.org.br/admin`, clique em **"Sign In with
-   Token"** e cole o token gerado acima. Ele fica salvo apenas no navegador de quem fez login.
-3. **Publicar uma notícia ou aviso**: abra a coleção "Notícias e Avisos", clique em "Novo", e
-   preencha título, data, foto de capa (opcional) e resumo. No campo de corpo do texto (o editor
-   Markdown), use o botão de imagem na barra de ferramentas para inserir fotos no meio do texto,
-   intercaladas com os parágrafos — não é necessário escrever código para isso. Ao salvar, o
-   painel publica direto no site.
-4. **Publicar um relatório/balancete em PDF**: abra a coleção "Prestação de Contas", clique em
-   "Novo", preencha título, período/trimestre, data e um resumo opcional, e anexe o arquivo PDF no
-   campo de anexo. Ele aparece automaticamente na página `/transparencia/` do site.
-5. **Editar Ministérios, Eventos ou Galeria**: essas três aparecem no painel como coleções de um
-   arquivo só (não dá pra criar "nova página" nelas, só editar a lista existente). Abra a
-   coleção, clique em "Adicionar" para incluir um item novo (um ministério, um evento ou uma
-   foto) ou no item existente para editar/remover. Cada alteração já aparece direto na página
-   correspondente do site.
-
-### Segurança e usuários
-
-- Cada colaborador (da secretaria, diretoria ou equipe técnica) deve ter **sua própria conta no
-  GitHub** e ser adicionado como colaborador do repositório `IEADESPA/site` (em Settings →
-  Collaborators, no GitHub). Ninguém deve compartilhar login nem senha de administrador — o
-  acesso é individual e pode ser removido a qualquer momento sem afetar os demais.
-- **Autenticação do painel**: feita pelo próprio Sveltia CMS via Personal Access Token do GitHub —
-  não existe nenhum servidor nosso envolvido no login (não tem mais `api/` no projeto). Cada
-  colaborador gera seu próprio token (o painel já indica exatamente como, com as permissões
-  certas), então continua valendo a regra acima: acesso individual, revogável a qualquer momento
-  direto nas configurações do GitHub de cada pessoa (Settings → Developer settings → Tokens), sem
-  afetar os demais.
-- **Trocar de domínio não quebra mais nada**: como não há mais `base_url`/callback OAuth para
-  ajustar, adicionar ou trocar o domínio do site não exige nenhuma mudança no painel.
-
-### Azure Blob Storage (mídia)
-
-Fotos e PDFs publicados pelo painel não vão para o repositório do GitHub — vão direto para o Azure
+Fotos e PDFs publicados no Directus não vão para o repositório do GitHub — vão direto para o Azure
 Blob Storage, para não pesar o histórico do Git com arquivos binários. Isso é um recurso nativo do
-Sveltia CMS (`media_libraries.azure_blob_storage` em
-[public/admin/config.yml](./public/admin/config.yml)), sem nenhum código customizado nosso — só o
-próprio navegador de quem está publicando envia o arquivo direto para o Azure, usando um token de
-SAS que fica salvo apenas ali (nunca no repositório).
+Directus (driver `azure` de armazenamento, configurado como variáveis de ambiente no App Service:
+`STORAGE_LOCATIONS`, `STORAGE_AZURE_DRIVER`, `STORAGE_AZURE_CONTAINER_NAME`,
+`STORAGE_AZURE_ACCOUNT_NAME`, `STORAGE_AZURE_ACCOUNT_KEY`), sem nenhum código customizado nosso.
 
-**Configuração manual necessária, uma única vez, na conta de armazenamento `storageigrejaportal`:**
+**Configuração já feita, uma única vez, na conta de armazenamento `storageigrejaportal`:**
 
-1. **CORS** (Portal Azure → conta de armazenamento → Configurações → Compartilhamento de recursos
-   — CORS → aba Serviço Blob): origem permitida = `https://www.ieadespa.org.br` (ou `*`), métodos
-   `GET, HEAD, PUT, OPTIONS`, cabeçalhos permitidos e expostos = `*`, idade máxima = `3600`. Sem
-   isso o navegador bloqueia o envio direto para o Azure.
-2. **Acesso público de leitura** no contêiner `imagens` (Contêiner → Alterar nível de acesso →
-   "Blob (acesso de leitura anônimo somente para blobs)") — sem isso, o upload funciona mas as
-   fotos e PDFs não aparecem no site (ficam privados).
-3. **Gerar um token de SAS do contêiner** (Portal Azure → conta de armazenamento → Segurança + rede
-   → Assinatura de acesso compartilhado, ou direto no contêiner `imagens` → Gerar SAS), com
-   permissões de Leitura, Gravação, Criação e Listagem, e uma validade generosa (ex.: 1 ano). Na
-   primeira vez que alguém enviar um arquivo pelo painel, ele pede esse token — cole-o ali; fica
-   guardado só no navegador de quem publicou. Quando o token expirar, é só gerar um novo e colar de
-   novo.
+1. CORS liberado no contêiner `imagens`.
+2. Acesso público de leitura no contêiner `imagens` (senão o upload funciona mas as fotos não
+   aparecem no site).
+3. As variáveis `STORAGE_AZURE_*` cadastradas nas Variáveis de ambiente do App Service do
+   Directus.
 
-### Integração com Azure
+## Integração com Azure
 
-Qualquer alteração no repositório — seja um `git push` feito no VS Code, seja uma publicação feita
-pelo painel administrativo — aciona automaticamente o workflow do GitHub Actions
-(`.github/workflows/azure-static-web-apps-*.yml`), que gera a versão de produção do site e
-atualiza o Azure Static Web Apps. O site no ar reflete a alteração em cerca de 1 a 2 minutos, sem
-qualquer ação manual adicional.
+Qualquer `git push` no repositório aciona automaticamente o workflow do GitHub Actions
+(`.github/workflows/azure-static-web-apps-*.yml`), que busca o conteúdo mais recente do Directus,
+gera a versão de produção do site e atualiza o Azure Static Web Apps. O site no ar reflete a
+alteração em cerca de 1 a 2 minutos.
 
-## Plano em andamento: migração para Directus (login por e-mail/senha)
+**Importante**: publicar algo novo pelo painel do Directus (uma notícia, um evento) só atualiza o
+*banco de dados* do Directus na hora — o *site público* só reflete essa mudança depois do próximo
+build. Hoje isso significa esperar o próximo `git push`/deploy. Automatizar isso (o Directus
+disparar um build sozinho a cada publicação, via webhook) é um passo futuro, ainda não configurado.
 
-O painel administrativo hoje (Sveltia CMS) sempre exige uma conta no GitHub de quem publica, porque
-ele salva o conteúdo como arquivos no repositório. Isso é uma barreira real para colaboradores sem
-familiaridade técnica. A decisão tomada foi migrar para o
-[Directus](https://directus.io/) — um CMS de código aberto e maduro, autoipedado, com login
-próprio por **e-mail e senha** (sem GitHub), suporte **oficial** a Azure Blob Storage para mídia, e
-um construtor de coleções mais flexível que o YAML do Sveltia.
+## Recursos no Azure (visão geral)
 
-**Por que essa mudança é maior do que parece**: o conteúdo passa a morar num banco de dados de
-verdade (PostgreSQL), não mais em arquivos Git. Isso exige um servidor rodando 24h (Azure App
-Service) e um banco de dados (Azure Database for PostgreSQL) — ambos pagos, ao contrário do site
-estático atual, que é gratuito. Custo estimado (setembro de 2026, pode variar):
-
-| Recurso | Tier | Custo aproximado |
+| Recurso | Função | Custo |
 | --- | --- | --- |
-| Azure App Service (Linux) | Basic B1 (1 vCPU / 1.75 GB) | ~US$ 13/mês |
-| Azure Database for PostgreSQL Flexible Server | Burstable B1ms (1 vCore / 2 GB) + ~32 GB | ~US$ 15–18/mês |
-| **Total** | | **~US$ 28–31/mês** (checar se os créditos de ONG da Azure cobrem) |
+| Static Web App | Hospeda o site público (este repositório) | Gratuito |
+| Storage Account `storageigrejaportal` | Armazena fotos e PDFs enviados no Directus | Baixo (poucos GB) |
+| App Service `ieadespa-directus` (Linux, Basic B1, Brazil South) | Roda o Directus | ~US$ 13/mês |
+| Azure Database for PostgreSQL Flexible Server (Burstable B1ms, Brazil South) | Banco de dados do Directus | ~US$ 15–18/mês |
 
-**Região escolhida**: Brazil South (São Paulo) — mesma região da América do Sul usada hoje,
-suporta tanto o App Service quanto o PostgreSQL Flexible Server.
-
-### Fases do plano
-
-1. **Provisionar os recursos no Azure** (só o usuário consegue fazer — exige acesso ao Portal):
-   - Criar um **Azure Database for PostgreSQL Flexible Server** (Burstable B1ms, região Brazil
-     South), com um banco vazio para o Directus.
-   - Criar um **Azure App Service** (Linux, plano Basic B1, região Brazil South), configurado para
-     rodar um contêiner Docker (a imagem oficial `directus/directus`).
-2. **Subir o Directus** nesse App Service, apontando para o banco criado no passo 1, com as
-   variáveis de ambiente de conexão, um usuário administrador inicial, e o driver de
-   armazenamento configurado para o Azure Blob Storage (`storageigrejaportal`, contêiner
-   `imagens`) — reaproveita a mesma conta de armazenamento já usada pelo Sveltia.
-3. **Modelar as coleções** no próprio painel do Directus (sem código): Mensagens, Relatórios,
-   Ministérios, Eventos, Galeria, e os dados institucionais da igreja (hoje em
-   [src/config/site.ts](./src/config/site.ts)).
-4. **Migrar o conteúdo existente**: um script lê os arquivos atuais (`src/content/posts`,
-   `src/content/relatorios`, `src/data/*.yml`) e os envia para o Directus pela API dele, uma
-   única vez.
-5. **Reescrever as páginas do site** em Astro para buscar o conteúdo da API do Directus no lugar
-   dos arquivos/coleções locais atuais.
-6. **Criar os logins de e-mail/senha** dos colaboradores diretamente no Directus, com papéis e
-   permissões por pessoa (sem precisar de conta no GitHub).
-7. **Decidir o fluxo de publicação**: manter o site estático (uma alteração no Directus dispara,
-   via webhook, um novo build no GitHub Actions — o site atualiza em 1–2 minutos, como hoje) ou
-   passar o Astro para modo servidor (SSR), onde a alteração aparece na hora, mas exige mais um
-   recurso rodando no Azure. Tendência é manter estático por simplicidade, a menos que a demora de
-   1–2 minutos incomode no uso real.
-
-O Sveltia CMS continua no ar normalmente enquanto esse plano avança — a troca só acontece quando
-as fases acima estiverem prontas e testadas.
+Nenhum desses recursos é redundante — cada um tem uma função diferente. Confirme se os créditos de
+ONG da Azure cobrem os ~US$ 28–31/mês dos dois últimos.
 
 ## Licença
 

@@ -1,5 +1,4 @@
-import { getCollection } from "astro:content";
-import { formatDate, postHref, readingLabel, visiblePosts } from "@/lib/posts";
+import { formatDate, postHref, readingLabel, getAllMensagens, visiblePosts } from "@/lib/posts";
 
 /**
  * Static search index consumed by the header command palette. It holds post
@@ -7,7 +6,7 @@ import { formatDate, postHref, readingLabel, visiblePosts } from "@/lib/posts";
  * the first search.
  */
 export async function GET() {
-  const posts = visiblePosts(await getCollection("posts"));
+  const posts = visiblePosts(await getAllMensagens());
   const index = posts.map((post) => ({
     title: post.data.title,
     excerpt: post.data.excerpt,

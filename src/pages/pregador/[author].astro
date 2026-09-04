@@ -1,14 +1,13 @@
 ---
-import { getCollection } from "astro:content";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { authorSlug, getAllAuthors, visiblePosts, type Post } from "@/lib/posts";
+import { authorSlug, getAllAuthors, getAllMensagens, visiblePosts, type Post } from "@/lib/posts";
 
 export async function getStaticPaths() {
-  const allPosts = visiblePosts(await getCollection("posts"));
+  const allPosts = visiblePosts(await getAllMensagens());
   return getAllAuthors(allPosts).map((author) => ({
     params: { author: author.slug },
     props: { author, allPosts },

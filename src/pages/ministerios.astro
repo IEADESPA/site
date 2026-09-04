@@ -1,13 +1,18 @@
 ---
-import { getCollection } from "astro:content";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { visiblePosts } from "@/lib/posts";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { fetchItems } from "@/lib/directus";
 
-const allPosts = visiblePosts(await getCollection("posts"));
-const ministries = (await getCollection("ministerios")).map((entry) => entry.data);
+interface Ministerio {
+  name: string;
+  description: string;
+}
+
+const allPosts = visiblePosts(await getAllMensagens());
+const ministries = await fetchItems<Ministerio>("ministerios", "sort[]=sort");
 ---
 
 <BaseLayout
