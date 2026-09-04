@@ -170,7 +170,10 @@ git push
 ### Azure Blob Storage (mídia)
 
 Fotos e PDFs publicados pelo painel não vão para o repositório do GitHub — vão direto para o Azure
-Blob Storage, para não pesar o histórico do Git com arquivos binários. O fluxo:
+Blob Storage, para não pesar o histórico do Git com arquivos binários. `api/sas` assina a
+autorização de upload manualmente (HMAC-SHA256, só com o módulo `crypto` do Node) em vez de usar o
+SDK oficial da Azure — o Ambiente de Functions gerenciado do Static Web Apps se mostrou instável
+com a dependência extra do SDK, então essa função não tem nenhuma dependência de pacote. O fluxo:
 
 1. O painel pede, para a função [api/sas](./api/sas), uma autorização de upload de curta duração
    (SAS) para um contêiner específico (`imagens` para fotos, `relatorios` para PDFs).
