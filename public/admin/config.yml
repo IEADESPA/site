@@ -2,12 +2,23 @@ backend:
   name: github
   repo: IEADESPA/site
   branch: main
-  base_url: /api
+  # Precisa ser a origem completa (protocolo + domínio, sem caminho) — o Decap
+  # exige isso para conferir a mensagem que volta do popup de login. Se algum
+  # dia trocar de domínio, atualize esta linha e a "Authorization callback
+  # URL" do OAuth App no GitHub para o novo domínio + "/api/callback".
+  base_url: https://salmon-bay-0efd06d0f.3.azurestaticapps.net
+  auth_endpoint: api/auth
 
 locale: "pt"
 
+# Mantido como referência/fallback, mas os campos de imagem e arquivo abaixo
+# usam a biblioteca de mídia customizada "azure-blob" (ver public/admin/index.html),
+# que envia os arquivos direto para o Azure Blob Storage em vez de aqui.
 media_folder: "public/uploads"
 public_folder: "/uploads"
+
+media_library:
+  name: azure-blob
 
 collections:
   - name: "noticias"
@@ -36,6 +47,7 @@ collections:
           widget: "image",
           required: false,
           hint: "Aparece no topo da notícia. Deixe em branco se não houver foto.",
+          media_library: { name: "azure-blob", config: { container: "imagens" } },
         }
       - {
           label: "Resumo",
@@ -48,6 +60,7 @@ collections:
           name: "body",
           widget: "markdown",
           hint: "Texto principal da notícia. Use o botão de imagem na barra de ferramentas para intercalar fotos no meio do texto.",
+          media_library: { name: "azure-blob", config: { container: "imagens" } },
         }
 
   - name: "relatorios"
@@ -81,4 +94,5 @@ collections:
           name: "file",
           widget: "file",
           hint: "Envie o arquivo PDF do relatório ou balancete.",
+          media_library: { name: "azure-blob", config: { container: "relatorios" } },
         }

@@ -70,8 +70,9 @@ RSS, sitemap, imagens sociais e dados estruturados derivam dele.
 
 ## Painel administrativo (Decap CMS)
 
-Quem não mexe em código publica notícias e relatórios pelo painel visual em `/admin` (ex.:
-`https://ieadespa.org/admin`), sem precisar do VS Code. Veja os detalhes de uso na seção
+Quem não mexe em código publica notícias e relatórios pelo painel visual em `/admin` (hoje:
+`https://salmon-bay-0efd06d0f.3.azurestaticapps.net/admin`), sem precisar do VS Code. Veja os
+detalhes de uso na seção
 [Regras Operacionais e Convivência do Projeto](#regras-operacionais-e-convivência-do-projeto)
 abaixo.
 
@@ -82,7 +83,10 @@ abaixo.
   padrão em [src/content.config.ts](./src/content.config.ts).
 - **Prestação de Contas**: cada relatório salva em `src/content/relatorios/<slug>.md` e aparece
   automaticamente em [`/transparencia/`](./src/pages/transparencia.astro).
-- **Mídia**: fotos e PDFs enviados pelo painel vão para `public/uploads/`.
+- **Mídia**: fotos e PDFs enviados pelo painel vão direto para o Azure Blob Storage (contêineres
+  `imagens` e `relatorios`), não para o repositório — o GitHub guarda só o link. Ver
+  [public/admin/index.html](./public/admin/index.html) e [api/sas](./api/sas) (detalhes em
+  [Azure Blob Storage (mídia)](#azure-blob-storage-mídia)).
 - **Autenticação**: [api/](./api) — Azure Functions que fazem o login do GitHub sem depender de
   terceiros (detalhes em [Segurança e usuários](#segurança-e-usuários)).
 
@@ -98,6 +102,9 @@ abaixo.
 - Definir `siteUrl` definitivo e trocar `og-image.png` em `public/`
 - Criar o aplicativo OAuth do GitHub e configurar as variáveis de ambiente da autenticação — ver
   [Segurança e usuários](#segurança-e-usuários) abaixo
+- Liberar o CORS e o acesso público de leitura nos contêineres do Azure Storage, e configurar as
+  variáveis de ambiente do armazenamento — ver
+  [Azure Blob Storage (mídia)](#azure-blob-storage-mídia) abaixo
 
 ## Regras Operacionais e Convivência do Projeto
 
@@ -149,11 +156,53 @@ git push
   site pelo mesmo Azure Static Web Apps. `api/auth` inicia o login do GitHub e `api/callback`
   troca o código pelo token e o devolve ao painel. Antes do primeiro uso, é preciso, uma única vez:
   1. Criar um **OAuth App** no GitHub (Settings → Developer settings → OAuth Apps → New OAuth App)
-     com **Authorization callback URL** = `https://[domínio-do-site]/api/callback`.
+     com **Authorization callback URL** = `https://salmon-bay-0efd06d0f.3.azurestaticapps.net/api/callback`.
   2. Em Azure Static Web Apps → Configuration → Application settings, cadastrar `OAUTH_CLIENT_ID` e
      `OAUTH_CLIENT_SECRET` com o Client ID e o Client Secret gerados nesse OAuth App.
   Sem essas duas variáveis configuradas no Azure, a tela de login do `/admin` não completa a
   autenticação.
+- **Se/quando adicionar um domínio próprio** (ex.: `ieadespa.org`) ao Static Web App, o login
+  para de funcionar até você atualizar duas coisas para o novo domínio: o `base_url` em
+  [public/admin/config.yml](./public/admin/config.yml) e a Authorization callback URL do OAuth
+  App no GitHub (item 1 acima). É esperado — avise para ajustarmos os dois juntos quando isso
+  acontecer.
+
+### Azure Blob Storage (mídia)
+
+Fotos e PDFs publicados pelo painel não vão para o repositório do GitHub — vão direto para o Azure
+Blob Storage, para não pesar o histórico do Git com arquivos binários. O fluxo:
+
+1. O painel pede, para a função [api/sas](./api/sas), uma autorização de upload de curta duração
+   (SAS) para um contêiner específico (`imagens` para fotos, `relatorios` para PDFs).
+2. O navegador de quem está publicando envia o arquivo direto para o Azure usando essa
+   autorização — o arquivo nunca passa pelo GitHub.
+3. Só a URL pública do arquivo (ex.: `https://storageigrejaportal.blob.core.windows.net/imagens/…`)
+   é salva no Markdown/frontmatter, que aí sim vai para o repositório.
+
+Esta é uma integração escrita sob medida (não existe um conector pronto e testado do Decap CMS
+para Azure Blob), então teste com calma após configurar — pode precisar de pequenos ajustes.
+**Configuração manual necessária, uma única vez, na conta de armazenamento `storageigrejaportal`:**
+
+1. **CORS** (Portal Azure → conta de armazenamento → Configurações → Compartilhamento de recursos
+   — CORS → aba Serviço Blob): origem permitida = o domínio do site (ou `*`), métodos `GET, PUT,
+   POST, OPTIONS, HEAD`, cabeçalhos permitidos e expostos = `*`, idade máxima = `3600`. Sem isso o
+   navegador bloqueia o envio direto para o Azure.
+2. **Acesso público de leitura** nos contêineres `imagens` e `relatorios` (Contêiner → Alterar
+   nível de acesso → "Blob (acesso de leitura anônimo somente para blobs)") — sem isso, o upload
+   funciona mas as fotos e PDFs não aparecem no site (ficam privados).
+3. **Duas variáveis em Azure Static Web Apps → Configuration → Application settings**:
+   `AZURE_STORAGE_ACCOUNT_NAME` = `storageigrejaportal`, e `AZURE_STORAGE_ACCOUNT_KEY` = uma das
+   chaves de acesso da conta (Portal Azure → conta de armazenamento → Segurança + rede → Chaves de
+   acesso). Essa chave é secreta — só vai como Application Setting no Azure, nunca em código ou
+   commitada no repositório.
+
+**Limitação conhecida**: `api/sas` não confere quem está pedindo a autorização de upload — qualquer
+pessoa que descubra essa URL poderia gerar uma autorização de envio para os dois contêineres
+(nunca para ler a chave da conta, só para enviar um arquivo, por até 15 minutos). O risco prático é
+baixo (o painel `/admin` em si continua exigindo login do GitHub, e uploads indevidos apareceriam
+como blobs estranhos nos contêineres, fáceis de notar e apagar), mas é bom saber que essa porta
+existe. Se isso virar um problema, dá para reforçar depois exigindo que `api/sas` confira o token
+de login do GitHub antes de emitir a autorização.
 
 ### Integração com Azure
 

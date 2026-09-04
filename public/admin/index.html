@@ -9,5 +9,95 @@
   <body>
     <!-- Interface padrão do Decap CMS, carregada via CDN. Não é preciso build local. -->
     <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+
+    <script>
+      /**
+       * Biblioteca de mídia customizada: em vez de salvar as imagens/PDFs no
+       * repositório do GitHub (padrão do Decap), envia o arquivo direto para
+       * um contêiner do Azure Blob Storage e devolve ao CMS só a URL pública
+       * — é essa URL curta que fica salva no Markdown/frontmatter no GitHub.
+       *
+       * Fluxo: 1) pede uma autorização de upload de curta duração (SAS) para
+       * a nossa função em /api/sas; 2) envia o arquivo direto para o Azure
+       * usando essa autorização; 3) devolve a URL pública final ao Decap.
+       */
+      (function () {
+        function safeFetchJson(url) {
+          return fetch(url).then(function (response) {
+            if (!response.ok) {
+              throw new Error("Não foi possível gerar a autorização de upload (HTTP " + response.status + ").");
+            }
+            return response.json();
+          });
+        }
+
+        function uploadToAzure(file, container) {
+          var query =
+            "/api/sas?container=" +
+            encodeURIComponent(container) +
+            "&filename=" +
+            encodeURIComponent(file.name);
+
+          return safeFetchJson(query).then(function (sas) {
+            return fetch(sas.uploadUrl, {
+              method: "PUT",
+              headers: {
+                "x-ms-blob-type": "BlockBlob",
+                "Content-Type": file.type || "application/octet-stream",
+              },
+              body: file,
+            }).then(function (uploadResponse) {
+              if (!uploadResponse.ok) {
+                throw new Error("Falha ao enviar o arquivo para o Azure (HTTP " + uploadResponse.status + ").");
+              }
+              return sas.publicUrl;
+            });
+          });
+        }
+
+        CMS.registerMediaLibrary({
+          name: "azure-blob",
+          init: function (args) {
+            var handleInsert = (args && args.handleInsert) || function () {};
+
+            return Promise.resolve({
+              show: function (showArgs) {
+                showArgs = showArgs || {};
+                var config = showArgs.config || {};
+                var imagesOnly = showArgs.imagesOnly;
+                // PDFs (widget "file") não são imagem, então caem no
+                // contêiner "relatorios" por padrão; fotos vão para
+                // "imagens". O container também pode ser fixado por campo
+                // em config.yml (media_library.config.container).
+                var container = config.container || (imagesOnly ? "imagens" : "relatorios");
+
+                var input = document.createElement("input");
+                input.type = "file";
+                if (imagesOnly) input.accept = "image/*";
+
+                input.addEventListener("change", function () {
+                  var file = input.files && input.files[0];
+                  if (!file) return;
+
+                  uploadToAzure(file, container)
+                    .then(function (publicUrl) {
+                      handleInsert(publicUrl);
+                    })
+                    .catch(function (error) {
+                      window.alert(error.message || "Falha no upload do arquivo.");
+                    });
+                });
+
+                input.click();
+              },
+              hide: function () {},
+              enableStandalone: function () {
+                return true;
+              },
+            });
+          },
+        });
+      })();
+    </script>
   </body>
 </html>

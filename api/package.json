@@ -1,10 +1,12 @@
 {
   "name": "azure-api",
   "version": "1.0.0",
-  "description": "Provedor OAuth do GitHub para o Decap CMS, hospedado como Azure Functions no Static Web Apps.",
+  "description": "Provedor OAuth do GitHub e emissor de SAS para upload no Azure Blob Storage, usados pelo Decap CMS, hospedados como Azure Functions no Static Web Apps.",
   "main": "index.js",
   "scripts": {
     "start": "func start"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@azure/storage-blob": "^12.33.0"
+  }
 }
