@@ -27,6 +27,7 @@ const events = (await fetchItems<Evento>("eventos")).sort((a, b) => {
 });
 const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric" });
 const programacao = await getAllProgramacao();
+const instagram = siteConfig.socials.find((social) => social.label === "Instagram");
 ---
 
 <BaseLayout title="Eventos" description={`Seminários, campanhas e eventos especiais da ${siteConfig.name}.`}>
@@ -93,7 +94,11 @@ const programacao = await getAllProgramacao();
       <div class="prose mt-16">
         <h2>Fique por dentro</h2>
         <p>
-          Siga nosso Instagram <a href="https://instagram.com/adsetaparauapebas" target="_blank" rel="noreferrer">@adsetaparauapebas</a>{" "}
+          {instagram && (
+            <>
+              Siga nosso Instagram <a href={instagram.href} target="_blank" rel="noreferrer">@{instagram.href.split("/").filter(Boolean).pop()}</a>{" "}
+            </>
+          )}
           para avisos de eventos especiais, ou acompanhe as <a href="/noticias/">notícias da igreja</a>.
         </p>
       </div>

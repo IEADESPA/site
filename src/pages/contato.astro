@@ -5,7 +5,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { DIRECTUS_URL, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes } from "@/lib/directus";
+import { DIRECTUS_URL, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes, mapsHref } from "@/lib/directus";
 import { churchStructuredData, getAllProgramacao, sedeProgramacao } from "@/lib/programacao";
 
 const allPosts = visiblePosts(await getAllMensagens());
@@ -13,14 +13,13 @@ const config = await fetchConfiguracoes();
 const sedeSchedule = sedeProgramacao(await getAllProgramacao());
 const structuredData = churchStructuredData(config, sedeSchedule, siteConfig.siteUrl, siteConfig.name);
 const contact = siteConfig.contact;
+const instagram = siteConfig.socials.find((social) => social.label === "Instagram");
 const isEnabled = contact.enabled;
 /* A pré-visualização em iframe só funciona com uma busca por endereço (é o
    formato de embed sem chave de API do Google) — o link "Ver rota", esse
    sim, aponta para o perfil real da igreja no Google Maps quando cadastrado. */
 const mapsEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(enderecoMapsQuery(config))}&output=embed`;
-const mapsLinkHref =
-  config.maps_url ||
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoMapsQuery(config))}`;
+const mapsLinkHref = mapsHref(config);
 ---
 
 <BaseLayout
@@ -69,9 +68,13 @@ const mapsLinkHref =
                 </li>
               )
             }
-            <li>
-              Instagram: <a href="https://instagram.com/adsetaparauapebas" target="_blank" rel="noreferrer" class="text-accent underline underline-offset-2">@adsetaparauapebas</a>
-            </li>
+            {
+              instagram && (
+                <li>
+                  Instagram: <a href={instagram.href} target="_blank" rel="noreferrer" class="text-accent underline underline-offset-2">@{instagram.href.split("/").filter(Boolean).pop()}</a>
+                </li>
+              )
+            }
           </ul>
 
           <div class="mt-8 overflow-hidden rounded-[var(--radius-md)] border border-border">

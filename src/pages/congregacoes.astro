@@ -4,7 +4,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { enderecoCompleto, fetchConfiguracoes, fetchItems, mapsHref } from "@/lib/directus";
 
 interface Congregacao {
   id: number;
@@ -26,9 +26,7 @@ interface Congregacao {
 const allPosts = visiblePosts(await getAllMensagens());
 const congregacoes = await fetchItems<Congregacao>("congregacoes", "sort[]=sort");
 const config = await fetchConfiguracoes();
-const sedeMapsHref =
-  config.maps_url ||
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoMapsQuery(config))}`;
+const sedeMapsHref = mapsHref(config);
 ---
 
 <BaseLayout

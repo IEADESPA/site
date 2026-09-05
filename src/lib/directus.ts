@@ -80,3 +80,7 @@ export const enderecoCompleto = (c: Configuracoes) =>
 /** String de busca pro Google Maps, usada como alternativa quando não há `maps_url`. */
 export const enderecoMapsQuery = (c: Configuracoes) =>
   `${c.address_line}, ${c.address_neighborhood}, ${c.address_city} - ${c.address_state}, ${c.address_zip}`;
+
+/** Link "Ver rota": usa o link real cadastrado, ou monta uma busca a partir do endereço. */
+export const mapsHref = (c: Configuracoes) =>
+  c.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoMapsQuery(c))}`;
