@@ -46,7 +46,12 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
       {
         programacao.length > 0 && (
           <section aria-labelledby="schedule-heading">
-            <h2 id="schedule-heading" class="section-title">Programação semanal</h2>
+            <div class="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 id="schedule-heading" class="section-title">Programação semanal</h2>
+              <a href="/programacao-semanal.png" target="_blank" class="link-sweep text-sm font-semibold text-accent">
+                Baixar imagem para compartilhar
+              </a>
+            </div>
             <div class="mt-5">
               <ProgramacaoList items={programacao} />
             </div>
