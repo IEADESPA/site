@@ -17,6 +17,45 @@ interface Evento {
   registration_url: string | null;
 }
 
+interface Programacao {
+  day: "terca" | "quarta" | "quinta" | "sexta" | "sabado" | "domingo_manha" | "domingo_noite";
+  title: string;
+  scope: "sede" | "congregacoes" | "todas";
+  occurrence: "1" | "2" | "3" | "4_se_5" | "ultimo" | null;
+  time: string | null;
+}
+
+const DAY_ORDER: Programacao["day"][] = [
+  "terca",
+  "quarta",
+  "quinta",
+  "sexta",
+  "sabado",
+  "domingo_manha",
+  "domingo_noite",
+];
+const DAY_LABEL: Record<Programacao["day"], string> = {
+  terca: "Terça-feira",
+  quarta: "Quarta-feira",
+  quinta: "Quinta-feira",
+  sexta: "Sexta-feira",
+  sabado: "Sábado",
+  domingo_manha: "Domingo de manhã",
+  domingo_noite: "Domingo à noite",
+};
+const SCOPE_LABEL: Record<Programacao["scope"], string> = {
+  sede: "Somente na Sede",
+  congregacoes: "Nas congregações",
+  todas: "Sede e congregações",
+};
+const OCCURRENCE_LABEL: Record<NonNullable<Programacao["occurrence"]>, string> = {
+  "1": "1º domingo",
+  "2": "2º domingo",
+  "3": "3º domingo",
+  "4_se_5": "4º domingo (meses com 5 domingos)",
+  ultimo: "Último domingo do mês",
+};
+
 const allPosts = visiblePosts(await getAllMensagens());
 const events = (await fetchItems<Evento>("eventos")).sort((a, b) => {
   const dateA = a.event_date ? new Date(a.event_date).getTime() : Number.POSITIVE_INFINITY;
@@ -24,6 +63,13 @@ const events = (await fetchItems<Evento>("eventos")).sort((a, b) => {
   return dateA - dateB;
 });
 const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric" });
+
+const programacao = await fetchItems<Programacao>("programacao", "sort[]=sort");
+const schedule = DAY_ORDER.map((day) => ({
+  day,
+  label: DAY_LABEL[day],
+  items: programacao.filter((item) => item.day === day),
+})).filter((group) => group.items.length > 0);
 ---
 
 <BaseLayout title="Eventos" description={`Seminários, campanhas e eventos especiais da ${siteConfig.name}.`}>
@@ -32,12 +78,45 @@ const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "num
     <div class="canvas">
       <header class="pagehead">
         <p class="eyebrow">Agenda</p>
-        <h1 class="pagehead-title">Eventos</h1>
+        <h1 class="pagehead-title">Eventos e programação</h1>
         <p class="pagehead-description">
-          Seminários, campanhas e demais eventos especiais da igreja. Os horários fixos de culto
-          estão na <a href="/contato/">página de contato</a>.
+          A programação semanal de cultos e os eventos especiais da igreja.
         </p>
       </header>
+
+      {
+        schedule.length > 0 && (
+          <section aria-labelledby="schedule-heading">
+            <h2 id="schedule-heading" class="section-title">Programação semanal</h2>
+            <ul class="mt-5 grid gap-4">
+              {schedule.map((group) => (
+                <li class="schedule-card">
+                  <span class="schedule-day">{group.label}</span>
+                  <ul class="mt-2 grid gap-2">
+                    {group.items.map((item) => (
+                      <li class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                        <span>
+                          {item.occurrence && (
+                            <span class="schedule-occurrence">{OCCURRENCE_LABEL[item.occurrence]}: </span>
+                          )}
+                          {item.title}
+                        </span>
+                        <span class="text-sm text-muted-foreground">
+                          {SCOPE_LABEL[item.scope]}
+                          {item.time && ` · ${item.time}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+
+      <section class="mt-16" aria-labelledby="special-events-heading">
+        <h2 id="special-events-heading" class="section-title">Eventos especiais</h2>
 
       {
         events.length > 0 ? (
@@ -45,7 +124,7 @@ const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "num
             {events.map((event) => (
               <li class="event-card">
                 <div class="flex flex-wrap items-baseline justify-between gap-3">
-                  <h2 class="text-lg font-semibold tracking-tight">{event.title}</h2>
+                  <h3 class="text-lg font-semibold tracking-tight">{event.title}</h3>
                   {event.event_date && (
                     <span class="pill shrink-0">
                       {dateFormatter.format(new Date(event.event_date))}
@@ -72,6 +151,7 @@ const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "num
           </div>
         )
       }
+      </section>
 
       <div class="prose mt-16">
         <h2>Fique por dentro</h2>
@@ -86,6 +166,23 @@ const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "num
 </BaseLayout>
 
 <style>
+  .schedule-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.4rem;
+  }
+
+  .schedule-day {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .schedule-occurrence {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
   .event-card {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
