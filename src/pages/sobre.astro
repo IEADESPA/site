@@ -11,6 +11,7 @@ const allPosts = visiblePosts(await getAllMensagens());
 const authors = getAllAuthors(allPosts);
 const config = await fetchConfiguracoes();
 const sobreHtml = await marked.parse(config.sobre_corpo);
+const historiaHtml = config.historia ? await marked.parse(config.historia) : null;
 ---
 
 <BaseLayout
@@ -28,7 +29,16 @@ const sobreHtml = await marked.parse(config.sobre_corpo);
 
       <div class="prose" set:html={sobreHtml} />
 
-      <div class="prose">
+      {
+        historiaHtml && (
+          <section class="mt-16" aria-labelledby="historia-heading">
+            <h2 id="historia-heading" class="section-title">Nossa história</h2>
+            <div class="prose mt-4" set:html={historiaHtml} />
+          </section>
+        )
+      }
+
+      <div class="prose mt-16">
         <h2>Liderança</h2>
         <ul>
           {
