@@ -54,7 +54,12 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
       }
 
       <section class="mt-16" aria-labelledby="special-events-heading">
-        <h2 id="special-events-heading" class="section-title">Eventos especiais</h2>
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 id="special-events-heading" class="section-title">Eventos especiais</h2>
+          {events.length > 0 && (
+            <a href="/eventos.ics" class="link-sweep text-sm font-semibold text-accent">Assinar a agenda</a>
+          )}
+        </div>
 
         {
           events.length > 0 ? (

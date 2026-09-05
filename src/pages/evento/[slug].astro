@@ -80,11 +80,18 @@ const structuredData = startDate
           {event.location && <li><strong class="text-foreground">Local:</strong> {event.location}</li>}
         </ul>
 
-        {event.registration_url && (
-          <a href={event.registration_url} target="_blank" rel="noreferrer" class="btn btn-solid mt-6">
-            Inscreva-se
-          </a>
-        )}
+        <div class="mt-6 flex flex-wrap gap-3">
+          {event.registration_url && (
+            <a href={event.registration_url} target="_blank" rel="noreferrer" class="btn btn-solid">
+              Inscreva-se
+            </a>
+          )}
+          {event.event_date && (
+            <a href={`/evento/${event.slug}.ics`} class="btn btn-outline">
+              Adicionar ao calendário
+            </a>
+          )}
+        </div>
       </header>
 
       {cover && (
