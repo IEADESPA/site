@@ -27,7 +27,8 @@ const mapsLinkHref =
         <p class="eyebrow">Contato</p>
         <h1 class="pagehead-title">Fale conosco</h1>
         <p class="pagehead-description">
-          Dúvidas, pedidos de oração e visitas caem na mesma caixa de entrada. {contact.responseTime}
+          Dúvidas, pedidos de oração e visitas pastorais — escolha o assunto para chegar direto a
+          quem cuida disso. {contact.responseTime}
         </p>
       </header>
 
@@ -102,6 +103,16 @@ const mapsLinkHref =
           </div>
 
           <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="contact-type">Assunto</label>
+            <select id="contact-type" name="type" disabled={!isEnabled} class="field">
+              <option value="duvida">Dúvida geral</option>
+              <option value="oracao">Pedido de oração</option>
+              <option value="visita">Visita pastoral</option>
+              <option value="outro">Outro assunto</option>
+            </select>
+          </div>
+
+          <div class="grid gap-2">
             <label class="text-sm font-semibold" for="contact-message">Mensagem</label>
             <textarea id="contact-message" name="message" rows="7" required disabled={!isEnabled} class="field resize-y"></textarea>
           </div>
@@ -146,6 +157,7 @@ const mapsLinkHref =
                 body: JSON.stringify({
                   name: data.get("name"),
                   email: data.get("email"),
+                  type: data.get("type"),
                   message: data.get("message"),
                 }),
               });

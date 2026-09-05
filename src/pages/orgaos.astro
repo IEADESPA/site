@@ -9,10 +9,38 @@ import { fetchItems } from "@/lib/directus";
 interface Orgao {
   name: string;
   description: string;
+  category: "governanca" | "departamentos" | "secretarias" | "servicos";
 }
+
+const CATEGORIES: { value: Orgao["category"]; label: string; description: string }[] = [
+  {
+    value: "governanca",
+    label: "Governança",
+    description: "Assembleia, ministério geral e conselhos que deliberam sobre a condução da igreja.",
+  },
+  {
+    value: "departamentos",
+    label: "Departamentos",
+    description: "Grupos organizados por faixa etária e perfil: crianças, jovens, senhoras e homens.",
+  },
+  {
+    value: "secretarias",
+    label: "Secretarias",
+    description: "Missões, ação social, família e escola bíblica.",
+  },
+  {
+    value: "servicos",
+    label: "Serviços",
+    description: "Louvor, adoração e demais equipes que servem diretamente nos cultos.",
+  },
+];
 
 const allPosts = visiblePosts(await getAllMensagens());
 const orgaos = await fetchItems<Orgao>("ministerios", "sort[]=sort");
+const groups = CATEGORIES.map((category) => ({
+  ...category,
+  items: orgaos.filter((orgao) => orgao.category === category.value),
+})).filter((group) => group.items.length > 0);
 ---
 
 <BaseLayout
@@ -32,16 +60,33 @@ const orgaos = await fetchItems<Orgao>("ministerios", "sort[]=sort");
         </p>
       </header>
 
-      <ul class="grid gap-6 sm:grid-cols-2">
+      <nav class="orgao-tabs" aria-label="Categorias de órgãos">
+        <button type="button" class="orgao-tab is-active" data-orgao-tab="todos">Todos</button>
         {
-          orgaos.map((orgao) => (
-            <li class="orgao-card">
-              <h2 class="text-lg font-semibold tracking-tight">{orgao.name}</h2>
-              <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{orgao.description}</p>
-            </li>
+          groups.map((group) => (
+            <button type="button" class="orgao-tab" data-orgao-tab={group.value}>
+              {group.label}
+            </button>
           ))
         }
-      </ul>
+      </nav>
+
+      {
+        groups.map((group) => (
+          <section class="orgao-group" data-orgao-group={group.value}>
+            <h2 class="section-title">{group.label}</h2>
+            <p class="mt-1 text-sm text-muted-foreground">{group.description}</p>
+            <ul class="mt-5 grid gap-6 sm:grid-cols-2">
+              {group.items.map((orgao) => (
+                <li class="orgao-card">
+                  <h3 class="text-lg font-semibold tracking-tight">{orgao.name}</h3>
+                  <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{orgao.description}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      }
 
       <div class="prose mt-16">
         <h2>Quer participar?</h2>
@@ -56,7 +101,62 @@ const orgaos = await fetchItems<Orgao>("ministerios", "sort[]=sort");
   <SiteFooter />
 </BaseLayout>
 
+<script is:inline>
+  (() => {
+    const tabs = document.querySelectorAll("[data-orgao-tab]");
+    const groups = document.querySelectorAll("[data-orgao-group]");
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const target = tab.getAttribute("data-orgao-tab");
+
+        tabs.forEach((t) => t.classList.toggle("is-active", t === tab));
+        groups.forEach((group) => {
+          const match = target === "todos" || group.getAttribute("data-orgao-group") === target;
+          group.hidden = !match;
+        });
+      });
+    });
+  })();
+</script>
+
 <style>
+  .orgao-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .orgao-tab {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    padding: 0.45rem 1.1rem;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: transparent;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .orgao-tab:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    color: var(--accent);
+  }
+
+  .orgao-tab.is-active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .orgao-group + .orgao-group {
+    margin-top: 3rem;
+  }
+
   .orgao-card {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
