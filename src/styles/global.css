@@ -48,9 +48,12 @@
   --muted-foreground: #5b6577;
   --primary: #0f1f3d;
   --primary-foreground: #ffffff;
-  --accent: #b8912b;
-  --accent-strong: #8f6f1f;
-  --accent-foreground: #1a1200;
+  /* #b8912b tinha só 2.95:1 de contraste com o fundo branco (abaixo do
+     mínimo de 4.5:1 do WCAG AA) — como é usado em links e textos em toda
+     a área clara, foi escurecido para #8f6f1f (4.71:1). */
+  --accent: #8f6f1f;
+  --accent-strong: #6b5417;
+  --accent-foreground: #ffffff;
   --border: #e8e3d4;
   --border-strong: #d8cfae;
   /* Callout states. */
