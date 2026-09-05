@@ -29,6 +29,11 @@ const structuredData = [
 
 const quickLinks = [
   {
+    label: "Primeira vez aqui?",
+    description: "Informações para quem vai nos visitar pela primeira vez.",
+    href: "/visitante/",
+  },
+  {
     label: "Notícias",
     description: "Comunicados e novidades da igreja.",
     href: "/noticias/",
@@ -71,7 +76,8 @@ const quickLinks = [
         <p class="hero-description">{config.about}</p>
 
         <div class="mt-8 flex flex-wrap items-center gap-3">
-          <a href="/mensagens/" class="btn btn-solid">Ouvir mensagens</a>
+          <a href="/visitante/" class="btn btn-solid">Primeira vez aqui?</a>
+          <a href="/mensagens/" class="btn btn-outline">Ouvir mensagens</a>
           <a href="/contato/" class="btn btn-outline">Como chegar</a>
           <a href="https://app.ieadespa.org.br" target="_blank" rel="noreferrer" class="btn btn-outline">Meu Painel</a>
         </div>

@@ -1,0 +1,130 @@
+---
+import { marked } from "marked";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { fetchSingleton } from "@/lib/directus";
+
+interface Visitante {
+  headline: string;
+  subheadline: string;
+  boas_vindas: string;
+  o_que_esperar: string;
+  estrutura: string;
+  faq: { pergunta: string; resposta: string }[];
+}
+
+const allPosts = visiblePosts(await getAllMensagens());
+const visitante = await fetchSingleton<Visitante>("visitantes");
+const [boasVindasHtml, oQueEsperarHtml, estruturaHtml] = await Promise.all([
+  marked.parse(visitante.boas_vindas ?? ""),
+  marked.parse(visitante.o_que_esperar ?? ""),
+  marked.parse(visitante.estrutura ?? ""),
+]);
+
+const nextSteps = [
+  { label: "Programação semanal", description: "Veja os dias e horários de cada culto.", href: "/eventos/" },
+  { label: "Congregações", description: "Encontre a congregação mais próxima de você.", href: "/congregacoes/" },
+  { label: "Como chegar", description: "Endereço, rota e horários da sede.", href: "/contato/" },
+];
+---
+
+<BaseLayout
+  title="Primeira vez aqui?"
+  description={`Informações para quem vai visitar a ${siteConfig.name} pela primeira vez.`}
+>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Bem-vindo(a)</p>
+        <h1 class="pagehead-title">{visitante.headline}</h1>
+        <p class="pagehead-description">{visitante.subheadline}</p>
+      </header>
+
+      {visitante.boas_vindas && <div class="prose" set:html={boasVindasHtml} />}
+
+      {visitante.o_que_esperar && (
+        <section class="mt-14" aria-labelledby="esperar-heading">
+          <h2 id="esperar-heading" class="section-title">O que esperar</h2>
+          <div class="prose mt-4" set:html={oQueEsperarHtml} />
+        </section>
+      )}
+
+      {visitante.estrutura && (
+        <section class="mt-14" aria-labelledby="estrutura-heading">
+          <h2 id="estrutura-heading" class="section-title">Estrutura para famílias</h2>
+          <div class="prose mt-4" set:html={estruturaHtml} />
+        </section>
+      )}
+
+      {visitante.faq?.length > 0 && (
+        <section class="mt-14" aria-labelledby="faq-heading">
+          <h2 id="faq-heading" class="section-title">Perguntas frequentes</h2>
+          <div class="mt-5 grid gap-3">
+            {visitante.faq.map((item) => (
+              <details class="faq-item">
+                <summary>{item.pergunta}</summary>
+                <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{item.resposta}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section class="mt-16" aria-labelledby="next-steps-heading">
+        <h2 id="next-steps-heading" class="section-title">Próximos passos</h2>
+        <div class="mt-5 grid gap-5 sm:grid-cols-3">
+          {nextSteps.map((step) => (
+            <a href={step.href} class="quick-link link-title">
+              <span class="link-title__text block text-base font-semibold tracking-tight">{step.label}</span>
+              <span class="mt-2 block text-sm leading-relaxed text-muted-foreground">{step.description}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <div class="prose mt-16">
+        <h2>Ainda com dúvidas?</h2>
+        <p>
+          Fale com a gente pela <a href="/contato/">página de contato</a> — respondemos com prazer antes
+          da sua visita.
+        </p>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>
+
+<style>
+  .faq-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+  }
+
+  .faq-item summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .faq-item summary::marker {
+    color: var(--accent);
+  }
+
+  .quick-link {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.4rem;
+    text-decoration: none;
+    transition: border-color var(--duration) var(--ease-out);
+  }
+
+  .quick-link:hover,
+  .quick-link:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  }
+</style>
