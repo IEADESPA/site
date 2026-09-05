@@ -31,7 +31,7 @@ interface Props {
 const { event } = Astro.props;
 const bodyHtml = event.body ? await marked.parse(event.body) : "";
 const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric" });
-const cover = event.cover ? directusAssetUrl(event.cover) : undefined;
+const cover = event.cover ? directusAssetUrl(event.cover, { width: 1600, quality: 80, format: "webp" }) : undefined;
 ---
 
 <BaseLayout title={event.title} description={event.description} image={cover}>

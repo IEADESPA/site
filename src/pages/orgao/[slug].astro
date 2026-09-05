@@ -65,7 +65,11 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
         orgao.leader_name && (
           <div class="leader-card">
             {orgao.leader_photo && (
-              <img src={directusAssetUrl(orgao.leader_photo)} alt={orgao.leader_name} class="leader-photo" />
+              <img
+                src={directusAssetUrl(orgao.leader_photo, { width: 200, height: 200, fit: "cover", quality: 80, format: "webp" })}
+                alt={orgao.leader_name}
+                class="leader-photo"
+              />
             )}
             <div>
               <p class="text-lg font-semibold tracking-tight">{orgao.leader_name}</p>

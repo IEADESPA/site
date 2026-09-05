@@ -54,7 +54,7 @@ function toNoticia(n: DirectusNoticia): Noticia {
       excerpt: n.excerpt,
       category: n.category,
       date: new Date(n.date),
-      cover: n.cover ? directusAssetUrl(n.cover) : undefined,
+      cover: n.cover ? directusAssetUrl(n.cover, { width: 1600, quality: 80, format: "webp" }) : undefined,
       featured: n.featured,
       draft: n.draft,
       orgaoRelacionado: n.orgao_relacionado,

@@ -57,7 +57,7 @@ function toPost(m: DirectusMensagem): Post {
       date: new Date(m.date),
       updatedDate: m.updated_date ? new Date(m.updated_date) : undefined,
       author: { name: m.author_name, role: m.author_role },
-      cover: m.cover ? directusAssetUrl(m.cover) : undefined,
+      cover: m.cover ? directusAssetUrl(m.cover, { width: 1600, quality: 80, format: "webp" }) : undefined,
       videoUrl: m.video_url ?? undefined,
       featured: m.featured,
       draft: m.draft,

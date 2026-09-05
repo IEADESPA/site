@@ -46,7 +46,11 @@ const registrosComHtml = await Promise.all(
                 <h2 class="text-xl font-semibold tracking-tight">{registro.title}</h2>
                 {registro.photo && (
                   <figure class="historia-photo">
-                    <img src={directusAssetUrl(registro.photo)} alt={registro.title} loading="lazy" />
+                    <img
+                      src={directusAssetUrl(registro.photo, { width: 1400, quality: 80, format: "webp" })}
+                      alt={registro.title}
+                      loading="lazy"
+                    />
                   </figure>
                 )}
                 <div class="prose mt-4" set:html={registro.bodyHtml} />

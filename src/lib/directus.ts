@@ -29,8 +29,33 @@ export async function fetchSingleton<T>(collection: string): Promise<T> {
   return data;
 }
 
-/** Monta a URL pública de um arquivo (imagem, PDF) enviado no Directus. */
-export const directusAssetUrl = (fileId: string) => `${DIRECTUS_URL}/assets/${fileId}`;
+export interface ImageTransform {
+  width?: number;
+  height?: number;
+  quality?: number;
+  fit?: "cover" | "contain" | "inside" | "outside";
+  format?: "webp" | "avif" | "jpg" | "png";
+}
+
+/**
+ * Monta a URL pública de um arquivo (imagem, PDF) enviado no Directus.
+ * Passar `transform` faz o Directus redimensionar/comprimir a imagem sob
+ * demanda (ex.: uma miniatura de galeria não precisa baixar a foto original
+ * de vários MB) — não se aplica a arquivos não-imagem, como PDFs.
+ */
+export const directusAssetUrl = (fileId: string, transform?: ImageTransform) => {
+  const url = `${DIRECTUS_URL}/assets/${fileId}`;
+  if (!transform) return url;
+
+  const params = new URLSearchParams();
+  if (transform.width) params.set("width", String(transform.width));
+  if (transform.height) params.set("height", String(transform.height));
+  if (transform.quality) params.set("quality", String(transform.quality));
+  if (transform.fit) params.set("fit", transform.fit);
+  if (transform.format) params.set("format", transform.format);
+
+  return `${url}?${params.toString()}`;
+};
 
 /** Dados institucionais e de contato, editáveis em Directus → Configurações do Site. */
 export interface Configuracoes {
