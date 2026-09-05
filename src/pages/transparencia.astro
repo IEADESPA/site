@@ -14,17 +14,17 @@ interface Relatorio {
   file: string;
 }
 
+interface MembroDiretoria {
+  role: string;
+  name: string;
+}
+
 const allPosts = visiblePosts(await getAllMensagens());
 
-/** Substitua pelos nomes reais da diretoria em exercício. */
-const board = [
-  { role: "Pastor Presidente", name: "A definir" },
-  { role: "Vice-presidente", name: "A definir" },
-  { role: "Secretário(a)", name: "A definir" },
-  { role: "Tesoureiro(a)", name: "A definir" },
-];
+/** Editável em Directus → Diretoria. */
+const board = await fetchItems<MembroDiretoria>("diretoria", "sort[]=sort");
 
-/** Publicados pela diretoria através do painel administrativo em /admin. */
+/** Publicados pela diretoria através do painel administrativo. */
 const reports = (await fetchItems<Relatorio>("relatorios")).sort(
   (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
 );

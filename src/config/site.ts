@@ -16,23 +16,12 @@ export const siteConfig = {
   dateLocale: "pt-BR",
   locale: "pt_BR",
   socialImage: "/og-image.png",
-  /** Exibido no card "Sobre" da barra lateral da página inicial. */
-  about:
-    "A IEADESPA é uma igreja evangélica comprometida em pregar o evangelho de Jesus Cristo, fortalecer famílias e servir à comunidade de Parauapebas com amor e verdade.",
-  address: {
-    line: "PA-275, Quadra 2G, Lote 05, Bairro Cidade Jardim",
-    city: "Parauapebas",
-    state: "PA",
-    zip: "68515-000",
-    full: "PA-275, Quadra 2G, Lote 05, Bairro Cidade Jardim, CEP 68515-000, Parauapebas – PA",
-    mapsQuery: "PA-275, Quadra 2G, Lote 05, Bairro Cidade Jardim, Parauapebas - PA, 68515-000",
-  },
-  /** Horários semanais de culto, exibidos na home e na página de contato. */
-  serviceTimes: [
-    { day: "Domingo", time: "18h", label: "Culto de Celebração" },
-    { day: "Quarta-feira", time: "19h30", label: "Culto de Oração e Doutrina" },
-    { day: "Sexta-feira", time: "19h30", label: "Culto de Jovens" },
-  ],
+  /**
+   * Frase de destaque, resumo, texto completo do "Sobre", endereço e
+   * horários de culto NÃO ficam mais aqui — são editáveis em Directus →
+   * Configurações do Site (coleção singleton "configuracoes"). Ver
+   * src/lib/directus.ts (fetchConfiguracoes).
+   */
   /**
    * Ambos os formulários abaixo saem habilitados com uma `action` vazia, o
    * que os torna demonstrações totalmente interativas que não enviam para

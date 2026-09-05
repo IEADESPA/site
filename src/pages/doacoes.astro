@@ -4,8 +4,10 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { fetchConfiguracoes } from "@/lib/directus";
 
 const allPosts = visiblePosts(await getAllMensagens());
+const config = await fetchConfiguracoes();
 
 /** Substitua pela chave PIX oficial da igreja antes de publicar. */
 const pixKey = "seta@ieadespa.org";
@@ -43,7 +45,7 @@ const pixKey = "seta@ieadespa.org";
           </p>
           <ul class="mt-4 grid gap-2 text-sm">
             {
-              siteConfig.serviceTimes.map((service) => (
+              config.service_times.map((service) => (
                 <li>
                   <span class="font-semibold">{service.day}</span> — {service.time} ({service.label})
                 </li>

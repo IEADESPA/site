@@ -1,12 +1,16 @@
 ---
+import { marked } from "marked";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { authorSlug, getAllAuthors, getAllMensagens, visiblePosts } from "@/lib/posts";
+import { fetchConfiguracoes } from "@/lib/directus";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const authors = getAllAuthors(allPosts);
+const config = await fetchConfiguracoes();
+const sobreHtml = await marked.parse(config.sobre_corpo);
 ---
 
 <BaseLayout
@@ -19,38 +23,12 @@ const authors = getAllAuthors(allPosts);
       <header class="pagehead">
         <p class="eyebrow">Sobre nós</p>
         <h1 class="pagehead-title">{siteConfig.name}</h1>
-        <p class="pagehead-description">{siteConfig.about}</p>
+        <p class="pagehead-description">{config.about}</p>
       </header>
 
+      <div class="prose" set:html={sobreHtml} />
+
       <div class="prose">
-        <h2>Quem somos</h2>
-        <p>
-          A {siteConfig.fullName} é uma igreja local ligada à Convenção das Assembleias de Deus,
-          reunida em Parauapebas para adorar a Deus, ensinar a Palavra e servir a comunidade. Nossas
-          portas estão abertas a todos que buscam conhecer a Jesus Cristo e crescer na fé.
-        </p>
-
-        <h2>Nossa missão</h2>
-        <p>
-          Pregar o evangelho de Jesus Cristo, fazer discípulos e edificar famílias, alcançando
-          Parauapebas e além com amor, verdade e serviço prático ao próximo.
-        </p>
-
-        <h2>Nossa visão</h2>
-        <p>
-          Ser uma igreja relevante para cada geração — crianças, jovens, adultos e idosos — vivendo o
-          evangelho dentro e fora dos cultos, com ministérios que acolhem, discipulam e enviam.
-        </p>
-
-        <h2>O que cremos</h2>
-        <ul>
-          <li>Na inspiração e autoridade da Bíblia Sagrada como Palavra de Deus.</li>
-          <li>Na Trindade: Pai, Filho e Espírito Santo.</li>
-          <li>Na salvação pela graça, mediante a fé em Jesus Cristo.</li>
-          <li>No batismo nas águas e no batismo com o Espírito Santo.</li>
-          <li>No chamado da igreja a viver em santidade e a servir ao próximo.</li>
-        </ul>
-
         <h2>Liderança</h2>
         <ul>
           {
