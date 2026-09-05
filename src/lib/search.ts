@@ -6,7 +6,7 @@ export interface SearchItem {
   title: string;
   excerpt: string;
   href: string;
-  group: "Mensagem" | "Notícia" | "Órgão" | "Congregação" | "Sede";
+  group: "Mensagem" | "Notícia" | "Órgão" | "Congregação" | "Sede" | "História";
   meta: string;
 }
 
@@ -33,17 +33,23 @@ interface Congregacao {
   state: string | null;
 }
 
+interface RegistroHistorico {
+  title: string;
+  period: string | null;
+}
+
 let cachedIndex: SearchItem[] | null = null;
 
 /** Índice de busca do site inteiro: mensagens, notícias, órgãos e congregações. */
 export async function buildSearchIndex(): Promise<SearchItem[]> {
   if (cachedIndex) return cachedIndex;
 
-  const [posts, noticias, orgaos, congregacoes, config] = await Promise.all([
+  const [posts, noticias, orgaos, congregacoes, registrosHistoricos, config] = await Promise.all([
     visiblePosts(await getAllMensagens()),
     visibleNoticias(await getAllNoticias()),
     fetchItems<Orgao>("ministerios"),
     fetchItems<Congregacao>("congregacoes"),
+    fetchItems<RegistroHistorico>("historia"),
     fetchConfiguracoes(),
   ]);
 
@@ -79,6 +85,14 @@ export async function buildSearchIndex(): Promise<SearchItem[]> {
     meta: [congregacao.neighborhood, congregacao.city].filter(Boolean).join(", "),
   }));
 
+  const fromHistoria: SearchItem[] = registrosHistoricos.map((registro) => ({
+    title: registro.title,
+    excerpt: "",
+    href: "/historia/",
+    group: "História",
+    meta: registro.period ?? "",
+  }));
+
   const sede: SearchItem = {
     title: "Sede",
     excerpt: enderecoCompleto(config),
@@ -87,6 +101,6 @@ export async function buildSearchIndex(): Promise<SearchItem[]> {
     meta: "Endereço e horários de culto",
   };
 
-  cachedIndex = [sede, ...fromPosts, ...fromNoticias, ...fromOrgaos, ...fromCongregacoes];
+  cachedIndex = [sede, ...fromPosts, ...fromNoticias, ...fromOrgaos, ...fromCongregacoes, ...fromHistoria];
   return cachedIndex;
 }

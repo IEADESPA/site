@@ -1,0 +1,113 @@
+---
+import { marked } from "marked";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { directusAssetUrl, fetchItems } from "@/lib/directus";
+
+interface RegistroHistorico {
+  title: string;
+  period: string | null;
+  photo: string | null;
+  body: string;
+}
+
+const allPosts = visiblePosts(await getAllMensagens());
+const registros = await fetchItems<RegistroHistorico>("historia", "sort[]=sort");
+const registrosComHtml = await Promise.all(
+  registros.map(async (registro) => ({ ...registro, bodyHtml: await marked.parse(registro.body ?? "") })),
+);
+---
+
+<BaseLayout
+  title="Nossa história"
+  description={`A história da ${siteConfig.fullName}, da fundação até hoje — fotos, relatos e entrevistas.`}
+>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Acervo</p>
+        <h1 class="pagehead-title">Nossa história</h1>
+        <p class="pagehead-description">
+          Um registro da caminhada da {siteConfig.name} — fotos de época, relatos e entrevistas
+          de quem viveu cada momento.
+        </p>
+      </header>
+
+      {
+        registrosComHtml.length > 0 ? (
+          <ol class="historia-timeline">
+            {registrosComHtml.map((registro) => (
+              <li class="historia-item">
+                {registro.period && <p class="eyebrow historia-period">{registro.period}</p>}
+                <h2 class="text-xl font-semibold tracking-tight">{registro.title}</h2>
+                {registro.photo && (
+                  <figure class="historia-photo">
+                    <img src={directusAssetUrl(registro.photo)} alt={registro.title} loading="lazy" />
+                  </figure>
+                )}
+                <div class="prose mt-4" set:html={registro.bodyHtml} />
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div class="gallery-empty">
+            <p class="text-sm leading-relaxed text-muted-foreground">
+              O acervo histórico ainda está sendo montado. Volte em breve.
+            </p>
+          </div>
+        )
+      }
+
+      <div class="prose mt-16">
+        <p><a href="/sobre/">&larr; Voltar para Sobre</a></p>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>
+
+<style>
+  .historia-timeline {
+    display: grid;
+    gap: 3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .historia-item {
+    padding-top: 3rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .historia-item:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .historia-period {
+    margin-bottom: 0.4rem;
+  }
+
+  .historia-photo {
+    margin: 1.25rem 0 0;
+  }
+
+  .historia-photo img {
+    width: 100%;
+    max-height: 28rem;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+  }
+
+  .gallery-empty {
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+</style>

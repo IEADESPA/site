@@ -4,7 +4,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { fetchItems } from "@/lib/directus";
+import { enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes, fetchItems } from "@/lib/directus";
 
 interface Congregacao {
   id: number;
@@ -25,6 +25,10 @@ interface Congregacao {
 
 const allPosts = visiblePosts(await getAllMensagens());
 const congregacoes = await fetchItems<Congregacao>("congregacoes", "sort[]=sort");
+const config = await fetchConfiguracoes();
+const sedeMapsHref =
+  config.maps_url ||
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoMapsQuery(config))}`;
 ---
 
 <BaseLayout
@@ -38,12 +42,22 @@ const congregacoes = await fetchItems<Congregacao>("congregacoes", "sort[]=sort"
         <p class="eyebrow">Rede de congregações</p>
         <h1 class="pagehead-title">Congregações</h1>
         <p class="pagehead-description">
-          Além da sede, a {siteConfig.name} sustenta congregações e pontos de pregação em outros
-          bairros e cidades da região.
+          A sede e as demais congregações e pontos de pregação da {siteConfig.name} pela região.
         </p>
       </header>
 
       <ul class="grid gap-6 sm:grid-cols-2">
+        <li class="congregacao-card congregacao-card-sede">
+          <span class="pill mb-2 inline-block">Sede</span>
+          <h2 class="text-lg font-semibold tracking-tight">{siteConfig.name}</h2>
+          <p class="mt-2 text-sm text-muted-foreground">{enderecoCompleto(config)}</p>
+          <div class="mt-3 flex flex-wrap gap-4">
+            <a href={sedeMapsHref} target="_blank" rel="noreferrer" class="link-sweep text-sm font-semibold text-accent">
+              Ver rota no Google Maps
+            </a>
+            <a href="/contato/" class="link-sweep text-sm font-semibold text-accent">Saiba mais</a>
+          </div>
+        </li>
         {
           congregacoes.map((congregacao) => (
             <li class="congregacao-card">
@@ -110,6 +124,10 @@ const congregacoes = await fetchItems<Congregacao>("congregacoes", "sort[]=sort"
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1.5rem 1.6rem;
+  }
+
+  .congregacao-card-sede {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   }
 
   .gallery-empty {

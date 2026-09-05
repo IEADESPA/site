@@ -37,7 +37,6 @@ export interface Configuracoes {
   tagline: string;
   about: string;
   sobre_corpo: string;
-  historia: string | null;
   address_line: string;
   address_neighborhood: string;
   address_city: string;

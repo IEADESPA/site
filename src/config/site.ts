@@ -44,6 +44,7 @@ export const siteConfig = {
 export const navigation = [
   { label: "Início", href: "/" },
   { label: "Sobre", href: "/sobre/" },
+  { label: "Nossa História", href: "/historia/" },
   { label: "Notícias", href: "/noticias/" },
   { label: "Órgãos", href: "/orgaos/" },
   { label: "Congregações", href: "/congregacoes/" },
