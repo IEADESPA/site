@@ -1,4 +1,5 @@
 ---
+import CalendarioMensal from "@/components/CalendarioMensal.astro";
 import ProgramacaoList from "@/components/ProgramacaoList.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
@@ -62,8 +63,24 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
         </div>
 
         {
+          events.length > 0 && (
+            <div class="mt-5 max-w-md">
+              <CalendarioMensal
+                events={events
+                  .filter((event) => event.event_date)
+                  .map((event) => ({
+                    date: event.event_date as string,
+                    title: event.title,
+                    href: event.body ? `/evento/${event.slug}/` : undefined,
+                  }))}
+              />
+            </div>
+          )
+        }
+
+        {
           events.length > 0 ? (
-            <ul class="grid gap-5">
+            <ul class="mt-8 grid gap-5">
               {events.map((event) => (
                 <li class="event-card">
                   <div class="flex flex-wrap items-baseline justify-between gap-3">
