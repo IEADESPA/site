@@ -1,5 +1,5 @@
 ---
-import NewsletterSignup from "@/components/NewsletterSignup.astro";
+import NoticiaCard from "@/components/NoticiaCard.astro";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
@@ -7,14 +7,21 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { categoryHref, getCategoryList, getFeatured, getAllMensagens, visiblePosts } from "@/lib/posts";
 import { enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
+import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const feed = allPosts.slice(0, 6);
 const featured = getFeatured(allPosts, 4);
 const categoryList = getCategoryList(allPosts);
 const config = await fetchConfiguracoes();
+const latestNoticias = visibleNoticias(await getAllNoticias()).slice(0, 3);
 
 const quickLinks = [
+  {
+    label: "Notícias",
+    description: "Comunicados e novidades da igreja.",
+    href: "/noticias/",
+  },
   {
     label: "Órgãos",
     description: "Conselhos, departamentos e secretarias da igreja.",
@@ -110,10 +117,17 @@ const quickLinks = [
             <p class="text-lg font-semibold tracking-tight">{siteConfig.name}</p>
             <p class="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">{config.about}</p>
             <p class="mt-3 text-sm leading-relaxed text-muted-foreground">{enderecoCompleto(config)}</p>
-            <div class="mt-7 border-t border-border pt-6">
-              <NewsletterSignup />
-            </div>
           </section>
+
+          {latestNoticias.length > 0 && (
+            <section aria-labelledby="noticias-heading">
+              <h2 id="noticias-heading" class="section-title">Notícias</h2>
+              <div class="grid gap-7">
+                {latestNoticias.map((noticia) => <NoticiaCard noticia={noticia} variant="compact" headingLevel="h3" />)}
+              </div>
+              <a href="/noticias/" class="btn btn-outline btn-block mt-6">Ver todas as notícias</a>
+            </section>
+          )}
 
           {featured.length > 0 && (
             <section aria-labelledby="featured-heading">

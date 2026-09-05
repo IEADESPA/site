@@ -23,15 +23,12 @@ export const siteConfig = {
    * src/lib/directus.ts (fetchConfiguracoes).
    */
   /**
-   * Ambos os formulários abaixo enviam direto para o Directus (coleções
-   * "newsletter_assinantes" e "contato_mensagens" — ver `fetch()` nos
-   * respectivos componentes/páginas). `enabled: false` desativa o controle.
+   * Envia direto para o Directus (coleção "contato_mensagens" — ver
+   * `fetch()` em src/pages/contato.astro). `enabled: false` desativa o
+   * controle. Não há newsletter por e-mail: avisos e novidades vão na
+   * coleção "noticias" (páginas /noticias/), sem depender de um provedor de
+   * envio de e-mail em massa.
    */
-  newsletter: {
-    enabled: true,
-    title: "Receba nossos avisos",
-    description: "Um e-mail quando houver novidades: eventos, mensagens novas e avisos da igreja.",
-  },
   contact: {
     enabled: true,
     responseTime: "Normalmente respondemos em até dois dias úteis.",
@@ -47,6 +44,7 @@ export const siteConfig = {
 export const navigation = [
   { label: "Início", href: "/" },
   { label: "Sobre", href: "/sobre/" },
+  { label: "Notícias", href: "/noticias/" },
   { label: "Órgãos", href: "/orgaos/" },
   { label: "Congregações", href: "/congregacoes/" },
   { label: "Eventos", href: "/eventos/" },

@@ -1,0 +1,64 @@
+---
+import NoticiaCard from "@/components/NoticiaCard.astro";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
+
+const allPosts = visiblePosts(await getAllMensagens());
+const noticias = visibleNoticias(await getAllNoticias());
+---
+
+<BaseLayout
+  title="Notícias"
+  description={`Notícias e comunicados institucionais da ${siteConfig.name}.`}
+>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Fique por dentro</p>
+        <h1 class="pagehead-title">Notícias</h1>
+        <p class="pagehead-description">
+          Comunicados, novidades e cobertura dos acontecimentos da igreja.
+        </p>
+      </header>
+
+      {
+        noticias.length > 0 ? (
+          <div class="noticias-grid">
+            {noticias.map((noticia, index) => (
+              <NoticiaCard noticia={noticia} variant={index === 0 ? "lead" : "feed"} />
+            ))}
+          </div>
+        ) : (
+          <div class="gallery-empty">
+            <p class="text-sm leading-relaxed text-muted-foreground">Nenhuma notícia publicada ainda.</p>
+          </div>
+        )
+      }
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>
+
+<style>
+  .noticias-grid {
+    display: grid;
+    gap: 3rem;
+  }
+
+  .noticias-grid > :not(:first-child) {
+    padding-top: 3rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .gallery-empty {
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+</style>
