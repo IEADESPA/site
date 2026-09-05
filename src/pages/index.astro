@@ -6,7 +6,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { categoryHref, getCategoryList, getFeatured, getAllMensagens, visiblePosts } from "@/lib/posts";
-import { enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
+import { churchStructuredData, enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
 import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
 
 const allPosts = visiblePosts(await getAllMensagens());
@@ -15,6 +15,17 @@ const featured = getFeatured(allPosts, 4);
 const categoryList = getCategoryList(allPosts);
 const config = await fetchConfiguracoes();
 const latestNoticias = visibleNoticias(await getAllNoticias()).slice(0, 3);
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: siteConfig.name,
+    url: siteConfig.siteUrl,
+    description: siteConfig.description,
+    publisher: { "@type": "Organization", name: siteConfig.authorName },
+  },
+  churchStructuredData(config, siteConfig.siteUrl, siteConfig.name),
+];
 
 const quickLinks = [
   {
@@ -50,7 +61,7 @@ const quickLinks = [
 ];
 ---
 
-<BaseLayout>
+<BaseLayout structuredData={structuredData}>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="inner">

@@ -5,7 +5,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { directusAssetUrl, fetchItems } from "@/lib/directus";
+import { directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
 
 interface Evento {
   slug: string;
@@ -32,9 +32,34 @@ const { event } = Astro.props;
 const bodyHtml = event.body ? await marked.parse(event.body) : "";
 const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric" });
 const cover = event.cover ? directusAssetUrl(event.cover, { width: 1600, quality: 80, format: "webp" }) : undefined;
+const config = await fetchConfiguracoes();
+
+/* "19h30" -> "19:30", exigido pelo ISO 8601 do schema.org. Se não bater
+   com o padrão esperado, a hora fica de fora em vez de gerar dado inválido. */
+const timeMatch = event.time ? /^(\d{1,2})h(\d{2})?$/i.exec(event.time.trim()) : null;
+const isoTime = timeMatch ? `T${timeMatch[1].padStart(2, "0")}:${timeMatch[2] ?? "00"}:00` : "";
+const startDate = event.event_date ? `${event.event_date}${isoTime}` : undefined;
+const structuredData = startDate
+  ? {
+      "@context": "https://schema.org",
+      "@type": "Event",
+      name: event.title,
+      description: event.description,
+      startDate,
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      location: {
+        "@type": "Place",
+        name: event.location || siteConfig.name,
+        address: event.location || enderecoCompleto(config),
+      },
+      image: cover ? [cover] : undefined,
+      organizer: { "@type": "Organization", name: siteConfig.authorName, url: siteConfig.siteUrl },
+    }
+  : undefined;
 ---
 
-<BaseLayout title={event.title} description={event.description} image={cover}>
+<BaseLayout title={event.title} description={event.description} image={cover} structuredData={structuredData}>
   <SiteHeader posts={visiblePosts(await getAllMensagens())} />
   <main id="content" class="outer">
     <article class="canvas">
@@ -81,6 +106,7 @@ const cover = event.cover ? directusAssetUrl(event.cover, { width: 1600, quality
     }
 
     .article-image :global(img) {
+      aspect-ratio: 16 / 9;
       max-height: 32rem;
       width: 100%;
       object-fit: cover;

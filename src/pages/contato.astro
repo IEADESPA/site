@@ -4,10 +4,11 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { DIRECTUS_URL, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes } from "@/lib/directus";
+import { DIRECTUS_URL, churchStructuredData, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes } from "@/lib/directus";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const config = await fetchConfiguracoes();
+const structuredData = churchStructuredData(config, siteConfig.siteUrl, siteConfig.name);
 const contact = siteConfig.contact;
 const isEnabled = contact.enabled;
 /* A pré-visualização em iframe só funciona com uma busca por endereço (é o
@@ -19,7 +20,11 @@ const mapsLinkHref =
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoMapsQuery(config))}`;
 ---
 
-<BaseLayout title="Contato" description={`Fale com a ${siteConfig.name} e veja como chegar até nós.`}>
+<BaseLayout
+  title="Contato"
+  description={`Fale com a ${siteConfig.name} e veja como chegar até nós.`}
+  structuredData={structuredData}
+>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas">
