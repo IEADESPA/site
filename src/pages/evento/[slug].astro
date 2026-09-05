@@ -1,0 +1,90 @@
+---
+import { marked } from "marked";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { directusAssetUrl, fetchItems } from "@/lib/directus";
+
+interface Evento {
+  slug: string;
+  title: string;
+  event_date: string | null;
+  time: string | null;
+  location: string | null;
+  description: string;
+  body: string | null;
+  cover: string | null;
+  registration_url: string | null;
+}
+
+export async function getStaticPaths() {
+  const events = await fetchItems<Evento>("eventos");
+  return events.filter((event) => event.body).map((event) => ({ params: { slug: event.slug }, props: { event } }));
+}
+
+interface Props {
+  event: Evento;
+}
+
+const { event } = Astro.props;
+const bodyHtml = event.body ? await marked.parse(event.body) : "";
+const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric" });
+const cover = event.cover ? directusAssetUrl(event.cover) : undefined;
+---
+
+<BaseLayout title={event.title} description={event.description} image={cover}>
+  <SiteHeader posts={visiblePosts(await getAllMensagens())} />
+  <main id="content" class="outer">
+    <article class="canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Evento</p>
+        <h1 class="pagehead-title">{event.title}</h1>
+        <p class="pagehead-description">{event.description}</p>
+
+        <ul class="mt-6 grid gap-2 text-sm text-muted-foreground">
+          {event.event_date && (
+            <li>
+              <strong class="text-foreground">Data:</strong> {dateFormatter.format(new Date(event.event_date))}
+              {event.time && ` · ${event.time}`}
+            </li>
+          )}
+          {event.location && <li><strong class="text-foreground">Local:</strong> {event.location}</li>}
+        </ul>
+
+        {event.registration_url && (
+          <a href={event.registration_url} target="_blank" rel="noreferrer" class="btn btn-solid mt-6">
+            Inscreva-se
+          </a>
+        )}
+      </header>
+
+      {cover && (
+        <figure class="article-image inner mt-10">
+          <img src={cover} alt={event.title} loading="eager" decoding="async" class="w-full" />
+        </figure>
+      )}
+
+      <div class="prose mt-10" set:html={bodyHtml} />
+
+      <div class="prose mt-16">
+        <p><a href="/eventos/">&larr; Voltar para Eventos</a></p>
+      </div>
+    </article>
+  </main>
+  <SiteFooter />
+
+  <style>
+    .article-image {
+      margin-bottom: 0;
+    }
+
+    .article-image :global(img) {
+      max-height: 32rem;
+      width: 100%;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+    }
+  </style>
+</BaseLayout>
