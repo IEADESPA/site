@@ -16,6 +16,10 @@ interface Congregacao {
   pastor_name: string | null;
   schedule: string | null;
   maps_url: string | null;
+  address_new: string | null;
+  neighborhood_new: string | null;
+  zip: string | null;
+  address_note: string | null;
 }
 
 const allPosts = visiblePosts(await getAllMensagens());
@@ -52,6 +56,20 @@ const congregacoes = await fetchItems<Congregacao>("congregacoes", "sort[]=sort"
                     <>, {congregacao.city} {congregacao.state && `- ${congregacao.state}`}</>
                   )}
                 </p>
+              )}
+              {congregacao.address_note && (
+                <p class="mt-1 text-sm italic text-muted-foreground">{congregacao.address_note}</p>
+              )}
+              {(congregacao.address_new || congregacao.neighborhood_new) && (
+                <p class="mt-2 text-xs text-muted-foreground">
+                  Endereço oficial (novo CEP): {congregacao.address_new}
+                  {congregacao.address_new && congregacao.neighborhood_new && " — "}
+                  {congregacao.neighborhood_new}
+                  {congregacao.zip && ` · CEP ${congregacao.zip}`}
+                </p>
+              )}
+              {!congregacao.address_new && !congregacao.neighborhood_new && congregacao.zip && (
+                <p class="mt-2 text-xs text-muted-foreground">CEP {congregacao.zip}</p>
               )}
               {congregacao.pastor_name && (
                 <p class="mt-1 text-sm text-muted-foreground">Responsável: {congregacao.pastor_name}</p>
