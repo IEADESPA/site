@@ -23,6 +23,7 @@ interface DirectusNoticia {
   featured: boolean;
   draft: boolean;
   body: string;
+  orgao_relacionado: number | null;
 }
 
 export interface NoticiaData {
@@ -33,6 +34,7 @@ export interface NoticiaData {
   cover?: string;
   featured: boolean;
   draft: boolean;
+  orgaoRelacionado: number | null;
 }
 
 export interface Noticia {
@@ -55,6 +57,7 @@ function toNoticia(n: DirectusNoticia): Noticia {
       cover: n.cover ? directusAssetUrl(n.cover) : undefined,
       featured: n.featured,
       draft: n.draft,
+      orgaoRelacionado: n.orgao_relacionado,
     },
   };
 }

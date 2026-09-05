@@ -7,6 +7,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { fetchItems } from "@/lib/directus";
 import {
   byNewest,
   categoryLabel,
@@ -18,23 +19,32 @@ import {
   type Noticia,
 } from "@/lib/noticias";
 
+interface Orgao {
+  id: number;
+  slug: string;
+  name: string;
+}
+
 export async function getStaticPaths() {
   const noticias = visibleNoticias(await getAllNoticias());
+  const orgaos = await fetchItems<Orgao>("ministerios");
   return noticias.map((noticia) => ({
     params: { slug: noticia.id },
-    props: { noticia, allNoticias: noticias },
+    props: { noticia, allNoticias: noticias, orgaos },
   }));
 }
 
 interface Props {
   noticia: Noticia;
   allNoticias: Noticia[];
+  orgaos: Orgao[];
 }
 
-const { noticia, allNoticias } = Astro.props;
+const { noticia, allNoticias, orgaos } = Astro.props;
 const allPosts = visiblePosts(await getAllMensagens());
 const bodyHtml = await marked.parse(noticia.body);
 const data = noticia.data;
+const orgaoRelacionado = orgaos.find((orgao) => orgao.id === data.orgaoRelacionado);
 const others = allNoticias.filter((item) => item.id !== noticia.id).sort(byNewest).slice(0, 3);
 const articleUrl = new URL(noticiaHref(noticia), siteConfig.siteUrl).toString();
 const socialImage = data.cover
@@ -78,6 +88,12 @@ const structuredData = {
 
         <h1 class="article-title">{data.title}</h1>
         <p class="article-excerpt">{data.excerpt}</p>
+
+        {orgaoRelacionado && (
+          <p class="mt-5">
+            <a href={`/orgao/${orgaoRelacionado.slug}/`} class="pill">Sobre: {orgaoRelacionado.name}</a>
+          </p>
+        )}
 
         <div class="mt-8 flex flex-wrap items-center gap-2 border-t border-border pt-6" role="group" aria-labelledby="share-heading">
           <h2 id="share-heading" class="eyebrow mr-1">Compartilhar</h2>

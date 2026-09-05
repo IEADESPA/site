@@ -2,11 +2,14 @@
 import { marked } from "marked";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
+import NoticiaCard from "@/components/NoticiaCard.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { directusAssetUrl, fetchItems } from "@/lib/directus";
+import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
 
 interface Orgao {
+  id: number;
   slug: string;
   name: string;
   description: string;
@@ -43,6 +46,9 @@ const allPosts = visiblePosts(await getAllMensagens());
 const bodyHtml = orgao.body ? await marked.parse(orgao.body) : null;
 const isDiretoria = orgao.slug === "diretoria-executiva";
 const board = isDiretoria ? await fetchItems<MembroDiretoria>("diretoria", "sort[]=sort") : [];
+const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
+  (noticia) => noticia.data.orgaoRelacionado === orgao.id,
+);
 ---
 
 <BaseLayout title={orgao.name} description={orgao.description}>
@@ -83,6 +89,17 @@ const board = isDiretoria ? await fetchItems<MembroDiretoria>("diretoria", "sort
                 </li>
               ))}
             </ul>
+          </section>
+        )
+      }
+
+      {
+        relatedNoticias.length > 0 && (
+          <section class="mt-16" aria-labelledby="related-heading">
+            <h2 id="related-heading" class="section-title">Notícias relacionadas</h2>
+            <div class="mt-5 grid gap-7 sm:grid-cols-3">
+              {relatedNoticias.map((noticia) => <NoticiaCard noticia={noticia} variant="compact" headingLevel="h3" />)}
+            </div>
           </section>
         )
       }
