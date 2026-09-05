@@ -54,7 +54,7 @@ const structuredData = startDate
         address: event.location || enderecoCompleto(config),
       },
       image: cover ? [cover] : undefined,
-      organizer: { "@type": "Organization", name: siteConfig.authorName, url: siteConfig.siteUrl },
+      organizer: { "@type": "Organization", name: siteConfig.authorName, url: siteConfig.siteUrl, logo: `${siteConfig.siteUrl}/logo.png` },
     }
   : undefined;
 ---

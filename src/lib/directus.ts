@@ -132,6 +132,8 @@ export function churchStructuredData(config: Configuracoes, siteUrl: string, sit
     "@type": "Church",
     name: siteName,
     url: siteUrl,
+    logo: `${siteUrl}/logo.png`,
+    image: `${siteUrl}/logo.png`,
     address: {
       "@type": "PostalAddress",
       streetAddress: config.address_line,

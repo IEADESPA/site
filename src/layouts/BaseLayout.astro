@@ -36,6 +36,7 @@ const defaultStructuredData = {
   publisher: {
     "@type": "Organization",
     name: siteConfig.authorName,
+    logo: { "@type": "ImageObject", url: `${siteConfig.siteUrl}/logo.png` },
   },
 };
 const schema = structuredData ?? defaultStructuredData;
@@ -49,7 +50,10 @@ const schema = structuredData ?? defaultStructuredData;
     <link rel="preload" href="/fonts/geist/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a1220" media="(prefers-color-scheme: dark)" />
     <link rel="canonical" href={canonical} />
