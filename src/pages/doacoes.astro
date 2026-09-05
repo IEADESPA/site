@@ -9,8 +9,9 @@ import { getAllProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
 const allPosts = visiblePosts(await getAllMensagens());
 const heroSchedule = sedeProgramacaoCompacta(await getAllProgramacao());
 
-/** Substitua pela chave PIX oficial da igreja antes de publicar. */
-const pixKey = "seta@ieadespa.org";
+/** Ambas as chaves abaixo pertencem à mesma conta Pix da igreja. */
+const pixKeyEmail = "seta@ieadespa.org";
+const pixKeyCnpj = "10.743.586/0001-38";
 ---
 
 <BaseLayout
@@ -33,9 +34,18 @@ const pixKey = "seta@ieadespa.org";
         <div class="donation-card">
           <h2 class="text-lg font-semibold tracking-tight">Pix</h2>
           <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Contribua diretamente pela chave Pix abaixo.
+            Contribua diretamente por qualquer uma das chaves abaixo — as duas caem na mesma conta.
           </p>
-          <p class="pix-key mt-4">{pixKey}</p>
+          <div class="mt-4 grid gap-3">
+            <div>
+              <span class="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">CNPJ</span>
+              <p class="pix-key mt-1">{pixKeyCnpj}</p>
+            </div>
+            <div>
+              <span class="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-mail</span>
+              <p class="pix-key mt-1">{pixKeyEmail}</p>
+            </div>
+          </div>
         </div>
 
         <div class="donation-card">

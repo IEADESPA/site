@@ -33,9 +33,9 @@ export const siteConfig = {
     enabled: true,
     responseTime: "Normalmente respondemos em até dois dias úteis.",
   },
+  /** Só entram aqui redes que a igreja realmente usa — não deixe link de rede que não existe ainda. */
   socials: [
-    { label: "Instagram", href: "https://instagram.com/adsetaparauapebas" },
-    { label: "YouTube", href: "https://www.youtube.com" },
+    { label: "Instagram", href: "https://instagram.com/adseta.parauapebas" },
     { label: "RSS", href: "/rss.xml" },
   ],
 };
@@ -60,5 +60,5 @@ export const footerNavigation = [
   { label: "Transparência", href: "/transparencia/" },
   { label: "Pregadores", href: "/pregadores/" },
   { label: "Privacidade", href: "/privacidade/" },
-  { label: "Painel administrativo", href: DIRECTUS_ADMIN_URL },
+  { label: "Painel de conteúdo", href: DIRECTUS_ADMIN_URL },
 ];

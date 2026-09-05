@@ -16,7 +16,7 @@ interface Relatorio {
 
 const allPosts = visiblePosts(await getAllMensagens());
 
-/** Publicados pela diretoria através do painel administrativo. */
+/** Publicados pela diretoria através do painel de conteúdo. */
 const reports = (await fetchItems<Relatorio>("relatorios")).sort(
   (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
 );
@@ -61,7 +61,7 @@ const reports = (await fetchItems<Relatorio>("relatorios")).sort(
             <div class="gallery-empty">
               <p class="text-sm leading-relaxed text-muted-foreground">
                 Nenhum relatório publicado ainda. Assim que a diretoria publicar um relatório de
-                prestação de contas pelo <a href={DIRECTUS_ADMIN_URL}>painel administrativo</a>, ele aparecerá
+                prestação de contas pelo <a href={DIRECTUS_ADMIN_URL}>painel de conteúdo</a>, ele aparecerá
                 aqui.
               </p>
             </div>
