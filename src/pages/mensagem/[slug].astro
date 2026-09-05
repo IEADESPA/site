@@ -1,5 +1,6 @@
 ---
 import { marked } from "marked";
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import LocalIcon from "@/components/LocalIcon.astro";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
@@ -87,6 +88,7 @@ const structuredData = {
   <main id="content" class="outer">
     <article>
       <header class="canvas pt-10 md:pt-14">
+        <Breadcrumbs items={[{ label: "Mensagens", href: "/mensagens/" }, { label: data.title }]} />
         <p class="meta post-meta">
           <span class="post-meta__byline">
             Por <a href={authorHref} class="link-sweep post-meta__link">{data.author.name}</a> em{" "}

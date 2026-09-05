@@ -1,5 +1,6 @@
 ---
 import { marked } from "marked";
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
@@ -64,6 +65,7 @@ const structuredData = startDate
   <main id="content" class="outer">
     <article class="canvas">
       <header class="pagehead">
+        <Breadcrumbs items={[{ label: "Eventos", href: "/eventos/" }, { label: event.title }]} />
         <p class="eyebrow">Evento</p>
         <h1 class="pagehead-title">{event.title}</h1>
         <p class="pagehead-description">{event.description}</p>

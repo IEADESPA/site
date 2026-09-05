@@ -1,5 +1,6 @@
 ---
 import { marked } from "marked";
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import NoticiaCard from "@/components/NoticiaCard.astro";
@@ -56,6 +57,7 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
   <main id="content" class="outer">
     <div class="canvas">
       <header class="pagehead">
+        <Breadcrumbs items={[{ label: "Órgãos", href: "/orgaos/" }, { label: orgao.name }]} />
         <p class="eyebrow">{CATEGORY_LABEL[orgao.category]}</p>
         <h1 class="pagehead-title">{orgao.name}</h1>
         <p class="pagehead-description">{orgao.description}</p>

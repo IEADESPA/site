@@ -1,5 +1,6 @@
 ---
 import { marked } from "marked";
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import LocalIcon from "@/components/LocalIcon.astro";
 import NoticiaCard from "@/components/NoticiaCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
@@ -80,6 +81,7 @@ const structuredData = {
   <main id="content" class="outer">
     <article>
       <header class="canvas pt-10 md:pt-14">
+        <Breadcrumbs items={[{ label: "Notícias", href: "/noticias/" }, { label: data.title }]} />
         <p class="meta post-meta">
           <span class="pill">{categoryLabel(data.category)}</span>
           <span class="meta-accent"><time datetime={data.date.toISOString()}>{formatDate(data.date, "long")}</time></span>

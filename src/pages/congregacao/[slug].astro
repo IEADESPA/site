@@ -1,5 +1,6 @@
 ---
 import { marked } from "marked";
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
@@ -46,6 +47,7 @@ const historiaHtml = congregacao.historia ? await marked.parse(congregacao.histo
   <main id="content" class="outer">
     <div class="canvas">
       <header class="pagehead">
+        <Breadcrumbs items={[{ label: "Congregações", href: "/congregacoes/" }, { label: congregacao.name }]} />
         <p class="eyebrow">Congregação</p>
         <h1 class="pagehead-title">{congregacao.name}</h1>
       </header>
