@@ -799,6 +799,16 @@
     color: var(--muted-foreground);
   }
 
+  /* Sem isso, uma imagem inserida no corpo do texto (Markdown) aparece no
+     tamanho real do arquivo enviado, não importa o quão grande. */
+  .prose img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 2rem auto;
+    border-radius: var(--radius-md);
+  }
+
   .prose code {
     background: var(--muted);
     padding: 0.15rem 0.35rem;
