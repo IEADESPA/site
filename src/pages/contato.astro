@@ -43,9 +43,14 @@ const mapsLinkHref = mapsHref(config);
         <div>
           <h2 class="section-title">Endereço</h2>
           <p class="text-sm leading-relaxed text-muted-foreground">{enderecoCompleto(config)}</p>
-          <a href={mapsLinkHref} target="_blank" rel="noreferrer" class="mt-3 inline-block link-sweep text-sm font-semibold text-accent">
-            Ver rota no Google Maps
-          </a>
+          <div class="mt-3 flex flex-wrap gap-4">
+            <a href={mapsLinkHref} target="_blank" rel="noreferrer" class="link-sweep text-sm font-semibold text-accent">
+              Ver rota no Google Maps
+            </a>
+            <a href="/ieadespa.vcf" class="link-sweep text-sm font-semibold text-accent">
+              Adicionar aos contatos
+            </a>
+          </div>
 
           <h2 class="section-title mt-10">Horários de culto</h2>
           <div class="mt-3">
