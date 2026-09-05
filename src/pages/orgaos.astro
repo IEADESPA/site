@@ -7,6 +7,7 @@ import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { fetchItems } from "@/lib/directus";
 
 interface Orgao {
+  slug: string;
   name: string;
   description: string;
   category: "governanca" | "departamentos" | "secretarias" | "servicos";
@@ -81,6 +82,9 @@ const groups = CATEGORIES.map((category) => ({
                 <li class="orgao-card">
                   <h3 class="text-lg font-semibold tracking-tight">{orgao.name}</h3>
                   <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{orgao.description}</p>
+                  <a href={`/orgao/${orgao.slug}/`} class="mt-3 inline-block link-sweep text-sm font-semibold text-accent">
+                    Saiba mais
+                  </a>
                 </li>
               ))}
             </ul>

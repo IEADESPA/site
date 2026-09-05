@@ -1,0 +1,123 @@
+---
+import { marked } from "marked";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { directusAssetUrl, fetchItems } from "@/lib/directus";
+
+interface Orgao {
+  slug: string;
+  name: string;
+  description: string;
+  category: "governanca" | "departamentos" | "secretarias" | "servicos";
+  leader_name: string | null;
+  leader_role: string | null;
+  leader_photo: string | null;
+  body: string | null;
+}
+
+interface MembroDiretoria {
+  role: string;
+  name: string;
+}
+
+const CATEGORY_LABEL: Record<Orgao["category"], string> = {
+  governanca: "Governança",
+  departamentos: "Departamentos",
+  secretarias: "Secretarias",
+  servicos: "Serviços",
+};
+
+export async function getStaticPaths() {
+  const orgaos = await fetchItems<Orgao>("ministerios");
+  return orgaos.map((orgao) => ({ params: { slug: orgao.slug }, props: { orgao } }));
+}
+
+interface Props {
+  orgao: Orgao;
+}
+
+const { orgao } = Astro.props;
+const allPosts = visiblePosts(await getAllMensagens());
+const bodyHtml = orgao.body ? await marked.parse(orgao.body) : null;
+const isDiretoria = orgao.slug === "diretoria-executiva";
+const board = isDiretoria ? await fetchItems<MembroDiretoria>("diretoria", "sort[]=sort") : [];
+---
+
+<BaseLayout title={orgao.name} description={orgao.description}>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas">
+      <header class="pagehead">
+        <p class="eyebrow">{CATEGORY_LABEL[orgao.category]}</p>
+        <h1 class="pagehead-title">{orgao.name}</h1>
+        <p class="pagehead-description">{orgao.description}</p>
+      </header>
+
+      {
+        orgao.leader_name && (
+          <div class="leader-card">
+            {orgao.leader_photo && (
+              <img src={directusAssetUrl(orgao.leader_photo)} alt={orgao.leader_name} class="leader-photo" />
+            )}
+            <div>
+              <p class="text-lg font-semibold tracking-tight">{orgao.leader_name}</p>
+              {orgao.leader_role && <p class="text-sm text-muted-foreground">{orgao.leader_role}</p>}
+            </div>
+          </div>
+        )
+      }
+
+      {bodyHtml && <div class="prose mt-10" set:html={bodyHtml} />}
+
+      {
+        isDiretoria && board.length > 0 && (
+          <section class="mt-12" aria-labelledby="board-heading">
+            <h2 id="board-heading" class="section-title">Diretores</h2>
+            <ul class="mt-5 grid gap-4 sm:grid-cols-2">
+              {board.map((member) => (
+                <li class="board-card">
+                  <span class="block text-xs font-semibold tracking-wide text-accent uppercase">{member.role}</span>
+                  <span class="mt-1 block text-lg font-semibold tracking-tight">{member.name}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+
+      <div class="prose mt-16">
+        <h2>Quer participar?</h2>
+        <p>
+          Fale com a liderança em um dos nossos cultos ou entre em contato pela{" "}
+          <a href="/contato/">página de contato</a>.
+        </p>
+        <p><a href="/orgaos/">&larr; Voltar para Órgãos</a></p>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>
+
+<style>
+  .leader-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .leader-photo {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+  }
+
+  .board-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.4rem;
+  }
+</style>

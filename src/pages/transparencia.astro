@@ -14,15 +14,7 @@ interface Relatorio {
   file: string;
 }
 
-interface MembroDiretoria {
-  role: string;
-  name: string;
-}
-
 const allPosts = visiblePosts(await getAllMensagens());
-
-/** Editável em Directus → Diretoria. */
-const board = await fetchItems<MembroDiretoria>("diretoria", "sort[]=sort");
 
 /** Publicados pela diretoria através do painel administrativo. */
 const reports = (await fetchItems<Relatorio>("relatorios")).sort(
@@ -41,26 +33,12 @@ const reports = (await fetchItems<Relatorio>("relatorios")).sort(
         <p class="eyebrow">Prestação de contas</p>
         <h1 class="pagehead-title">Transparência</h1>
         <p class="pagehead-description">
-          Informações sobre a diretoria da igreja e os relatórios de prestação de contas à
-          congregação.
+          Relatórios de prestação de contas à congregação. Para conhecer os diretores executivos,
+          veja o órgão <a href="/orgao/diretoria-executiva/">Diretoria Executiva</a>.
         </p>
       </header>
 
-      <section aria-labelledby="board-heading">
-        <h2 id="board-heading" class="section-title">Diretoria</h2>
-        <ul class="grid gap-4 sm:grid-cols-2">
-          {
-            board.map((member) => (
-              <li class="board-card">
-                <span class="block text-xs font-semibold tracking-wide text-accent uppercase">{member.role}</span>
-                <span class="mt-1 block text-lg font-semibold tracking-tight">{member.name}</span>
-              </li>
-            ))
-          }
-        </ul>
-      </section>
-
-      <section class="mt-16" aria-labelledby="reports-heading">
+      <section aria-labelledby="reports-heading">
         <h2 id="reports-heading" class="section-title">Relatórios</h2>
         {
           reports.length > 0 ? (
@@ -104,7 +82,6 @@ const reports = (await fetchItems<Relatorio>("relatorios")).sort(
 </BaseLayout>
 
 <style>
-  .board-card,
   .report-card {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
