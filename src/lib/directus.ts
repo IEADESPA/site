@@ -69,6 +69,8 @@ export interface Configuracoes {
   address_zip: string;
   maps_url: string;
   phone: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 export const fetchConfiguracoes = () => fetchSingleton<Configuracoes>("configuracoes");

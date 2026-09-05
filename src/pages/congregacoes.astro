@@ -1,4 +1,5 @@
 ---
+import MapaCongregacoes from "@/components/MapaCongregacoes.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
@@ -21,12 +22,23 @@ interface Congregacao {
   neighborhood_new: string | null;
   zip: string | null;
   address_note: string | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 const allPosts = visiblePosts(await getAllMensagens());
 const congregacoes = await fetchItems<Congregacao>("congregacoes", "sort[]=sort");
 const config = await fetchConfiguracoes();
 const sedeMapsHref = mapsHref(config);
+
+const pontosMapa = [
+  ...(config.lat != null && config.lng != null
+    ? [{ name: `${siteConfig.name} (Sede)`, lat: config.lat, lng: config.lng, href: "/contato/" }]
+    : []),
+  ...congregacoes
+    .filter((c) => c.lat != null && c.lng != null)
+    .map((c) => ({ name: c.name, lat: c.lat as number, lng: c.lng as number, href: `/congregacao/${c.slug}/` })),
+];
 ---
 
 <BaseLayout
@@ -43,6 +55,17 @@ const sedeMapsHref = mapsHref(config);
           A sede e as demais congregações e pontos de pregação da {siteConfig.name} pela região.
         </p>
       </header>
+
+      {
+        pontosMapa.length > 0 && (
+          <div class="mb-10">
+            <MapaCongregacoes pontos={pontosMapa} />
+            <p class="mt-2 text-xs text-muted-foreground">
+              Mostra só as congregações com localização já cadastrada — a lista vai crescendo com o tempo.
+            </p>
+          </div>
+        )
+      }
 
       <ul class="grid gap-6 sm:grid-cols-2">
         <li class="congregacao-card congregacao-card-sede">
