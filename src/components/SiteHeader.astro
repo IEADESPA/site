@@ -1,23 +1,15 @@
 ---
 import { navigation, siteConfig } from "@/config/site";
-import { formatDate, postHref, readingLabel, visiblePosts, type Post } from "@/lib/posts";
+import type { Post } from "@/lib/posts";
+import { buildSearchIndex } from "@/lib/search";
 
 interface Props {
   posts: Post[];
 }
 
 const currentPath = Astro.url.pathname;
-const posts = visiblePosts(Astro.props.posts);
 /* Inlined so the palette still returns results if /search-index.json fails. */
-const searchFallback = posts.slice(0, 12).map((post) => ({
-  title: post.data.title,
-  excerpt: post.data.excerpt,
-  href: postHref(post),
-  author: post.data.author.name,
-  category: post.data.category,
-  date: formatDate(post.data.date),
-  reading: readingLabel(post),
-}));
+const searchFallback = (await buildSearchIndex()).slice(0, 12);
 const isCurrentPath = (href: string) =>
   currentPath === href || (href !== "/" && currentPath.startsWith(href));
 ---
@@ -235,12 +227,12 @@ const isCurrentPath = (href: string) =>
        category match, which beats a hit in the excerpt or author name. */
     const rank = (item, query) => {
       const title = item.title.toLowerCase();
-      const category = (item.category || "").toLowerCase();
-      const supporting = [item.excerpt, item.author].join(" ").toLowerCase();
+      const group = (item.group || "").toLowerCase();
+      const supporting = [item.excerpt, item.meta].join(" ").toLowerCase();
 
       if (title.startsWith(query)) return 0;
       if (title.includes(query)) return 1;
-      if (category.includes(query)) return 2;
+      if (group.includes(query)) return 2;
       if (supporting.includes(query)) return 3;
       return Number.POSITIVE_INFINITY;
     };
@@ -248,7 +240,7 @@ const isCurrentPath = (href: string) =>
     const resultMarkup = (item) => `
       <a href="${escapeHtml(item.href)}" class="search-result">
         <span class="search-result-title">${escapeHtml(item.title)}</span>
-        <span class="search-result-meta">${escapeHtml(item.category || "")} &middot; ${escapeHtml(item.date)} &middot; ${escapeHtml(item.reading || "")}</span>
+        <span class="search-result-meta">${escapeHtml(item.group)}${item.meta ? ` &middot; ${escapeHtml(item.meta)}` : ""}</span>
       </a>
     `;
 

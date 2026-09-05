@@ -1,21 +1,12 @@
-import { formatDate, postHref, readingLabel, getAllMensagens, visiblePosts } from "@/lib/posts";
+import { buildSearchIndex } from "@/lib/search";
 
 /**
- * Static search index consumed by the header command palette. It holds post
- * metadata only, never the article body, so it stays small enough to fetch on
- * the first search.
+ * Static search index consumed by the header command palette and by
+ * /busca/. Covers mensagens, notícias, órgãos e congregações — metadata
+ * only, never full article bodies, so it stays small.
  */
 export async function GET() {
-  const posts = visiblePosts(await getAllMensagens());
-  const index = posts.map((post) => ({
-    title: post.data.title,
-    excerpt: post.data.excerpt,
-    href: postHref(post),
-    author: post.data.author.name,
-    category: post.data.category,
-    date: formatDate(post.data.date),
-    reading: readingLabel(post),
-  }));
+  const index = await buildSearchIndex();
 
   return new Response(JSON.stringify(index), {
     headers: {

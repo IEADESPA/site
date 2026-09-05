@@ -3,23 +3,16 @@ import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { formatDate, postHref, readingLabel, getAllMensagens, visiblePosts } from "@/lib/posts";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { buildSearchIndex } from "@/lib/search";
 
 const allPosts = visiblePosts(await getAllMensagens());
-const searchItems = allPosts.map((post) => ({
-  title: post.data.title,
-  excerpt: post.data.excerpt,
-  href: postHref(post),
-  author: post.data.author.name,
-  category: post.data.category,
-  date: formatDate(post.data.date),
-  reading: readingLabel(post),
-}));
+const searchItems = await buildSearchIndex();
 ---
 
 <BaseLayout
   title="Buscar"
-  description={`Busque em todas as mensagens publicadas por ${siteConfig.name}.`}
+  description={`Busque em mensagens, notícias, órgãos e congregações da ${siteConfig.name}.`}
   noindex
 >
   <SiteHeader posts={allPosts} />
@@ -27,17 +20,17 @@ const searchItems = allPosts.map((post) => ({
     <div class="canvas">
       <header class="pagehead">
         <p class="eyebrow">Busca</p>
-        <h1 class="pagehead-title">Buscar mensagens</h1>
+        <h1 class="pagehead-title">Buscar no site</h1>
 
-        <form class="mt-8" role="search" aria-label="Busca de mensagens" action="/busca/" method="get">
-          <label class="sr-only" for="search-page-input">Buscar mensagens</label>
+        <form class="mt-8" role="search" aria-label="Busca no site" action="/busca/" method="get">
+          <label class="sr-only" for="search-page-input">Buscar</label>
           <div class="flex gap-2">
             <input
               id="search-page-input"
               name="q"
               type="search"
               class="field"
-              placeholder="Título, tema ou pregador..."
+              placeholder="Mensagens, notícias, órgãos, congregações..."
               autocomplete="off"
               data-search-page-input
             />
@@ -73,13 +66,13 @@ const searchItems = allPosts.map((post) => ({
         })[character]);
 
       const matches = (item, query) =>
-        [item.title, item.excerpt, item.author, item.category]
+        [item.title, item.excerpt, item.group, item.meta]
           .join(" ")
           .toLowerCase()
           .includes(query);
 
       /* Nada é listado até que haja uma busca — esta página é para buscar,
-         não para navegar. O arquivo de mensagens cobre a navegação. */
+         não para navegar. As páginas de listagem cobrem a navegação. */
       const render = () => {
         const raw = input.value.trim();
         const query = raw.toLowerCase();
@@ -95,8 +88,8 @@ const searchItems = allPosts.map((post) => ({
               <article>
                 <a href="${escapeHtml(item.href)}" class="link-title">
                   <h2 class="search-page-title link-title__text">${escapeHtml(item.title)}</h2>
-                  <p class="search-page-excerpt">${escapeHtml(item.excerpt)}</p>
-                  <p class="meta mt-4"><span class="meta-accent">${escapeHtml(item.category)}</span><time>${escapeHtml(item.date)}</time><span>${escapeHtml(item.reading)}</span></p>
+                  ${item.excerpt ? `<p class="search-page-excerpt">${escapeHtml(item.excerpt)}</p>` : ""}
+                  <p class="meta mt-4"><span class="meta-accent">${escapeHtml(item.group)}</span>${item.meta ? `<span>${escapeHtml(item.meta)}</span>` : ""}</p>
                 </a>
               </article>
             `,
