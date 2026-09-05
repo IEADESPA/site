@@ -8,6 +8,7 @@ import { fetchItems } from "@/lib/directus";
 
 interface Congregacao {
   id: number;
+  slug: string;
   name: string;
   address: string | null;
   neighborhood: string | null;
@@ -77,11 +78,16 @@ const congregacoes = await fetchItems<Congregacao>("congregacoes", "sort[]=sort"
               {congregacao.schedule && (
                 <p class="mt-3 whitespace-pre-line text-sm leading-relaxed">{congregacao.schedule}</p>
               )}
-              {congregacao.maps_url && (
-                <a href={congregacao.maps_url} target="_blank" rel="noreferrer" class="mt-3 inline-block link-sweep text-sm font-semibold text-accent">
-                  Ver rota no Google Maps
+              <div class="mt-3 flex flex-wrap gap-4">
+                {congregacao.maps_url && (
+                  <a href={congregacao.maps_url} target="_blank" rel="noreferrer" class="link-sweep text-sm font-semibold text-accent">
+                    Ver rota no Google Maps
+                  </a>
+                )}
+                <a href={`/congregacao/${congregacao.slug}/`} class="link-sweep text-sm font-semibold text-accent">
+                  Saiba mais
                 </a>
-              )}
+              </div>
             </li>
           ))
         }

@@ -25,6 +25,7 @@ const ORGAO_CATEGORY_LABEL: Record<string, string> = {
 };
 
 interface Congregacao {
+  slug: string;
   name: string;
   address: string | null;
   neighborhood: string | null;
@@ -73,7 +74,7 @@ export async function buildSearchIndex(): Promise<SearchItem[]> {
   const fromCongregacoes: SearchItem[] = congregacoes.map((congregacao) => ({
     title: congregacao.name,
     excerpt: [congregacao.address, congregacao.neighborhood].filter(Boolean).join(" — "),
-    href: `/congregacoes/`,
+    href: `/congregacao/${congregacao.slug}/`,
     group: "Congregação",
     meta: [congregacao.neighborhood, congregacao.city].filter(Boolean).join(", "),
   }));
