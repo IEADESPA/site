@@ -6,7 +6,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { categoryHref, getCategoryList, getFeatured, getAllMensagens, visiblePosts } from "@/lib/posts";
-import { enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
+import { enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
 import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
 import { churchStructuredData, getAllProgramacao, sedeProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
 
@@ -19,6 +19,12 @@ const latestNoticias = visibleNoticias(await getAllNoticias()).slice(0, 3);
 const programacao = await getAllProgramacao();
 const sedeSchedule = sedeProgramacao(programacao);
 const heroSchedule = sedeProgramacaoCompacta(programacao);
+
+interface Versiculo {
+  texto: string;
+  referencia: string;
+}
+const versiculos = await fetchItems<Versiculo>("versiculos", "sort[]=sort");
 const structuredData = [
   {
     "@context": "https://schema.org",
@@ -101,6 +107,33 @@ const quickLinks = [
           <a href="/eventos/" class="link-sweep text-accent font-semibold">Ver programação completa &rarr;</a>
         </p>
       </section>
+
+      {
+        versiculos.length > 0 && (
+          <section class="verse-section pb-[var(--space-section)]" aria-labelledby="verse-heading">
+            <h2 id="verse-heading" class="sr-only">Versículo do dia</h2>
+            <blockquote class="verse-card">
+              <p class="verse-text" data-verse-text>&ldquo;{versiculos[0].texto}&rdquo;</p>
+              <footer class="verse-ref" data-verse-ref>{versiculos[0].referencia}</footer>
+            </blockquote>
+            <script is:inline type="application/json" id="verse-data" set:html={JSON.stringify(versiculos)} />
+            <script is:inline>
+              (() => {
+                const data = JSON.parse(document.getElementById("verse-data")?.textContent || "[]");
+                if (!data.length) return;
+                const start = new Date(new Date().getFullYear(), 0, 0);
+                const diff = Date.now() - start.getTime();
+                const dayOfYear = Math.floor(diff / 86400000);
+                const verse = data[dayOfYear % data.length];
+                const textEl = document.querySelector("[data-verse-text]");
+                const refEl = document.querySelector("[data-verse-ref]");
+                if (textEl) textEl.textContent = `“${verse.texto}”`;
+                if (refEl) refEl.textContent = verse.referencia;
+              })();
+            </script>
+          </section>
+        )
+      }
 
       <section class="pb-[var(--space-section)]" aria-labelledby="quick-links">
         <h2 id="quick-links" class="section-title">Acesso rápido</h2>
@@ -187,6 +220,29 @@ const quickLinks = [
 </BaseLayout>
 
 <style>
+  .verse-card {
+    margin: 0;
+    border-left: 3px solid var(--accent);
+    padding: 1.25rem 1.6rem;
+    background: var(--muted);
+    border-radius: var(--radius-md);
+  }
+
+  .verse-text {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: clamp(1.0625rem, 2vw, 1.25rem);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  .verse-ref {
+    margin-top: 0.6rem;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
   .hero-title {
     margin: 0.75rem 0 0;
     font-family: var(--font-display);
