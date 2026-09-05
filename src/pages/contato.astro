@@ -1,14 +1,17 @@
 ---
+import ProgramacaoList from "@/components/ProgramacaoList.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { DIRECTUS_URL, churchStructuredData, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes } from "@/lib/directus";
+import { DIRECTUS_URL, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes } from "@/lib/directus";
+import { churchStructuredData, getAllProgramacao, sedeProgramacao } from "@/lib/programacao";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const config = await fetchConfiguracoes();
-const structuredData = churchStructuredData(config, siteConfig.siteUrl, siteConfig.name);
+const sedeSchedule = sedeProgramacao(await getAllProgramacao());
+const structuredData = churchStructuredData(config, sedeSchedule, siteConfig.siteUrl, siteConfig.name);
 const contact = siteConfig.contact;
 const isEnabled = contact.enabled;
 /* A pré-visualização em iframe só funciona com uma busca por endereço (é o
@@ -46,19 +49,9 @@ const mapsLinkHref =
           </a>
 
           <h2 class="section-title mt-10">Horários de culto</h2>
-          <ul class="grid gap-3">
-            {
-              config.service_times.map((service) => (
-                <li class="flex items-baseline justify-between gap-4 border-b border-border pb-3">
-                  <span>
-                    <span class="block font-semibold">{service.label}</span>
-                    <span class="block text-sm text-muted-foreground">{service.day}</span>
-                  </span>
-                  <span class="pill shrink-0">{service.time}</span>
-                </li>
-              ))
-            }
-          </ul>
+          <div class="mt-3">
+            <ProgramacaoList items={sedeSchedule} showScope={false} />
+          </div>
 
           <h2 class="section-title mt-10">Outros contatos</h2>
           <ul class="grid gap-2 text-sm text-muted-foreground">

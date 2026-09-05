@@ -6,8 +6,9 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { categoryHref, getCategoryList, getFeatured, getAllMensagens, visiblePosts } from "@/lib/posts";
-import { churchStructuredData, enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
+import { enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
 import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
+import { churchStructuredData, getAllProgramacao, sedeProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const feed = allPosts.slice(0, 6);
@@ -15,6 +16,9 @@ const featured = getFeatured(allPosts, 4);
 const categoryList = getCategoryList(allPosts);
 const config = await fetchConfiguracoes();
 const latestNoticias = visibleNoticias(await getAllNoticias()).slice(0, 3);
+const programacao = await getAllProgramacao();
+const sedeSchedule = sedeProgramacao(programacao);
+const heroSchedule = sedeProgramacaoCompacta(programacao);
 const structuredData = [
   {
     "@context": "https://schema.org",
@@ -24,7 +28,7 @@ const structuredData = [
     description: siteConfig.description,
     publisher: { "@type": "Organization", name: siteConfig.authorName, logo: { "@type": "ImageObject", url: `${siteConfig.siteUrl}/logo.png` } },
   },
-  churchStructuredData(config, siteConfig.siteUrl, siteConfig.name),
+  churchStructuredData(config, sedeSchedule, siteConfig.siteUrl, siteConfig.name),
 ];
 
 const quickLinks = [
@@ -84,15 +88,18 @@ const quickLinks = [
 
         <ul class="hero-services mt-10 grid gap-4 sm:grid-cols-3">
           {
-            config.service_times.map((service) => (
+            heroSchedule.map((service) => (
               <li class="hero-service">
-                <span class="block text-xs font-semibold tracking-wide text-accent uppercase">{service.day}</span>
-                <span class="mt-1 block text-lg font-semibold tracking-tight">{service.time}</span>
-                <span class="mt-1 block text-sm text-muted-foreground">{service.label}</span>
+                <span class="block text-xs font-semibold tracking-wide text-accent uppercase">{service.label}</span>
+                <span class="mt-1 block text-lg font-semibold tracking-tight">{service.title}</span>
+                {service.time && <span class="mt-1 block text-sm text-muted-foreground">{service.time}</span>}
               </li>
             ))
           }
         </ul>
+        <p class="mt-4 text-sm text-muted-foreground">
+          <a href="/eventos/" class="link-sweep text-accent font-semibold">Ver programação completa &rarr;</a>
+        </p>
       </section>
 
       <section class="pb-[var(--space-section)]" aria-labelledby="quick-links">

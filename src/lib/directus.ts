@@ -69,7 +69,6 @@ export interface Configuracoes {
   address_zip: string;
   maps_url: string;
   phone: string;
-  service_times: { day: string; time: string; label: string }[];
 }
 
 export const fetchConfiguracoes = () => fetchSingleton<Configuracoes>("configuracoes");
@@ -81,68 +80,3 @@ export const enderecoCompleto = (c: Configuracoes) =>
 /** String de busca pro Google Maps, usada como alternativa quando não há `maps_url`. */
 export const enderecoMapsQuery = (c: Configuracoes) =>
   `${c.address_line}, ${c.address_neighborhood}, ${c.address_city} - ${c.address_state}, ${c.address_zip}`;
-
-const DAY_OF_WEEK: Record<string, string> = {
-  domingo: "Sunday",
-  "segunda-feira": "Monday",
-  segunda: "Monday",
-  "terça-feira": "Tuesday",
-  terça: "Tuesday",
-  "quarta-feira": "Wednesday",
-  quarta: "Wednesday",
-  "quinta-feira": "Thursday",
-  quinta: "Thursday",
-  "sexta-feira": "Friday",
-  sexta: "Friday",
-  sábado: "Saturday",
-};
-
-/** Converte "18h", "19h30" etc. em "18:00", "19:30" (formato exigido pelo schema.org). */
-const parseTime = (time: string): string | null => {
-  const match = /^(\d{1,2})h(\d{2})?$/i.exec(time.trim());
-  if (!match) return null;
-  const [, hour, minute = "00"] = match;
-  return `${hour.padStart(2, "0")}:${minute}`;
-};
-
-/**
- * Dados estruturados schema.org (tipo Church) com endereço, telefone e
- * horários de culto — ajuda o Google a mostrar a igreja corretamente em
- * buscas locais e no Maps. Horários com dia/hora que não seguem o padrão
- * esperado (ex.: "Todo domingo, 18h") são omitidos em vez de gerar dado
- * inválido.
- */
-export function churchStructuredData(config: Configuracoes, siteUrl: string, siteName: string) {
-  const openingHoursSpecification = config.service_times
-    .map((service) => {
-      const dayOfWeek = DAY_OF_WEEK[service.day.trim().toLowerCase()];
-      const opens = parseTime(service.time);
-      if (!dayOfWeek || !opens) return null;
-      return {
-        "@type": "OpeningHoursSpecification",
-        dayOfWeek: `https://schema.org/${dayOfWeek}`,
-        opens,
-        description: service.label,
-      };
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-
-  return {
-    "@context": "https://schema.org",
-    "@type": "Church",
-    name: siteName,
-    url: siteUrl,
-    logo: `${siteUrl}/logo.png`,
-    image: `${siteUrl}/logo.png`,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: config.address_line,
-      addressLocality: config.address_city,
-      addressRegion: config.address_state,
-      postalCode: config.address_zip,
-      addressCountry: "BR",
-    },
-    ...(config.phone && { telephone: config.phone }),
-    ...(openingHoursSpecification.length > 0 && { openingHoursSpecification }),
-  };
-}
