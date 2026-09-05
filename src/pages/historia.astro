@@ -100,7 +100,10 @@ const registrosComHtml = await Promise.all(
   .historia-photo img {
     width: 100%;
     max-height: 28rem;
-    object-fit: cover;
+    /* "contain" em vez de "cover": fotos de época vêm em qualquer proporção
+       (quadradas, verticais...) e aqui nunca é cortada, só encaixada. */
+    object-fit: contain;
+    background: var(--muted);
     border-radius: var(--radius-md);
   }
 
