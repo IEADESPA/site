@@ -4,16 +4,12 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes } from "@/lib/directus";
+import { DIRECTUS_URL, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes } from "@/lib/directus";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const config = await fetchConfiguracoes();
 const contact = siteConfig.contact;
-const action = contact.action.trim();
 const isEnabled = contact.enabled;
-/* Sem endpoint configurado: o formulário permanece utilizável e confirma o
-   envio localmente em vez de enviar a página para lugar nenhum. */
-const isDemo = isEnabled && action.length === 0;
 /* A pré-visualização em iframe só funciona com uma busca por endereço (é o
    formato de embed sem chave de API do Google) — o link "Ver rota", esse
    sim, aponta para o perfil real da igreja no Google Maps quando cadastrado. */
@@ -92,12 +88,7 @@ const mapsLinkHref =
           </div>
         </div>
 
-        <form
-          class="grid gap-5"
-          action={action || undefined}
-          method={contact.method}
-          data-contact-form={isDemo ? "" : undefined}
-        >
+        <form class="grid gap-5" data-contact-form={isEnabled ? "" : undefined}>
           <h2 class="section-title">Envie uma mensagem</h2>
 
           <div class="grid gap-2">
@@ -125,7 +116,7 @@ const mapsLinkHref =
           {
             !isEnabled && (
               <p class="text-sm leading-relaxed text-muted-foreground">
-                Este formulário está desativado até que um endpoint seja configurado em <code>siteConfig.contact</code>.
+                Este formulário está desativado. Ative em <code>siteConfig.contact.enabled</code>.
               </p>
             )
           }
@@ -136,17 +127,42 @@ const mapsLinkHref =
   <SiteFooter />
 
   {
-    isDemo && (
-      <script is:inline>
+    isEnabled && (
+      <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
         document.querySelectorAll("[data-contact-form]").forEach((form) => {
-          form.addEventListener("submit", (event) => {
+          form.addEventListener("submit", async (event) => {
             event.preventDefault();
             const status = form.querySelector("[data-contact-status]");
-            if (status) {
-              status.textContent =
-                "Obrigado. Este formulário de demonstração ainda não está conectado a um endpoint, então nada foi enviado.";
+            const button = form.querySelector("button[type=submit]");
+            const data = new FormData(form);
+
+            if (button) button.disabled = true;
+            if (status) status.textContent = "Enviando…";
+
+            try {
+              const response = await fetch(`${directusUrl}/items/contato_mensagens`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: data.get("name"),
+                  email: data.get("email"),
+                  message: data.get("message"),
+                }),
+              });
+
+              if (!response.ok) throw new Error("request failed");
+
+              if (status) status.textContent = "Mensagem enviada. Obrigado pelo contato!";
+              form.reset();
+            } catch {
+              if (status) {
+                status.textContent =
+                  "Não foi possível enviar agora. Tente novamente em instantes ou escreva para " +
+                  "o e-mail no rodapé desta página.";
+              }
+            } finally {
+              if (button) button.disabled = false;
             }
-            form.reset();
           });
         });
       </script>

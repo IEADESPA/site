@@ -23,24 +23,17 @@ export const siteConfig = {
    * src/lib/directus.ts (fetchConfiguracoes).
    */
   /**
-   * Ambos os formulários abaixo saem habilitados com uma `action` vazia, o
-   * que os torna demonstrações totalmente interativas que não enviam para
-   * lugar nenhum: um pequeno script confirma o envio e limpa os campos. Cole
-   * o endpoint do seu provedor em `action` para receber envios reais, ou
-   * defina `enabled: false` para desativar os controles.
+   * Ambos os formulários abaixo enviam direto para o Directus (coleções
+   * "newsletter_assinantes" e "contato_mensagens" — ver `fetch()` nos
+   * respectivos componentes/páginas). `enabled: false` desativa o controle.
    */
   newsletter: {
     enabled: true,
-    action: "",
-    method: "post",
-    emailFieldName: "email",
     title: "Receba nossos avisos",
     description: "Um e-mail quando houver novidades: eventos, mensagens novas e avisos da igreja.",
   },
   contact: {
     enabled: true,
-    action: "",
-    method: "post",
     responseTime: "Normalmente respondemos em até dois dias úteis.",
   },
   socials: [

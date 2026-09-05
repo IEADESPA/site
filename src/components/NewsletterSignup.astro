@@ -1,5 +1,6 @@
 ---
 import { siteConfig } from "@/config/site";
+import { DIRECTUS_URL } from "@/lib/directus";
 
 /*
  * The compact subscribe form used once, in the home sidebar under the About
@@ -7,29 +8,20 @@ import { siteConfig } from "@/config/site";
  * repeating a call to action at the end of every page.
  */
 const newsletter = siteConfig.newsletter;
-const action = newsletter.action.trim();
 const isEnabled = newsletter.enabled;
-/* No endpoint configured: the form stays interactive and a script confirms the
-   submit locally instead of posting the page to nowhere. */
-const isDemo = isEnabled && action.length === 0;
 ---
 
 <section id="newsletter" aria-labelledby="newsletter-heading">
   <h3 id="newsletter-heading" class="text-base font-semibold tracking-tight">{newsletter.title}</h3>
   <p class="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">{newsletter.description}</p>
 
-  <form
-    class="mt-5 grid gap-3"
-    action={action || undefined}
-    method={newsletter.method}
-    data-newsletter-form={isDemo ? "" : undefined}
-  >
+  <form class="mt-5 grid gap-3" data-newsletter-form={isEnabled ? "" : undefined}>
     <label class="sr-only" for="newsletter-email">Endereço de e-mail</label>
     <input
       id="newsletter-email"
       required
       type="email"
-      name={newsletter.emailFieldName}
+      name="email"
       autocomplete="email"
       placeholder="voce@exemplo.com"
       disabled={!isEnabled}
@@ -54,17 +46,43 @@ const isDemo = isEnabled && action.length === 0;
 </section>
 
 {
-  isDemo && (
-    <script is:inline>
+  isEnabled && (
+    <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
       document.querySelectorAll("[data-newsletter-form]").forEach((form) => {
-        form.addEventListener("submit", (event) => {
+        form.addEventListener("submit", async (event) => {
           event.preventDefault();
           const status = form.querySelector("[data-newsletter-status]");
-          if (status) {
-            status.textContent =
-              "Obrigado. Este formulário de demonstração ainda não está conectado a um provedor, então nada foi enviado.";
+          const button = form.querySelector("button[type=submit]");
+          const email = new FormData(form).get("email");
+
+          if (button) button.disabled = true;
+          if (status) status.textContent = "Enviando…";
+
+          try {
+            const response = await fetch(`${directusUrl}/items/newsletter_assinantes`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            });
+
+            if (response.ok) {
+              if (status) status.textContent = "Inscrito! Você vai receber nossos avisos por e-mail.";
+              form.reset();
+            } else {
+              const body = await response.json().catch(() => null);
+              const alreadySubscribed = body?.errors?.some((e) => e.extensions?.code === "RECORD_NOT_UNIQUE");
+              if (status) {
+                status.textContent = alreadySubscribed
+                  ? "Este e-mail já está inscrito."
+                  : "Não foi possível concluir agora. Tente novamente em instantes.";
+              }
+              if (alreadySubscribed) form.reset();
+            }
+          } catch {
+            if (status) status.textContent = "Não foi possível concluir agora. Tente novamente em instantes.";
+          } finally {
+            if (button) button.disabled = false;
           }
-          form.reset();
         });
       });
     </script>
