@@ -16,6 +16,9 @@ const shikiConfig = /** @type {const} */ ({
 
 export default defineConfig({
   site: siteConfig.siteUrl,
+  redirects: {
+    "/ministerios": "/orgaos/",
+  },
   integrations: [
     sitemap({
       filter: (page) => page !== new URL("/busca/", siteConfig.siteUrl).toString(),

@@ -54,7 +54,8 @@ export const siteConfig = {
 export const navigation = [
   { label: "Início", href: "/" },
   { label: "Sobre", href: "/sobre/" },
-  { label: "Ministérios", href: "/ministerios/" },
+  { label: "Órgãos", href: "/orgaos/" },
+  { label: "Congregações", href: "/congregacoes/" },
   { label: "Eventos", href: "/eventos/" },
   { label: "Mensagens", href: "/mensagens/" },
   { label: "Contato", href: "/contato/" },
@@ -62,7 +63,6 @@ export const navigation = [
 
 /** Navegação secundária exibida no rodapé. */
 export const footerNavigation = [
-  { label: "Congregações", href: "/congregacoes/" },
   { label: "Doações", href: "/doacoes/" },
   { label: "Galeria", href: "/galeria/" },
   { label: "Transparência", href: "/transparencia/" },

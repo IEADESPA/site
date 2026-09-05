@@ -6,37 +6,38 @@ import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { fetchItems } from "@/lib/directus";
 
-interface Ministerio {
+interface Orgao {
   name: string;
   description: string;
 }
 
 const allPosts = visiblePosts(await getAllMensagens());
-const ministries = await fetchItems<Ministerio>("ministerios", "sort[]=sort");
+const orgaos = await fetchItems<Orgao>("ministerios", "sort[]=sort");
 ---
 
 <BaseLayout
-  title="Ministérios"
-  description={`Conheça os ministérios e departamentos da ${siteConfig.name}.`}
+  title="Órgãos"
+  description={`Conselhos, departamentos e secretarias da ${siteConfig.name}.`}
 >
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas">
       <header class="pagehead">
         <p class="eyebrow">Servindo juntos</p>
-        <h1 class="pagehead-title">Ministérios</h1>
+        <h1 class="pagehead-title">Órgãos</h1>
         <p class="pagehead-description">
-          Cada ministério existe para servir à igreja e à comunidade de uma forma específica. Há
-          espaço para você servir com os dons que Deus lhe deu.
+          Conselhos, departamentos e secretarias que deliberam nas assembleias e reuniões da
+          igreja. Cada órgão existe para servir à igreja e à comunidade de uma forma específica —
+          há espaço para você servir com os dons que Deus lhe deu.
         </p>
       </header>
 
       <ul class="grid gap-6 sm:grid-cols-2">
         {
-          ministries.map((ministry) => (
-            <li class="ministry-card">
-              <h2 class="text-lg font-semibold tracking-tight">{ministry.name}</h2>
-              <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{ministry.description}</p>
+          orgaos.map((orgao) => (
+            <li class="orgao-card">
+              <h2 class="text-lg font-semibold tracking-tight">{orgao.name}</h2>
+              <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{orgao.description}</p>
             </li>
           ))
         }
@@ -46,7 +47,8 @@ const ministries = await fetchItems<Ministerio>("ministerios", "sort[]=sort");
         <h2>Quer participar?</h2>
         <p>
           Fale com a liderança em um dos nossos cultos ou entre em contato pela{" "}
-          <a href="/contato/">página de contato</a> para saber como se envolver em um dos ministérios.
+          <a href="/contato/">página de contato</a> para saber como se envolver em um dos órgãos da
+          igreja.
         </p>
       </div>
     </div>
@@ -55,7 +57,7 @@ const ministries = await fetchItems<Ministerio>("ministerios", "sort[]=sort");
 </BaseLayout>
 
 <style>
-  .ministry-card {
+  .orgao-card {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1.5rem 1.6rem;
