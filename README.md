@@ -314,9 +314,27 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
 
 ### Mais ideias (comunidade, crescimento e operação interna)
 
-- [ ] **Chat/mural de oração em tempo real** — usando o Directus Realtime (WebSocket, já incluso
-      no plano gratuito) para um mural onde pedidos aparecem e recebem "orando por você" sem
-      precisar de recarregar a página.
+- [ ] **Mural de oração público em tempo real** — diferente do "Pedido de oração" já existente em
+      `/contato/` (esse continua privado, só a secretaria vê). Aqui a pessoa escolhe deixar o
+      pedido **público**, com nome ou anônimo, e qualquer visitante pode ver e clicar em
+      "🙏 Orando por você" — o contador sobe na hora pra todo mundo com a página aberta, via
+      Directus Realtime (WebSocket, já incluso no plano gratuito), sem recarregar.
+      - **Moderação obrigatória** — decidido que não tem como publicar sem revisão prévia (campo
+        `aprovado`, só a secretaria muda): é conteúdo público de qualquer visitante, sem login. O
+        "orando por você" continua em tempo real normalmente; só a publicação do pedido em si
+        passa por aprovação antes de entrar no mural.
+      - **Regras de publicação** (texto a exibir no formulário): "Este mural é um espaço de apoio
+        espiritual. Os pedidos passam por uma breve moderação antes de aparecer aqui. Não serão
+        publicados: mensagens ofensivas, discurso de ódio, conteúdo político-partidário,
+        propaganda comercial, spam, ou dados sensíveis de terceiros (endereço, telefone, valores).
+        A equipe se reserva o direito de não publicar pedidos fora desse propósito."
+      - **Tempo de vida**: pedido some do mural público sozinho depois de um tempo definido (ex.
+        30-60 dias), ficando arquivado só como histórico interno — evita acumular anos de pedidos
+        já resolvidos/esquecidos numa lista sem fim.
+      - **Layout**: cards (texto, nome ou "Anônimo", tempo relativo, contador de "orando"), mais
+        recentes aprovados primeiro, carregado por página (não rolagem infinita) para não pesar
+        com milhares de itens de uma vez. Só o contador atualiza sozinho; a ordem da lista não
+        muda em tempo real, para não confundir quem está lendo.
 - [ ] **Devocional em áudio** — versículo do dia narrado (Text-to-Speech do navegador,
       `SpeechSynthesis`, sem custo nem serviço externo).
 - [ ] **Linha do tempo/história interativa** — versão visual (scroll com marcos) da página
