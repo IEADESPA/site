@@ -344,6 +344,30 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       OpenStreetMap) e o embed de `/contato/` pelo Google Maps, com rotas reais e Street View da
       sede. Depende de uma chave de API própria (nunca fica salva em nenhum arquivo do
       repositório) — avisar quando estiver disponível.
+- [ ] **Aba dedicada de gestão de eventos (só camada 3)** — decidido **adiar** para depois do
+      Google Maps e dos ajustes gerais do site, e das ideias de comunidade/crescimento/operação
+      interna acima; retomar só quando houver disposição de mexer com calma, por ser a mudança
+      de maior fôlego desta lista. Escopo: uma área nova dentro do próprio site, autenticada,
+      exclusiva para os eventos com inscrição (camada 3) — a programação semanal (camada 1) e o
+      calendário de eventos simples (camada 2) continuam geridos no Directus normalmente, sem
+      mudança nenhuma. Objetivo: gerenciar o ciclo inteiro do evento complexo num só lugar, com a
+      tela do jeito que a igreja quer (não o formulário genérico do Directus), e resolver o
+      problema real de **inscrições acumulando para sempre** depois que o evento termina.
+      Exige transformar essa parte do site (hoje 100% estático) em renderização sob demanda
+      (suportado nativamente pelo Azure Static Web Apps) e um login simples só para as poucas
+      pessoas que administram evento. Ordem de construção combinada:
+      1. Autenticação da aba.
+      2. Criar evento + suas perguntas (substitui o cadastro no Directus).
+      3. Inscritos, pagamento e check-in reunidos numa única tela.
+      4. Certificado — link único por inscrição (`/certificado/<código>/`), nome direto do banco,
+         sem exportação, sem conta nem senha.
+      5. **Encerrar evento** — ação que grava um resumo agregado (total de inscritos, presentes,
+         pagos, valor arrecadado) direto no evento e **apaga** os dados pessoais (nome, telefone,
+         respostas) daquela edição — evita acumular centenas de inscrições de eventos passados
+         junto com as do evento atual, e evita guardar dado pessoal além do necessário.
+      6. **Relatório automático** — ao encerrar, gera um rascunho de notícia/relatório público
+         (quantas pessoas participaram, quem ministrou, fotos) para a aba de notícias/relatórios
+         do site — sem valor em dinheiro, que nunca é publicado.
 
 ### Ideias rejeitadas
 
