@@ -6,9 +6,10 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { categoryHref, getCategoryList, getFeatured, getAllMensagens, visiblePosts } from "@/lib/posts";
-import { enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
 import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
 import { churchStructuredData, getAllProgramacao, sedeProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
+import versiculos from "@/data/versiculos.json";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const feed = allPosts.slice(0, 6);
@@ -20,11 +21,13 @@ const programacao = await getAllProgramacao();
 const sedeSchedule = sedeProgramacao(programacao);
 const heroSchedule = sedeProgramacaoCompacta(programacao);
 
-interface Versiculo {
-  texto: string;
-  referencia: string;
-}
-const versiculos = await fetchItems<Versiculo>("versiculos", "sort[]=sort");
+/* Escolhido em tempo de build só como valor inicial (pra funcionar sem
+   JavaScript); o script no navegador recalcula com base na data real de
+   quem está vendo e substitui isso na hora. */
+const buildDayOfYear = Math.floor(
+  (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000,
+);
+const versiculoInicial = versiculos[buildDayOfYear % versiculos.length];
 const structuredData = [
   {
     "@context": "https://schema.org",
@@ -109,29 +112,34 @@ const quickLinks = [
       </section>
 
       {
-        versiculos.length > 0 && (
+        versiculoInicial && (
           <section class="verse-section pb-[var(--space-section)]" aria-labelledby="verse-heading">
             <h2 id="verse-heading" class="sr-only">Versículo do dia</h2>
             <blockquote class="verse-card">
-              <p class="verse-text" data-verse-text>&ldquo;{versiculos[0].texto}&rdquo;</p>
-              <footer class="verse-ref" data-verse-ref>{versiculos[0].referencia}</footer>
+              <p class="verse-text" data-verse-text>&ldquo;{versiculoInicial.t}&rdquo;</p>
+              <footer class="verse-ref" data-verse-ref>{versiculoInicial.r}</footer>
             </blockquote>
             <p class="verse-credit">
               Texto: <a href="https://github.com/blivre/BibliaLivre" target="_blank" rel="noreferrer">Bíblia Livre (BLIVRE)</a>, licença CC-BY 3.0 Brasil.
             </p>
-            <script is:inline type="application/json" id="verse-data" set:html={JSON.stringify(versiculos)} />
             <script is:inline>
               (() => {
-                const data = JSON.parse(document.getElementById("verse-data")?.textContent || "[]");
-                if (!data.length) return;
-                const start = new Date(new Date().getFullYear(), 0, 0);
-                const diff = Date.now() - start.getTime();
-                const dayOfYear = Math.floor(diff / 86400000);
-                const verse = data[dayOfYear % data.length];
-                const textEl = document.querySelector("[data-verse-text]");
-                const refEl = document.querySelector("[data-verse-ref]");
-                if (textEl) textEl.textContent = `“${verse.texto}”`;
-                if (refEl) refEl.textContent = verse.referencia;
+                /* A Bíblia inteira (~31 mil versículos) fica num arquivo à
+                   parte, não embutida na página — só é buscada aqui, uma vez
+                   por dia por visitante (cache do navegador cuida do resto). */
+                fetch("/versiculos.json")
+                  .then((response) => (response.ok ? response.json() : []))
+                  .then((data) => {
+                    if (!data.length) return;
+                    const start = new Date(new Date().getFullYear(), 0, 0);
+                    const dayOfYear = Math.floor((Date.now() - start.getTime()) / 86400000);
+                    const verse = data[dayOfYear % data.length];
+                    const textEl = document.querySelector("[data-verse-text]");
+                    const refEl = document.querySelector("[data-verse-ref]");
+                    if (textEl) textEl.textContent = `“${verse.t}”`;
+                    if (refEl) refEl.textContent = verse.r;
+                  })
+                  .catch(() => {});
               })();
             </script>
           </section>
