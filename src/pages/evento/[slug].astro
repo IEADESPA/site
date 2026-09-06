@@ -169,6 +169,17 @@ const structuredData = startDate
 
       {
         event.aceita_inscricao && (
+          <p class="mt-8 text-sm text-muted-foreground">
+            Equipe do evento:{" "}
+            <a href={`/checkin/${event.slug}/`} class="text-accent underline underline-offset-2">
+              abrir check-in de presença
+            </a>
+          </p>
+        )
+      }
+
+      {
+        event.aceita_inscricao && (
           <section class="inscricao-card canvas mt-16" aria-labelledby="inscricao-heading">
             <h2 id="inscricao-heading" class="section-title">Inscrição</h2>
 
