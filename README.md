@@ -232,17 +232,8 @@ seção é justamente para isso.
       Astro (`ClientRouter` + `transition:persist`) para o áudio sobreviver à navegação entre
       páginas, já que hoje cada página carrega do zero — uma mudança de infraestrutura maior que
       a maioria dos itens desta lista, vale planejar com calma quando o conteúdo existir.
-- [ ] **Transmissão ao vivo** — embutir o link do YouTube/Instagram Live nos dias de culto, com
-      aviso automático "ao vivo agora" na home quando dentro do horário de culto.
-- [ ] **Aniversariantes do mês** — lista opcional (com autorização de cada membro) na página de
-      congregações ou em área restrita.
-- [ ] **Escala de trabalho/voluntários** — coleção no Directus para escalas de louvor, mídia,
-      recepção etc., visível só para quem está escalado.
-- [ ] **Enquetes/avaliação pós-evento** — formulário curto após eventos especiais, para feedback
-      da congregação.
-- [ ] **Multilíngue (PT/EN/ES)** — para visitantes estrangeiros, caso a igreja receba público
-      diverso.
-- [ ] **Feed RSS/Atom das mensagens e notícias** — para quem acompanha por leitor de feeds.
+- [x] **Feed RSS/Atom das mensagens e notícias** — `/rss.xml` já existia, mas só cobria mensagens;
+      agora junta mensagens e notícias, ordenado por data, com `<category>` pra diferenciar.
 - [ ] **QR code em cartazes físicos** — gerado automaticamente por evento, apontando direto para
       a página `/evento/<slug>/`.
 - [ ] **Inscrição/gestão de eventos pelo próprio site** — testado como viável, sem precisar de
@@ -258,6 +249,9 @@ seção é justamente para isso.
       - **Exportar lista de presença**: o próprio painel do Directus exporta a coleção em CSV.
       - Não cobre pagamento de inscrição (ex. evento pago) — para isso seria necessário um
         gateway de pagamento de verdade (Stripe/Mercado Pago), que é serviço externo com custo.
+      - **Enquete de avaliação pós-evento**: formulário curto liberado depois do evento, salvando
+        as respostas na mesma lógica da inscrição — parte do mesmo trabalho de eventos, não um
+        item separado.
 
 ### Mais ideias (comunidade, crescimento e operação interna)
 
@@ -291,6 +285,23 @@ seção é justamente para isso.
       OpenStreetMap) e o embed de `/contato/` pelo Google Maps, com rotas reais e Street View da
       sede. Depende de uma chave de API própria (nunca fica salva em nenhum arquivo do
       repositório) — avisar quando estiver disponível.
+
+### Ideias rejeitadas
+
+Avaliadas e descartadas por decisão explícita — registradas aqui só para não serem propostas de
+novo sem necessidade.
+
+- **"Ao vivo agora" automático** — aviso que aparece sozinho quando há transmissão ao vivo. As
+  duas formas possíveis de fazer isso (interruptor manual no painel, ou checagem automática via
+  API) foram descartadas: a primeira tem um fluxo ruim pra quem está no evento, a segunda tem
+  limite diário de consultas que não compensa pra transmissões raras. Ficou só o link estático
+  "Assistir ao vivo" em `/eventos/`, que já resolve na prática sem nenhuma dessas complicações.
+- **Aniversariantes do mês** — envolveria coletar e expor data de nascimento de membros de várias
+  congregações — dado sensível demais pra pouco benefício.
+- **Escala de trabalho/voluntários** — já existe um sistema de gestão de membros usado pela
+  igreja com essa função, mais completo do que valeria a pena reconstruir aqui do zero.
+- **Multilíngue (PT/EN/ES)** — a igreja não recebe público de outros idiomas com frequência que
+  justifique manter traduções; o tradutor automático do navegador já cobre o caso raro.
 
 ## Licença
 
