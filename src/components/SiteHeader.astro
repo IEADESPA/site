@@ -632,7 +632,9 @@ const isCurrentPath = (href: string) =>
   .search-filter.is-active {
     border-color: var(--accent);
     background: color-mix(in srgb, var(--accent) 15%, transparent);
-    color: var(--accent);
+    /* var(--accent) sobre este fundo claro dava só 3.88:1 — --accent-strong
+       resolve com folga (5.97:1), em ambos os temas. */
+    color: var(--accent-strong);
   }
 
   .search-body {
