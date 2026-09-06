@@ -166,9 +166,13 @@ export const getAllAuthors = (posts: Post[]) =>
     .map(([slug, author]) => ({ slug, ...author }))
     .sort((a, b) => b.posts.length - a.posts.length || a.name.localeCompare(b.name));
 
+/* timeZone: "UTC" porque as datas vêm do Directus como "AAAA-MM-DD" (um dia
+   de calendário, não um instante) — sem isso, formatar dependeria do fuso
+   horário de onde o build roda, podendo mostrar o dia errado. */
 export const formatDate = (date: Date, style: "short" | "long" = "short") =>
   new Intl.DateTimeFormat(siteConfig.dateLocale, {
     month: style === "short" ? "short" : "long",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   }).format(date);

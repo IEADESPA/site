@@ -1,4 +1,5 @@
 import { enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { hasEventPage } from "@/lib/eventos";
 import { getAllNoticias, categoryLabel as noticiaCategoryLabel, noticiaHref, visibleNoticias } from "@/lib/noticias";
 import {
   categoryHref,
@@ -97,6 +98,7 @@ interface Evento {
   location: string | null;
   description: string;
   body: string | null;
+  aceita_inscricao?: boolean;
 }
 
 /** Páginas institucionais que não vêm de nenhuma coleção do Directus, mas
@@ -182,7 +184,7 @@ export async function buildSearchIndex(): Promise<SearchItem[]> {
   const fromEventos: SearchItem[] = eventos.map((evento) => ({
     title: evento.title,
     excerpt: evento.description,
-    href: evento.body ? `/evento/${evento.slug}/` : "/eventos/",
+    href: hasEventPage(evento) ? `/evento/${evento.slug}/` : "/eventos/",
     group: "Evento",
     meta: [evento.event_date ? formatDate(new Date(evento.event_date), "long") : null, evento.location]
       .filter(Boolean)

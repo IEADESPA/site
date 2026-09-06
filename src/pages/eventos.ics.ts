@@ -1,5 +1,6 @@
 import { siteConfig } from "@/config/site";
 import { fetchItems } from "@/lib/directus";
+import { hasEventPage } from "@/lib/eventos";
 import { buildIcs } from "@/lib/ics";
 
 interface Evento {
@@ -11,6 +12,7 @@ interface Evento {
   location: string | null;
   description: string;
   body: string | null;
+  aceita_inscricao?: boolean;
 }
 
 export async function GET() {
@@ -26,7 +28,7 @@ export async function GET() {
         date: event.event_date as string,
         endDate: event.end_date,
         time: event.time,
-        url: event.body ? `${siteConfig.siteUrl}/evento/${event.slug}/` : undefined,
+        url: hasEventPage(event) ? `${siteConfig.siteUrl}/evento/${event.slug}/` : undefined,
       })),
     `Eventos — ${siteConfig.name}`,
   );

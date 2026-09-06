@@ -6,24 +6,32 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { DIRECTUS_URL, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { hasEventPage } from "@/lib/eventos";
 
 interface Evento {
+  id: number;
   slug: string;
   title: string;
   event_date: string | null;
   end_date: string | null;
   time: string | null;
+  end_time: string | null;
   location: string | null;
   description: string;
   body: string | null;
   cover: string | null;
   registration_url: string | null;
+  aceita_inscricao: boolean;
+  vagas_limite: number | null;
+  inscricoes_ate: string | null;
+  inscricoes_encerradas: boolean;
+  valor: string | null;
 }
 
 export async function getStaticPaths() {
   const events = await fetchItems<Evento>("eventos");
-  return events.filter((event) => event.body).map((event) => ({ params: { slug: event.slug }, props: { event } }));
+  return events.filter(hasEventPage).map((event) => ({ params: { slug: event.slug }, props: { event } }));
 }
 
 interface Props {
@@ -32,9 +40,22 @@ interface Props {
 
 const { event } = Astro.props;
 const bodyHtml = event.body ? await marked.parse(event.body) : "";
-const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric" });
+/* timeZone: "UTC" porque as datas vêm do Directus como "AAAA-MM-DD" (um dia
+   de calendário, não um instante) — sem isso, formatar dependeria do fuso
+   horário de onde o build roda, podendo mostrar o dia errado. */
+const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 const cover = event.cover ? directusAssetUrl(event.cover, { width: 1600, quality: 80, format: "webp" }) : undefined;
 const config = await fetchConfiguracoes();
+
+const timeRange = event.time ? `${event.time}${event.end_time ? ` às ${event.end_time}` : ""}` : null;
+
+// Inscrição fecha por dois motivos independentes: prazo vencido (checado
+// aqui, sem precisar contar quantas pessoas já se inscreveram — não expõe
+// nada privado) ou a secretaria fechar manualmente pelo painel (vagas
+// esgotadas, por exemplo — decisão dela, não uma contagem automática).
+const inscricaoVencida = event.inscricoes_ate ? new Date(event.inscricoes_ate).getTime() < Date.now() : false;
+const inscricaoAberta = event.aceita_inscricao && !event.inscricoes_encerradas && !inscricaoVencida;
+const inscricaoEncerradaMotivo = event.inscricoes_encerradas ? "encerradas" : inscricaoVencida ? "vencido" : null;
 
 /* "19h30" -> "19:30", exigido pelo ISO 8601 do schema.org. Se não bater
    com o padrão esperado, a hora fica de fora em vez de gerar dado inválido. */
@@ -76,7 +97,7 @@ const structuredData = startDate
             <li>
               <strong class="text-foreground">Data:</strong> {dateFormatter.format(new Date(event.event_date))}
               {event.end_date && event.end_date !== event.event_date && ` até ${dateFormatter.format(new Date(event.end_date))}`}
-              {event.time && ` · ${event.time}`}
+              {timeRange && ` · ${timeRange}`}
             </li>
           )}
           {event.location && <li><strong class="text-foreground">Local:</strong> {event.location}</li>}
@@ -104,6 +125,61 @@ const structuredData = startDate
 
       <div class="prose mt-10" set:html={bodyHtml} />
 
+      {
+        event.aceita_inscricao && (
+          <section class="inscricao-card canvas mt-16" aria-labelledby="inscricao-heading">
+            <h2 id="inscricao-heading" class="section-title">Inscrição</h2>
+
+            <ul class="mt-3 grid gap-1 text-sm text-muted-foreground">
+              {event.valor && <li><strong class="text-foreground">Investimento:</strong> R$ {Number(event.valor).toFixed(2).replace(".", ",")}</li>}
+              {event.vagas_limite && <li><strong class="text-foreground">Vagas limitadas:</strong> {event.vagas_limite}</li>}
+              {event.inscricoes_ate && (
+                <li><strong class="text-foreground">Inscrições até:</strong> {dateFormatter.format(new Date(event.inscricoes_ate))}</li>
+              )}
+            </ul>
+
+            {event.valor && (
+              <p class="mt-4 text-sm leading-relaxed text-muted-foreground">
+                Pagamento via Pix (chave na <a href="/doacoes/" class="text-accent underline underline-offset-2">página de Doações</a>).
+                Depois de pagar, envie o comprovante para{" "}
+                {config.phone ? (
+                  <a href={`https://wa.me/${config.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" class="text-accent underline underline-offset-2">
+                    o WhatsApp da secretaria
+                  </a>
+                ) : (
+                  "a secretaria"
+                )}. A confirmação da vaga é feita manualmente pela equipe.
+              </p>
+            )}
+
+            {inscricaoAberta ? (
+              <form class="mt-6 grid gap-4 max-w-md" data-inscricao-form data-evento-id={event.id}>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="inscricao-nome">Nome</label>
+                  <input id="inscricao-nome" name="nome" type="text" autocomplete="name" required class="field" />
+                </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="inscricao-telefone">Telefone / WhatsApp</label>
+                  <input id="inscricao-telefone" name="telefone" type="tel" autocomplete="tel" required class="field" />
+                </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="inscricao-email">E-mail (opcional)</label>
+                  <input id="inscricao-email" name="email" type="email" autocomplete="email" class="field" />
+                </div>
+                <div class="flex flex-wrap items-center gap-4">
+                  <button type="submit" class="btn btn-solid">Confirmar inscrição</button>
+                  <p class="text-sm leading-relaxed text-muted-foreground" role="status" aria-live="polite" data-inscricao-status />
+                </div>
+              </form>
+            ) : (
+              <p class="mt-6 text-sm leading-relaxed text-muted-foreground">
+                {inscricaoEncerradaMotivo === "vencido" ? "O prazo de inscrição para este evento já encerrou." : "As inscrições para este evento estão encerradas."}
+              </p>
+            )}
+          </section>
+        )
+      }
+
       <div class="prose mt-16">
         <p><a href="/eventos/">&larr; Voltar para Eventos</a></p>
       </div>
@@ -111,7 +187,57 @@ const structuredData = startDate
   </main>
   <SiteFooter />
 
+  {
+    event.aceita_inscricao && inscricaoAberta && (
+      <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
+        document.querySelectorAll("[data-inscricao-form]").forEach((form) => {
+          form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const status = form.querySelector("[data-inscricao-status]");
+            const button = form.querySelector("button[type=submit]");
+            const data = new FormData(form);
+            const eventoId = Number(form.dataset.eventoId);
+
+            if (button) button.disabled = true;
+            if (status) status.textContent = "Enviando…";
+
+            try {
+              const response = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  evento: eventoId,
+                  nome: data.get("nome"),
+                  telefone: data.get("telefone"),
+                  email: data.get("email") || null,
+                }),
+              });
+
+              if (!response.ok) throw new Error("request failed");
+
+              if (status) status.textContent = "Inscrição confirmada! Guarde esta página para lembrar dos detalhes.";
+              form.reset();
+            } catch {
+              if (status) {
+                status.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";
+              }
+            } finally {
+              if (button) button.disabled = false;
+            }
+          });
+        });
+      </script>
+    )
+  }
+
   <style>
+    .inscricao-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.75rem 2rem;
+      background: var(--muted);
+    }
+
     .article-image {
       margin-bottom: 0;
     }

@@ -7,6 +7,7 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
+import { hasEventPage } from "@/lib/eventos";
 import { getAllProgramacao } from "@/lib/programacao";
 
 interface Evento {
@@ -19,6 +20,7 @@ interface Evento {
   description: string;
   body: string | null;
   registration_url: string | null;
+  aceita_inscricao: boolean;
 }
 
 const allPosts = visiblePosts(await getAllMensagens());
@@ -27,9 +29,12 @@ const events = (await fetchItems<Evento>("eventos")).sort((a, b) => {
   const dateB = b.event_date ? new Date(b.event_date).getTime() : Number.POSITIVE_INFINITY;
   return dateA - dateB;
 });
-const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric" });
-const shortDateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long" });
-const monthFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { month: "long", year: "numeric" });
+/* timeZone: "UTC" nos três porque as datas vêm do Directus como
+   "AAAA-MM-DD" (um dia de calendário, não um instante) — sem isso, mostrar
+   o dia certo dependeria do fuso horário de onde o build roda. */
+const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const shortDateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", timeZone: "UTC" });
+const monthFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { month: "long", year: "numeric", timeZone: "UTC" });
 
 const eventDateRange = (event: Evento) => {
   if (!event.event_date) return null;
@@ -121,7 +126,7 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
                     date: event.event_date as string,
                     endDate: event.end_date,
                     title: event.title,
-                    href: event.body ? `/evento/${event.slug}/` : undefined,
+                    href: hasEventPage(event) ? `/evento/${event.slug}/` : undefined,
                   }))}
               />
             </div>
@@ -148,8 +153,10 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
                       {event.location && <p class="mt-1 text-sm text-muted-foreground">{event.location}</p>}
                       <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{event.description}</p>
                       <div class="mt-3 flex flex-wrap gap-4">
-                        {event.body && (
-                          <a href={`/evento/${event.slug}/`} class="link-sweep text-sm font-semibold text-accent">Ver detalhes</a>
+                        {hasEventPage(event) && (
+                          <a href={`/evento/${event.slug}/`} class="link-sweep text-sm font-semibold text-accent">
+                            {event.aceita_inscricao ? "Ver detalhes e inscrever-se" : "Ver detalhes"}
+                          </a>
                         )}
                         {event.registration_url && (
                           <a href={event.registration_url} target="_blank" rel="noreferrer" class="link-sweep text-sm font-semibold text-accent">Inscreva-se</a>

@@ -1,5 +1,6 @@
 import { siteConfig } from "@/config/site";
 import { fetchItems } from "@/lib/directus";
+import { hasEventPage } from "@/lib/eventos";
 import { buildIcs } from "@/lib/ics";
 
 interface Evento {
@@ -11,6 +12,7 @@ interface Evento {
   location: string | null;
   description: string;
   body: string | null;
+  aceita_inscricao?: boolean;
 }
 
 export async function getStaticPaths() {
@@ -34,7 +36,7 @@ export async function GET({ props }: { props: Props }) {
         date: event.event_date as string,
         endDate: event.end_date,
         time: event.time,
-        url: event.body ? `${siteConfig.siteUrl}/evento/${event.slug}/` : undefined,
+        url: hasEventPage(event) ? `${siteConfig.siteUrl}/evento/${event.slug}/` : undefined,
       },
     ],
     event.title,
