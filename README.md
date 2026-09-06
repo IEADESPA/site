@@ -328,9 +328,11 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
         publicados: mensagens ofensivas, discurso de ódio, conteúdo político-partidário,
         propaganda comercial, spam, ou dados sensíveis de terceiros (endereço, telefone, valores).
         A equipe se reserva o direito de não publicar pedidos fora desse propósito."
-      - **Tempo de vida**: pedido some do mural público sozinho depois de um tempo definido (ex.
-        30-60 dias), ficando arquivado só como histórico interno — evita acumular anos de pedidos
-        já resolvidos/esquecidos numa lista sem fim.
+      - **Tempo de vida**: pedido some do mural público sozinho depois de **90 dias**, ficando
+        arquivado só como histórico interno — evita acumular anos de pedidos já
+        resolvidos/esquecidos numa lista sem fim. Se a pessoa quiser continuar orando depois
+        disso, pode postar de novo — o prazo é só pra manter o mural atual, não é um limite de
+        quanto tempo se pode orar por algo.
       - **Layout**: cards (texto, nome ou "Anônimo", tempo relativo, contador de "orando"), mais
         recentes aprovados primeiro, carregado por página (não rolagem infinita) para não pesar
         com milhares de itens de uma vez. Só o contador atualiza sozinho; a ordem da lista não
