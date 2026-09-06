@@ -201,8 +201,12 @@ seção é justamente para isso.
       (16px → 20px, escala junto com todo o layout por ser baseado em `rem`), reforça o contraste
       dos textos secundários e o anel de foco, e sublinha links — pensado para idosos e pessoas
       com baixa visão. Persiste por navegador (`localStorage`), independente do tema claro/escuro.
-- [ ] **Pedido de oração** — formulário simples que salva no Directus, visível só para a
-      liderança no painel (não aparece publicamente quem pediu).
+- [x] **Pedido de oração** — não é uma página separada: é o próprio "Fale conosco" (`/contato/`)
+      aprimorado. Escolher "Pedido de oração" no assunto muda o formulário (título, aviso de
+      confidencialidade, rótulos) e libera a opção de enviar sem se identificar. Um link direto
+      (`/contato/?assunto=oracao#fale-conosco`, já indexado na busca do site) chega com essa opção
+      pré-selecionada. Confirmado que a coleção `contato_mensagens` não é lida publicamente — só
+      aceita criar, ninguém de fora consegue ver os pedidos.
 - [ ] **Notificações push de eventos** — quem visita o site pode ativar avisos do navegador para
       eventos próximos, sem precisar de app nem WhatsApp.
 - [ ] **Modo escuro (dark mode)** — alternância manual, respeitando a preferência do sistema por

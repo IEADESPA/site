@@ -115,6 +115,11 @@ const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
   { title: "Transparência", excerpt: "Diretoria e prestação de contas.", href: "/transparencia/" },
   { title: "Primeira vez aqui?", excerpt: "Informações para quem vai visitar pela primeira vez.", href: "/visitante/" },
   { title: "Contato", excerpt: "Formulário, endereço e mapa.", href: "/contato/" },
+  {
+    title: "Pedido de oração",
+    excerpt: "Envie um pedido de oração direto para a liderança, com a opção de ser anônimo.",
+    href: "/contato/?assunto=oracao#fale-conosco",
+  },
 ];
 
 let cachedIndex: SearchItem[] | null = null;

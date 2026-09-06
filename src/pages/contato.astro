@@ -95,22 +95,12 @@ const mapsLinkHref = mapsHref(config);
           </div>
         </div>
 
-        <form class="grid gap-5" data-contact-form={isEnabled ? "" : undefined}>
-          <h2 class="section-title">Envie uma mensagem</h2>
-
-          <div class="grid gap-2">
-            <label class="text-sm font-semibold" for="contact-name">Nome</label>
-            <input id="contact-name" name="name" type="text" autocomplete="name" required disabled={!isEnabled} class="field" />
-          </div>
-
-          <div class="grid gap-2">
-            <label class="text-sm font-semibold" for="contact-email">E-mail</label>
-            <input id="contact-email" name="email" type="email" autocomplete="email" required disabled={!isEnabled} class="field" />
-          </div>
+        <form id="fale-conosco" class="grid gap-5" data-contact-form={isEnabled ? "" : undefined}>
+          <h2 class="section-title" data-contact-heading>Envie uma mensagem</h2>
 
           <div class="grid gap-2">
             <label class="text-sm font-semibold" for="contact-type">Assunto</label>
-            <select id="contact-type" name="type" disabled={!isEnabled} class="field">
+            <select id="contact-type" name="type" disabled={!isEnabled} class="field" data-contact-type>
               <option value="duvida">Dúvida geral</option>
               <option value="oracao">Pedido de oração</option>
               <option value="visita">Visita pastoral</option>
@@ -118,13 +108,43 @@ const mapsLinkHref = mapsHref(config);
             </select>
           </div>
 
+          <p class="contact-privacy-note" data-contact-privacy hidden>
+            Só a diretoria e a liderança pastoral têm acesso aos pedidos de oração — nada é
+            publicado no site nem visto por outros visitantes.
+          </p>
+
+          <div class="grid gap-2" data-contact-anon-field hidden>
+            <label class="contact-checkbox">
+              <input type="checkbox" name="anonymous" id="contact-anonymous" data-contact-anonymous />
+              Prefiro enviar de forma anônima (sem nome nem e-mail)
+            </label>
+          </div>
+
+          <div class="grid gap-2" data-contact-name-field>
+            <label class="text-sm font-semibold" for="contact-name" data-contact-name-label>Nome</label>
+            <input id="contact-name" name="name" type="text" autocomplete="name" required disabled={!isEnabled} class="field" />
+          </div>
+
+          <div class="grid gap-2" data-contact-email-field>
+            <label class="text-sm font-semibold" for="contact-email" data-contact-email-label>E-mail</label>
+            <input id="contact-email" name="email" type="email" autocomplete="email" required disabled={!isEnabled} class="field" />
+          </div>
+
           <div class="grid gap-2">
-            <label class="text-sm font-semibold" for="contact-message">Mensagem</label>
-            <textarea id="contact-message" name="message" rows="7" required disabled={!isEnabled} class="field resize-y"></textarea>
+            <label class="text-sm font-semibold" for="contact-message" data-contact-message-label>Mensagem</label>
+            <textarea
+              id="contact-message"
+              name="message"
+              rows="7"
+              required
+              disabled={!isEnabled}
+              class="field resize-y"
+              data-contact-message
+            ></textarea>
           </div>
 
           <div class="flex flex-wrap items-center gap-4">
-            <button type="submit" disabled={!isEnabled} class="btn btn-solid">
+            <button type="submit" disabled={!isEnabled} class="btn btn-solid" data-contact-submit>
               {isEnabled ? "Enviar mensagem" : "Formulário indisponível"}
             </button>
             <p class="contact-status text-sm leading-relaxed text-muted-foreground" role="status" aria-live="polite" data-contact-status></p>
@@ -147,31 +167,83 @@ const mapsLinkHref = mapsHref(config);
     isEnabled && (
       <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
         document.querySelectorAll("[data-contact-form]").forEach((form) => {
+          const typeSelect = form.querySelector("[data-contact-type]");
+          const heading = form.querySelector("[data-contact-heading]");
+          const privacyNote = form.querySelector("[data-contact-privacy]");
+          const anonField = form.querySelector("[data-contact-anon-field]");
+          const anonCheckbox = form.querySelector("[data-contact-anonymous]");
+          const nameField = form.querySelector("[data-contact-name-field]");
+          const emailField = form.querySelector("[data-contact-email-field]");
+          const nameInput = form.querySelector("#contact-name");
+          const emailInput = form.querySelector("#contact-email");
+          const nameLabel = form.querySelector("[data-contact-name-label]");
+          const messageLabel = form.querySelector("[data-contact-message-label]");
+          const messageField = form.querySelector("[data-contact-message]");
+          const submitButton = form.querySelector("[data-contact-submit]");
+
+          /* O assunto "Pedido de oração" muda o próprio formulário: título,
+             rótulos, um aviso de confidencialidade e a opção de enviar sem
+             se identificar — em vez de só mais uma opção num dropdown. */
+          const applyType = () => {
+            const isOracao = typeSelect?.value === "oracao";
+            const isAnon = isOracao && anonCheckbox instanceof HTMLInputElement && anonCheckbox.checked;
+
+            if (heading) heading.textContent = isOracao ? "Envie seu pedido de oração" : "Envie uma mensagem";
+            if (privacyNote) privacyNote.hidden = !isOracao;
+            if (anonField) anonField.hidden = !isOracao;
+            if (messageLabel) messageLabel.textContent = isOracao ? "Seu pedido de oração" : "Mensagem";
+            if (nameLabel) nameLabel.textContent = isOracao ? "Nome (opcional se enviar anônimo)" : "Nome";
+            if (messageField) {
+              messageField.placeholder = isOracao
+                ? "Conte com suas palavras o que você gostaria que a igreja orasse."
+                : "";
+            }
+            if (submitButton) submitButton.textContent = isOracao ? "Enviar pedido de oração" : "Enviar mensagem";
+
+            if (nameField) nameField.hidden = isAnon;
+            if (emailField) emailField.hidden = isAnon;
+            if (nameInput) nameInput.required = !isAnon;
+            if (emailInput) emailInput.required = !isAnon;
+          };
+
+          typeSelect?.addEventListener("change", applyType);
+          anonCheckbox?.addEventListener("change", applyType);
+
+          /* Um link tipo /contato/?assunto=oracao#fale-conosco já chega com o
+             assunto certo escolhido, sem a pessoa precisar procurar. */
+          const requestedType = new URLSearchParams(window.location.search).get("assunto");
+          if (requestedType && typeSelect) typeSelect.value = requestedType;
+          applyType();
+
           form.addEventListener("submit", async (event) => {
             event.preventDefault();
             const status = form.querySelector("[data-contact-status]");
             const button = form.querySelector("button[type=submit]");
             const data = new FormData(form);
+            const isAnon = anonCheckbox instanceof HTMLInputElement && anonCheckbox.checked && !anonField?.hidden;
 
             if (button) button.disabled = true;
             if (status) status.textContent = "Enviando…";
 
             try {
+              const payload = {
+                name: isAnon ? "Anônimo" : data.get("name"),
+                type: data.get("type"),
+                message: data.get("message"),
+              };
+              if (!isAnon) payload.email = data.get("email");
+
               const response = await fetch(`${directusUrl}/items/contato_mensagens`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  name: data.get("name"),
-                  email: data.get("email"),
-                  type: data.get("type"),
-                  message: data.get("message"),
-                }),
+                body: JSON.stringify(payload),
               });
 
               if (!response.ok) throw new Error("request failed");
 
               if (status) status.textContent = "Mensagem enviada. Obrigado pelo contato!";
               form.reset();
+              applyType();
             } catch {
               if (status) {
                 status.textContent =
@@ -190,6 +262,32 @@ const mapsLinkHref = mapsHref(config);
   <style>
     .contact-status:empty {
       display: none;
+    }
+
+    .contact-privacy-note {
+      margin: 0;
+      border-left: 3px solid var(--accent);
+      background: var(--muted);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      color: var(--muted-foreground);
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+
+    .contact-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--foreground);
+      font-size: 0.9375rem;
+      cursor: pointer;
+    }
+
+    .contact-checkbox input {
+      width: 1.1rem;
+      height: 1.1rem;
+      accent-color: var(--accent);
     }
   </style>
 </BaseLayout>
