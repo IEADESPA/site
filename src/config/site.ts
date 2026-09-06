@@ -36,8 +36,13 @@ export const siteConfig = {
   /** Só entram aqui redes que a igreja realmente usa — não deixe link de rede que não existe ainda. */
   socials: [
     { label: "Instagram", href: "https://instagram.com/adseta.parauapebas" },
+    { label: "YouTube", href: "https://www.youtube.com/channel/UCt-reZ0YGpGsmDwr5mkxPHQ" },
     { label: "RSS", href: "/rss.xml" },
   ],
+  /** URL fixa do YouTube: mostra o vídeo ao vivo automaticamente se houver
+   * uma transmissão rolando, ou a página do canal caso contrário — sem
+   * precisar de nenhuma checagem programática. */
+  youtubeLiveUrl: "https://www.youtube.com/channel/UCt-reZ0YGpGsmDwr5mkxPHQ/live",
 };
 
 /** Navegação do cabeçalho. Adicione ou remova itens livremente; o cabeçalho os renderiza em ordem. */
