@@ -29,18 +29,39 @@ const heroSchedule = sedeProgramacaoCompacta(programacao);
  * é só texto — sem custo de bundling.
  *
  * Escolhido aqui só como valor inicial (pra funcionar sem JavaScript); o
- * script no navegador recalcula com base na data real de quem está vendo e
- * substitui isso na hora.
+ * script no navegador recalcula com base no horário real de quem está
+ * vendo e substitui isso na hora.
  */
 /* `process.cwd()` (não `import.meta.url`) porque o build empacota este
    arquivo em outra pasta (dist/.prerender/chunks/...) — resolver relativo
    ao próprio módulo apontaria pro lugar errado depois de empacotado. */
+type VerseBuckets = { madrugada: Verse[]; manha: Verse[]; tarde: Verse[]; noite: Verse[] };
+type Verse = { r: string; t: string };
 const versiculosPath = join(process.cwd(), "public", "versiculos.json");
-const versiculos = JSON.parse(readFileSync(versiculosPath, "utf8")) as { r: string; t: string }[];
-const buildDayOfYear = Math.floor(
-  (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000,
+const versiculoBuckets = JSON.parse(readFileSync(versiculosPath, "utf8")) as VerseBuckets;
+
+/* Classificação automática por padrão de texto (palavras-chave e
+   estrutura), não leitura manual verso a verso — ver
+   scratchpad/classify-verses.mjs para o critério usado. Cada período do
+   dia tem seu próprio balde de versículos, embaralhado, e avança um
+   índice por dia — dá 4 versículos diferentes por dia (um a cada 6h),
+   sem repetir enquanto o balde for maior que os dias decorridos. */
+function periodoDoHorario(hora: number): keyof VerseBuckets {
+  if (hora < 6) return "madrugada";
+  if (hora < 12) return "manha";
+  if (hora < 18) return "tarde";
+  return "noite";
+}
+
+// Dias desde o Unix epoch (não "dia do ano"): avança pra sempre em vez de
+// resetar todo 1º de janeiro, senão só os primeiros ~365 versículos de
+// cada balde jamais apareceriam.
+const epochDays = Math.floor(Date.now() / 86400000);
+const horaBuild = Number(
+  new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(new Date()),
 );
-const versiculoInicial = versiculos[buildDayOfYear % versiculos.length];
+const baldeInicial = versiculoBuckets[periodoDoHorario(horaBuild)];
+const versiculoInicial = baldeInicial[epochDays % baldeInicial.length];
 const structuredData = [
   {
     "@context": "https://schema.org",
@@ -137,20 +158,39 @@ const quickLinks = [
             </p>
             <script is:inline>
               (() => {
-                /* A Bíblia inteira (~31 mil versículos) fica num arquivo à
-                   parte, não embutida na página — só é buscada aqui, uma vez
-                   por dia por visitante (cache do navegador cuida do resto). */
+                /* A Bíblia inteira (~31 mil versículos, em 4 baldes por
+                   período do dia) fica num arquivo à parte, não embutida
+                   na página — buscada uma vez por visita (cache do
+                   navegador cuida do resto). Muda a cada 6h: madrugada
+                   (0-6h), manhã (6-12h), tarde (12-18h), noite (18-24h),
+                   no horário local de quem está vendo. */
+                const periodoDoHorario = (hora) => {
+                  if (hora < 6) return "madrugada";
+                  if (hora < 12) return "manha";
+                  if (hora < 18) return "tarde";
+                  return "noite";
+                };
+
                 fetch("/versiculos.json")
-                  .then((response) => (response.ok ? response.json() : []))
-                  .then((data) => {
-                    if (!data.length) return;
-                    const start = new Date(new Date().getFullYear(), 0, 0);
-                    const dayOfYear = Math.floor((Date.now() - start.getTime()) / 86400000);
-                    const verse = data[dayOfYear % data.length];
+                  .then((response) => (response.ok ? response.json() : null))
+                  .then((buckets) => {
+                    if (!buckets) return;
                     const textEl = document.querySelector("[data-verse-text]");
                     const refEl = document.querySelector("[data-verse-ref]");
-                    if (textEl) textEl.textContent = `“${verse.t}”`;
-                    if (refEl) refEl.textContent = verse.r;
+
+                    const render = () => {
+                      const balde = buckets[periodoDoHorario(new Date().getHours())];
+                      if (!balde || !balde.length) return;
+                      const epochDays = Math.floor(Date.now() / 86400000);
+                      const verse = balde[epochDays % balde.length];
+                      if (textEl) textEl.textContent = `“${verse.t}”`;
+                      if (refEl) refEl.textContent = verse.r;
+                    };
+
+                    render();
+                    // Sem precisar recarregar a página: confere a cada 5
+                    // minutos se entrou num novo período de 6h.
+                    setInterval(render, 5 * 60 * 1000);
                   })
                   .catch(() => {});
               })();
