@@ -1,0 +1,164 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+interface Evento {
+  id: number;
+  slug: string;
+  title: string;
+  aceita_inscricao: boolean;
+}
+
+export async function getStaticPaths() {
+  const events = await fetchItems<Evento>("eventos", "filter[aceita_inscricao][_eq]=true");
+  return events.map((event) => ({ params: { slug: event.slug }, props: { event } }));
+}
+
+interface Props {
+  event: Evento;
+}
+
+const { event } = Astro.props;
+const allPosts = visiblePosts(await getAllMensagens());
+---
+
+<BaseLayout title={`Check-in — ${event.title}`} description="Confirme sua presença no evento." noindex>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas checkin-canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Check-in</p>
+        <h1 class="pagehead-title">{event.title}</h1>
+        <p class="pagehead-description">Digite seu código de confirmação pra registrar sua presença.</p>
+      </header>
+
+      <form class="mt-8 grid gap-4 max-w-sm" data-checkin-form data-evento-id={event.id}>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="checkin-codigo">Código de confirmação</label>
+          <input
+            id="checkin-codigo"
+            name="codigo"
+            type="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            maxlength="6"
+            class="field checkin-codigo-input"
+            placeholder="A3F9K2"
+          />
+        </div>
+        <button type="submit" class="btn btn-solid">Confirmar presença</button>
+      </form>
+
+      <p class="mt-6 text-lg font-semibold" data-checkin-resultado role="status" aria-live="polite" />
+
+      <details class="mt-10">
+        <summary class="cursor-pointer text-sm font-semibold text-accent">Esqueceu o código? Buscar pelo nome</summary>
+        <div class="mt-4 grid gap-3 max-w-sm">
+          <input
+            type="text"
+            class="field"
+            placeholder="Digite seu nome…"
+            data-checkin-busca-nome
+            autocomplete="off"
+          />
+          <div class="grid gap-2" data-checkin-resultados-nome></div>
+        </div>
+      </details>
+    </div>
+  </main>
+  <SiteFooter />
+
+  <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, eventoId: event.id }}>
+    (() => {
+      const form = document.querySelector("[data-checkin-form]");
+      const resultado = document.querySelector("[data-checkin-resultado]");
+      const buscaInput = document.querySelector("[data-checkin-busca-nome]");
+      const resultadosNome = document.querySelector("[data-checkin-resultados-nome]");
+      let pessoas = null;
+
+      const escapeHtml = (value) =>
+        String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+      async function confirmarPresenca(id, nome) {
+        const res = await fetch(`${directusUrl}/items/inscricoes_eventos/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ presente: true }),
+        });
+        if (!res.ok) throw new Error("falha ao confirmar");
+        resultado.textContent = `✅ ${nome} — presença confirmada!`;
+      }
+
+      form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const codigo = document.getElementById("checkin-codigo").value.trim().toUpperCase();
+        resultado.textContent = "Verificando…";
+
+        try {
+          const res = await fetch(
+            `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][codigo][_eq]=${encodeURIComponent(codigo)}`,
+          );
+          const json = await res.json();
+          const pessoa = json.data?.[0];
+          if (!pessoa) {
+            resultado.textContent = "Código não encontrado. Confira e tente de novo, ou busque pelo nome abaixo.";
+            return;
+          }
+          await confirmarPresenca(pessoa.id, pessoa.nome);
+          form.reset();
+        } catch {
+          resultado.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";
+        }
+      });
+
+      buscaInput?.addEventListener("input", async () => {
+        const termo = buscaInput.value.trim().toLowerCase();
+        if (termo.length < 2) {
+          resultadosNome.innerHTML = "";
+          return;
+        }
+
+        if (!pessoas) {
+          const res = await fetch(`${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=id,nome&limit=-1`);
+          const json = await res.json();
+          pessoas = json.data ?? [];
+        }
+
+        const encontrados = pessoas.filter((p) => p.nome.toLowerCase().includes(termo)).slice(0, 8);
+        resultadosNome.innerHTML = encontrados
+          .map((p) => `<button type="button" class="btn btn-outline" data-pessoa-id="${p.id}" data-pessoa-nome="${escapeHtml(p.nome)}">${escapeHtml(p.nome)}</button>`)
+          .join("");
+      });
+
+      resultadosNome?.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-pessoa-id]");
+        if (!button) return;
+        resultado.textContent = "Confirmando…";
+        try {
+          await confirmarPresenca(button.dataset.pessoaId, button.dataset.pessoaNome);
+          resultadosNome.innerHTML = "";
+          buscaInput.value = "";
+        } catch {
+          resultado.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";
+        }
+      });
+    })();
+  </script>
+
+  <style>
+    .checkin-canvas {
+      max-width: 40rem;
+    }
+
+    .checkin-codigo-input {
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-size: 1.5rem;
+      text-align: center;
+      font-family: var(--font-mono);
+    }
+  </style>
+</BaseLayout>

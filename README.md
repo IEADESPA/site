@@ -283,16 +283,34 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       - Testado de ponta a ponta com um evento fictício de 5 perguntas (baseado no seminário
         real mostrado): formulário renderiza os tipos certos, inscrição criada, duas respostas
         corretamente vinculadas a ela — confirmado via painel administrativo.
+      - **Check-in por código, sem login de ninguém** — decidido depois de perceber que só 3
+        contas existem no Directus, e a pessoa de plantão na portaria pode nem ser uma delas.
+        Modelo: a inscrição gera um código curto (6 caracteres, sem letras ambíguas como 0/O),
+        mostrado na hora da confirmação. Página pública `/checkin/<slug>/`: a pessoa digita o
+        próprio código (ou busca pelo nome, se esquecer) numa tela pública — nenhum login
+        necessário, qualquer voluntário pode tomar conta do tablet na porta.
+        - Campo `codigo` (único) e `presente` (boolean) em `inscricoes_eventos`.
+        - Permissão pública de leitura ampliada pra `id, nome, codigo, evento` (só o necessário
+          pra buscar/confirmar — nunca telefone, pago ou valor).
+        - Permissão pública de **atualização restrita ao campo `presente`** — testado e
+          confirmado que tentar mudar qualquer outro campo (ex. `pago`) é bloqueado.
+        - Testado de ponta a ponta com dados fictícios: busca por código, busca por nome
+          (filtrada corretamente só ao evento certo), confirmação de presença — tudo validado via
+          requisição direta (o CORS bloqueia só o teste local, não o domínio real).
+      - **Painel gerencial ("Insights" do Directus)** — confirmado como disponível no plano atual
+        (testado via API). Um painel de teste com dados fictícios (10 inscritos) foi montado com
+        sucesso: contadores de inscritos/pagos/presentes, soma de valor confirmado, e um gráfico
+        de ranking por congregação — tudo nativo do Directus, sem nenhum código customizado.
+        Avaliado como alternativa ao Microsoft Power Apps (que teria custo real de licença e de
+        armazenamento — Dataverse —, além de fragmentar o sistema em duas fontes de dados);
+        Insights resolve o mesmo problema de graça, dentro do que já existe.
       - **Certificado**: ainda adiado, mas confirmado como a dor real mais forte do processo
         manual atual (49 certificados feitos um por um à mão). Quando for construído, a meta é
         não precisar de nenhuma exportação — nome usado direto do banco pra gerar um link único
         por inscrição (`/certificado/<código>/`), sem conta nem senha.
-      - **Lista de chamada / check-in**: não construído ainda, mas identificado como de baixo
-        esforço — uma página imprimível com nome, respostas relevantes e uma coluna em branco
-        pra assinatura, gerada direto dos dados já cadastrados.
-      - **Ranking por congregação/gráficos**: o Directus tem um recurso nativo de dashboards
-        ("Insights") que provavelmente cobre isso sem precisar construir nada customizado —
-        avaliar quando for relevante.
+      - **Lista de chamada impressa**: não construído ainda — com o check-in por código já
+        resolvendo a presença digitalmente, avaliar se ainda faz sentido ter também uma versão
+        em papel como reserva.
 
 ### Mais ideias (comunidade, crescimento e operação interna)
 

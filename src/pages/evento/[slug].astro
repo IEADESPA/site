@@ -245,6 +245,15 @@ const structuredData = startDate
   {
     event.aceita_inscricao && inscricaoAberta && (
       <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
+        // Sem caracteres ambíguos (0/O, 1/I/L) — pra ser fácil de digitar de
+        // volta na portaria no dia do evento.
+        const ALFABETO_CODIGO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+        function gerarCodigo(tamanho = 6) {
+          const bytes = new Uint8Array(tamanho);
+          crypto.getRandomValues(bytes);
+          return Array.from(bytes, (b) => ALFABETO_CODIGO[b % ALFABETO_CODIGO.length]).join("");
+        }
+
         document.querySelectorAll("[data-inscricao-form]").forEach((form) => {
           form.addEventListener("submit", async (event) => {
             event.preventDefault();
@@ -252,6 +261,7 @@ const structuredData = startDate
             const button = form.querySelector("button[type=submit]");
             const data = new FormData(form);
             const eventoId = Number(form.dataset.eventoId);
+            const codigo = gerarCodigo();
 
             if (button) button.disabled = true;
             if (status) status.textContent = "Enviando…";
@@ -264,6 +274,7 @@ const structuredData = startDate
                   evento: eventoId,
                   nome: data.get("nome"),
                   telefone: data.get("telefone"),
+                  codigo,
                 }),
               });
               if (!inscricaoRes.ok) throw new Error("falha ao criar inscrição");
@@ -299,7 +310,9 @@ const structuredData = startDate
                 ),
               );
 
-              if (status) status.textContent = "Inscrição confirmada!";
+              if (status) {
+                status.innerHTML = `Inscrição confirmada! Seu código de check-in é <strong>${codigo}</strong> — anote ou tire um print, você vai usar na entrada do evento.`;
+              }
               form.reset();
             } catch {
               if (status) {
