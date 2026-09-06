@@ -188,19 +188,82 @@ que um item é criado, editado ou apagado. O workflow do GitHub Actions escuta e
 do Directus (`GITHUB_DISPATCH_TOKEN`, exposta ao Flow via `FLOWS_ENV_ALLOW_LIST`) — nunca aparece
 em texto puro em nenhuma tela de configuração do Directus.
 
-## Recursos no Azure (visão geral)
+## Ideias futuras (roadmap de inovações)
 
-| Recurso | Função | Custo |
-| --- | --- | --- |
-| Static Web App | Hospeda o site público (este repositório) | Gratuito |
-| Storage Account `storageigrejaportal` | Armazena fotos e PDFs enviados no Directus | Baixo (poucos GB) |
-| App Service `ieadespa-directus` (Linux, Basic B1, Brazil South) | Roda o Directus | ~US$ 13/mês |
-| Azure Database for PostgreSQL Flexible Server (Burstable B1ms, Brazil South) | Banco de dados do Directus | ~US$ 15–18/mês |
+Lista aberta de funcionalidades ainda não construídas, para avaliar e priorizar quando fizer
+sentido. Marque com `[x]` o que decidir construir, ou adicione novos itens livremente — esta
+seção é justamente para isso.
 
-Nenhum desses recursos é redundante — cada um tem uma função diferente. Confirme se os créditos de
-ONG da Azure cobrem os ~US$ 28–31/mês dos dois últimos.
+- [ ] **Atalho de busca rápida (Ctrl+K)** — abre a busca já existente (`/busca/`) de qualquer
+      página, sem precisar rolar até o campo.
+- [ ] **Modo alto-contraste / leitura fácil** — botão que aumenta fonte e contraste, pensado para
+      idosos e pessoas com baixa visão (público real de igreja).
+- [ ] **Pedido de oração** — formulário simples que salva no Directus, visível só para a
+      liderança no painel (não aparece publicamente quem pediu).
+- [ ] **Notificações push de eventos** — quem visita o site pode ativar avisos do navegador para
+      eventos próximos, sem precisar de app nem WhatsApp.
+- [ ] **Modo escuro (dark mode)** — alternância manual, respeitando a preferência do sistema por
+      padrão.
+- [ ] **Player de áudio persistente (mini-player)** — ao abrir uma mensagem, o áudio continua
+      tocando enquanto se navega para outras páginas do site.
+- [ ] **Transmissão ao vivo** — embutir o link do YouTube/Instagram Live nos dias de culto, com
+      aviso automático "ao vivo agora" na home quando dentro do horário de culto.
+- [ ] **Aniversariantes do mês** — lista opcional (com autorização de cada membro) na página de
+      congregações ou em área restrita.
+- [ ] **Escala de trabalho/voluntários** — coleção no Directus para escalas de louvor, mídia,
+      recepção etc., visível só para quem está escalado.
+- [ ] **Enquetes/avaliação pós-evento** — formulário curto após eventos especiais, para feedback
+      da congregação.
+- [ ] **Multilíngue (PT/EN/ES)** — para visitantes estrangeiros, caso a igreja receba público
+      diverso.
+- [ ] **Feed RSS/Atom das mensagens e notícias** — para quem acompanha por leitor de feeds.
+- [ ] **QR code em cartazes físicos** — gerado automaticamente por evento, apontando direto para
+      a página `/evento/<slug>/`.
+- [ ] **Inscrição/gestão de eventos pelo próprio site** — testado como viável, sem precisar de
+      Sympla/Eventbrite nem outro app pago:
+      - Nova coleção `inscricoes` no Directus (nome, telefone, e-mail, evento vinculado),
+        permissão pública apenas de **criar** item — ninguém de fora consegue ler a lista, só a
+        diretoria no painel.
+      - Formulário na própria página do evento (`/evento/<slug>/`) que salva direto na coleção.
+      - **Limite de vagas**: o formulário conta as inscrições já feitas e se fecha sozinho ao
+        bater o limite cadastrado no evento.
+      - **Confirmação automática por e-mail**: usa o Flow de e-mail nativo do Directus (grátis,
+        já usado no Flow de deploy), sem serviço de terceiro.
+      - **Exportar lista de presença**: o próprio painel do Directus exporta a coleção em CSV.
+      - Não cobre pagamento de inscrição (ex. evento pago) — para isso seria necessário um
+        gateway de pagamento de verdade (Stripe/Mercado Pago), que é serviço externo com custo.
+
+### Mais ideias (comunidade, crescimento e operação interna)
+
+- [ ] **Chat/mural de oração em tempo real** — usando o Directus Realtime (WebSocket, já incluso
+      no plano gratuito) para um mural onde pedidos aparecem e recebem "orando por você" sem
+      precisar de recarregar a página.
+- [ ] **Devocional em áudio** — versículo do dia narrado (Text-to-Speech do navegador,
+      `SpeechSynthesis`, sem custo nem serviço externo).
+- [ ] **Linha do tempo/história interativa** — versão visual (scroll com marcos) da página
+      "Nossa história", reaproveitando o conteúdo já cadastrado.
+- [ ] **Área "Batismo/Casamento/Dedicação de crianças"** — página com pré-requisitos e formulário
+      de solicitação de data, salvando no Directus como as inscrições de evento.
+- [ ] **Estatísticas públicas de crescimento** — gráfico simples (ex. nº de congregações ao longo
+      dos anos, atendendo à transparência) na página `/transparencia/`.
+- [ ] **Impressão amigável (modo impressão) da programação semanal** — CSS `@media print`
+      dedicado, para quem prefere imprimir em vez de guardar a imagem compartilhável.
+- [ ] **Newsletter por e-mail** — resumo semanal automático (notícias + próximos eventos) via
+      Flow do Directus, para quem se cadastra com o e-mail.
+- [ ] **Progressive Web App (PWA)** — permite "instalar" o site na tela inicial do celular como
+      se fosse um app, com ícone próprio, sem passar pela loja de aplicativos.
+- [ ] **Modo offline básico** — cache da programação semanal e contatos via Service Worker, para
+      funcionar mesmo sem internet (útil em áreas de sinal fraco).
+- [ ] **Busca por proximidade nas congregações** — usar a localização do navegador (com permissão
+      do visitante) para ordenar as congregações da mais próxima para a mais distante.
+- [ ] **Painel "hoje na igreja"** — tela pensada para ficar num telão/TV na recepção, mostrando
+      automaticamente o culto do dia, versículo e avisos, atualizando sozinha.
+- [ ] **Certificado/declaração automática** — para batismo, conclusão de curso ou participação em
+      evento, gerado em PDF a partir de um formulário simples (reaproveita `sharp`, já usado no
+      gerador de imagem compartilhável).
 
 ## Licença
 
-MIT — ver [LICENSE](./LICENSE), que também lista as licenças das fontes, ícones e imagens
-originais do tema base.
+Uso restrito — ver [LICENSE](./LICENSE). O código é público apenas para fins de transparência e
+consulta; não é software de código aberto, não permite uso comercial e qualquer reaproveitamento
+por terceiros depende de autorização prévia da IEADESPA.

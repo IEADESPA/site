@@ -9,7 +9,8 @@ import { categoryHref, getCategoryList, getFeatured, getAllMensagens, visiblePos
 import { enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
 import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
 import { churchStructuredData, getAllProgramacao, sedeProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
-import versiculos from "@/data/versiculos.json";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const feed = allPosts.slice(0, 6);
@@ -21,9 +22,21 @@ const programacao = await getAllProgramacao();
 const sedeSchedule = sedeProgramacao(programacao);
 const heroSchedule = sedeProgramacaoCompacta(programacao);
 
-/* Escolhido em tempo de build só como valor inicial (pra funcionar sem
-   JavaScript); o script no navegador recalcula com base na data real de
-   quem está vendo e substitui isso na hora. */
+/*
+ * Lido do disco (não importado como módulo ES) de propósito: um array de
+ * ~31 mil objetos vira código gigante se for `import`-ado, o que pode
+ * sobrecarregar o processo de build. Como arquivo lido em tempo de build,
+ * é só texto — sem custo de bundling.
+ *
+ * Escolhido aqui só como valor inicial (pra funcionar sem JavaScript); o
+ * script no navegador recalcula com base na data real de quem está vendo e
+ * substitui isso na hora.
+ */
+/* `process.cwd()` (não `import.meta.url`) porque o build empacota este
+   arquivo em outra pasta (dist/.prerender/chunks/...) — resolver relativo
+   ao próprio módulo apontaria pro lugar errado depois de empacotado. */
+const versiculosPath = join(process.cwd(), "public", "versiculos.json");
+const versiculos = JSON.parse(readFileSync(versiculosPath, "utf8")) as { r: string; t: string }[];
 const buildDayOfYear = Math.floor(
   (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000,
 );
