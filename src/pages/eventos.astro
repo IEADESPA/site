@@ -40,14 +40,22 @@ const eventDateRange = (event: Evento) => {
 };
 
 // Com muitos eventos especiais cadastrados (o calendário anual inteiro),
-// uma lista só ficaria enorme — agrupar por mês deixa navegável.
-const eventsByMonth = events.reduce<{ month: string; items: Evento[] }[]>((groups, event) => {
-  const key = event.event_date ? monthFormatter.format(new Date(event.event_date)) : "Sem data";
+// uma lista só ficaria enorme — agrupa por mês e mostra só o mês
+// selecionado no calendário acima, em vez de rolar a página inteira.
+const eventsByMonth = events.reduce<{ month: string; monthKey: string; items: Evento[] }[]>((groups, event) => {
+  const monthKey = event.event_date ? event.event_date.slice(0, 7) : "sem-data";
+  const label = event.event_date ? monthFormatter.format(new Date(event.event_date)) : "Sem data";
   const last = groups.at(-1);
-  if (last && last.month === key) last.items.push(event);
-  else groups.push({ month: key, items: [event] });
+  if (last && last.monthKey === monthKey) last.items.push(event);
+  else groups.push({ month: label, monthKey, items: [event] });
   return groups;
 }, []);
+
+// Mesma lógica do calendário: mostra por padrão o mês atual (se tiver
+// evento) ou o próximo com evento — nunca um mês vazio à toa.
+const todayMonthKey = new Date().toISOString().slice(0, 7);
+const defaultMonthKey =
+  eventsByMonth.find((group) => group.monthKey >= todayMonthKey)?.monthKey ?? eventsByMonth[0]?.monthKey;
 
 const programacao = await getAllProgramacao();
 const instagram = siteConfig.socials.find((social) => social.label === "Instagram");
@@ -109,7 +117,7 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
         {
           events.length > 0 ? (
             eventsByMonth.map((group) => (
-              <div class="mt-10">
+              <div class="mt-10" data-month-group={group.monthKey} hidden={group.monthKey !== defaultMonthKey}>
                 <h3 class="eyebrow">{group.month}</h3>
                 <ul class="mt-4 grid gap-4">
                   {group.items.map((event) => (
@@ -144,7 +152,30 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
             </div>
           )
         }
+
+        <p class="mt-10 gallery-empty" data-month-empty hidden>
+          <span class="text-sm leading-relaxed text-muted-foreground">Nenhum evento especial nesse mês.</span>
+        </p>
       </section>
+
+      <script is:inline>
+        (() => {
+          const groups = document.querySelectorAll("[data-month-group]");
+          const empty = document.querySelector("[data-month-empty]");
+          if (!groups.length) return;
+
+          window.addEventListener("calendario-mes", (event) => {
+            const monthKey = event.detail.monthKey;
+            let matched = false;
+            groups.forEach((group) => {
+              const isMatch = group.dataset.monthGroup === monthKey;
+              group.hidden = !isMatch;
+              if (isMatch) matched = true;
+            });
+            if (empty) empty.hidden = matched;
+          });
+        })();
+      </script>
 
       <div class="prose mt-16">
         <h2>Fique por dentro</h2>

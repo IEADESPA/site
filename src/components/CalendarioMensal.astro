@@ -14,7 +14,7 @@ const { events } = Astro.props;
         <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </button>
-    <p class="calendario-title" data-cal-title></p>
+    <select class="calendario-jump" data-cal-jump aria-label="Ir para o mês"></select>
     <button type="button" class="icon-btn" data-cal-next aria-label="Próximo mês">
       <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
         <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -39,7 +39,7 @@ const { events } = Astro.props;
 
     const events = JSON.parse(document.getElementById("calendario-data")?.textContent || "[]");
     const grid = root.querySelector("[data-cal-grid]");
-    const title = root.querySelector("[data-cal-title]");
+    const jump = root.querySelector("[data-cal-jump]");
     const details = root.querySelector("[data-cal-details]");
     const monthNames = [
       "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -55,9 +55,6 @@ const { events } = Astro.props;
         "'": "&#39;",
       })[character]);
 
-    let cursor = new Date();
-    cursor.setDate(1);
-
     // Expande eventos de vários dias: um evento com endDate aparece marcado
     // em todos os dias do intervalo, não só no primeiro.
     const eventsByDate = events.reduce((map, event) => {
@@ -70,13 +67,34 @@ const { events } = Astro.props;
       return map;
     }, {});
 
+    // Todos os meses (AAAA-MM) que têm pelo menos um evento — vira as opções
+    // do seletor, então "ir para dezembro" é uma escolha só, não 8 cliques.
+    const monthsWithEvents = Array.from(new Set(Object.keys(eventsByDate).map((key) => key.slice(0, 7)))).sort();
+
+    for (const monthKey of monthsWithEvents) {
+      const [year, month] = monthKey.split("-").map(Number);
+      const option = document.createElement("option");
+      option.value = monthKey;
+      option.textContent = `${monthNames[month - 1]} de ${year}`;
+      jump.appendChild(option);
+    }
+
     const toKey = (year, month, day) =>
       `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    // Começa no mês atual se ele tiver evento; senão, no próximo mês com
+    // evento; senão, no primeiro disponível — nunca num mês vazio à toa.
+    const todayMonthKey = toKey(new Date().getFullYear(), new Date().getMonth(), 1).slice(0, 7);
+    const initialMonthKey =
+      monthsWithEvents.find((key) => key >= todayMonthKey) ?? monthsWithEvents[0] ?? todayMonthKey;
+    const [initialYear, initialMonth] = initialMonthKey.split("-").map(Number);
+    let cursor = new Date(initialYear, initialMonth - 1, 1);
 
     function render() {
       const year = cursor.getFullYear();
       const month = cursor.getMonth();
-      title.textContent = `${monthNames[month]} ${year}`;
+      const monthKey = toKey(year, month, 1).slice(0, 7);
+      if (jump.value !== monthKey) jump.value = monthKey;
 
       const firstWeekday = new Date(year, month, 1).getDay();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -115,6 +133,10 @@ const { events } = Astro.props;
 
         grid.appendChild(cell);
       }
+
+      // Avisa quem mais estiver na página (a listagem de eventos, por
+      // exemplo) qual mês está em foco agora, pra ficarem sincronizados.
+      window.dispatchEvent(new CustomEvent("calendario-mes", { detail: { year, month, monthKey } }));
     }
 
     root.querySelector("[data-cal-prev]")?.addEventListener("click", () => {
@@ -123,6 +145,11 @@ const { events } = Astro.props;
     });
     root.querySelector("[data-cal-next]")?.addEventListener("click", () => {
       cursor.setMonth(cursor.getMonth() + 1);
+      render();
+    });
+    jump.addEventListener("change", () => {
+      const [y, m] = jump.value.split("-").map(Number);
+      cursor = new Date(y, m - 1, 1);
       render();
     });
 
@@ -141,12 +168,19 @@ const { events } = Astro.props;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.5rem;
   }
 
-  .calendario-title {
+  .calendario-jump {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    color: var(--foreground);
+    padding: 0.35rem 0.5rem;
     font-family: var(--font-display);
     font-weight: 600;
     text-transform: capitalize;
+    text-align: center;
   }
 
   .calendario-weekdays {
