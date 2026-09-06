@@ -21,6 +21,17 @@ interface Congregacao {
   state: string | null;
 }
 
+type TipoPergunta = "texto_curto" | "texto_longo" | "selecao_unica" | "selecao_multipla" | "numero" | "data";
+
+interface Pergunta {
+  id: number;
+  ordem: number | null;
+  label: string;
+  tipo: TipoPergunta;
+  opcoes: string[] | null;
+  obrigatoria: boolean;
+}
+
 interface Evento {
   id: number;
   slug: string;
@@ -75,8 +86,11 @@ const inscricaoVencida = event.inscricoes_ate ? new Date(event.inscricoes_ate).g
 const inscricaoAberta = event.aceita_inscricao && !event.inscricoes_encerradas && !inscricaoVencida;
 const inscricaoEncerradaMotivo = event.inscricoes_encerradas ? "encerradas" : inscricaoVencida ? "vencido" : null;
 
-const congregacoes = event.aceita_inscricao
-  ? await fetchItems<{ id: number; name: string }>("congregacoes", "sort=name&fields=id,name")
+/* Cada evento define suas próprias perguntas — nada fixo (nem "congregação",
+   nem "casal") além de nome/telefone, que todo evento precisa pra
+   identificar quem se inscreveu. Ver perguntas_evento no Directus. */
+const perguntas = inscricaoAberta
+  ? await fetchItems<Pergunta>("perguntas_evento", `filter[evento][_eq]=${event.id}&sort=ordem`)
   : [];
 
 /* "19h30" -> "19:30", exigido pelo ISO 8601 do schema.org. Se não bater
@@ -175,18 +189,38 @@ const structuredData = startDate
                   <label class="text-sm font-semibold" for="inscricao-telefone">Telefone / WhatsApp</label>
                   <input id="inscricao-telefone" name="telefone" type="tel" autocomplete="tel" required class="field" />
                 </div>
-                <div class="grid gap-2">
-                  <label class="text-sm font-semibold" for="inscricao-congregacao">Congregação</label>
-                  <select id="inscricao-congregacao" name="congregacao" class="field" data-congregacao-select>
-                    <option value="">Selecione…</option>
-                    {congregacoes.map((c) => <option value={c.id}>{c.name}</option>)}
-                    <option value="outra">Outra cidade / não sou de nenhuma congregação daqui</option>
-                  </select>
-                </div>
-                <div class="grid gap-2" data-cidade-outra-field hidden>
-                  <label class="text-sm font-semibold" for="inscricao-cidade">Cidade</label>
-                  <input id="inscricao-cidade" name="cidade_outra" type="text" class="field" />
-                </div>
+
+                {
+                  perguntas.map((pergunta) => (
+                    <div class="grid gap-2" data-pergunta-field data-pergunta-id={pergunta.id} data-pergunta-tipo={pergunta.tipo}>
+                      <label class="text-sm font-semibold" for={`pergunta-${pergunta.id}`}>{pergunta.label}</label>
+                      {pergunta.tipo === "texto_longo" ? (
+                        <textarea id={`pergunta-${pergunta.id}`} rows="4" required={pergunta.obrigatoria} class="field resize-y" />
+                      ) : pergunta.tipo === "numero" ? (
+                        <input id={`pergunta-${pergunta.id}`} type="number" required={pergunta.obrigatoria} class="field" />
+                      ) : pergunta.tipo === "data" ? (
+                        <input id={`pergunta-${pergunta.id}`} type="date" required={pergunta.obrigatoria} class="field" />
+                      ) : pergunta.tipo === "selecao_unica" ? (
+                        <select id={`pergunta-${pergunta.id}`} required={pergunta.obrigatoria} class="field">
+                          <option value="">Selecione…</option>
+                          {(pergunta.opcoes ?? []).map((opcao) => <option value={opcao}>{opcao}</option>)}
+                        </select>
+                      ) : pergunta.tipo === "selecao_multipla" ? (
+                        <div class="grid gap-1.5">
+                          {(pergunta.opcoes ?? []).map((opcao) => (
+                            <label class="contact-checkbox">
+                              <input type="checkbox" name={`pergunta-${pergunta.id}-multipla`} value={opcao} />
+                              {opcao}
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <input id={`pergunta-${pergunta.id}`} type="text" required={pergunta.obrigatoria} class="field" />
+                      )}
+                    </div>
+                  ))
+                }
+
                 <div class="flex flex-wrap items-center gap-4">
                   <button type="submit" class="btn btn-solid">Confirmar inscrição</button>
                   <p class="text-sm leading-relaxed text-muted-foreground" role="status" aria-live="polite" data-inscricao-status />
@@ -212,46 +246,61 @@ const structuredData = startDate
     event.aceita_inscricao && inscricaoAberta && (
       <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
         document.querySelectorAll("[data-inscricao-form]").forEach((form) => {
-          const congregacaoSelect = form.querySelector("[data-congregacao-select]");
-          const cidadeField = form.querySelector("[data-cidade-outra-field]");
-          const cidadeInput = form.querySelector("#inscricao-cidade");
-
-          congregacaoSelect?.addEventListener("change", () => {
-            const isOutra = congregacaoSelect.value === "outra";
-            if (cidadeField) cidadeField.hidden = !isOutra;
-            if (cidadeInput) cidadeInput.required = isOutra;
-          });
-
           form.addEventListener("submit", async (event) => {
             event.preventDefault();
             const status = form.querySelector("[data-inscricao-status]");
             const button = form.querySelector("button[type=submit]");
             const data = new FormData(form);
             const eventoId = Number(form.dataset.eventoId);
-            const congregacaoValue = data.get("congregacao");
-            const isOutra = congregacaoValue === "outra";
 
             if (button) button.disabled = true;
             if (status) status.textContent = "Enviando…";
 
             try {
-              const response = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
+              const inscricaoRes = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   evento: eventoId,
                   nome: data.get("nome"),
                   telefone: data.get("telefone"),
-                  congregacao: congregacaoValue && !isOutra ? Number(congregacaoValue) : null,
-                  cidade_outra: isOutra ? data.get("cidade_outra") : null,
                 }),
               });
+              if (!inscricaoRes.ok) throw new Error("falha ao criar inscrição");
+              const inscricaoJson = await inscricaoRes.json();
+              const inscricaoId = inscricaoJson.data.id;
 
-              if (!response.ok) throw new Error("request failed");
+              // Cada pergunta personalizada vira uma resposta vinculada à
+              // inscrição recém-criada.
+              const respostas = [];
+              form.querySelectorAll("[data-pergunta-field]").forEach((field) => {
+                const perguntaId = Number(field.dataset.perguntaId);
+                const tipo = field.dataset.perguntaTipo;
+                let valor;
+
+                if (tipo === "selecao_multipla") {
+                  const marcadas = Array.from(field.querySelectorAll("input[type=checkbox]:checked")).map((el) => el.value);
+                  valor = marcadas.join(", ");
+                } else {
+                  const input = field.querySelector("input, textarea, select");
+                  valor = input ? input.value : "";
+                }
+
+                if (valor) respostas.push({ inscricao: inscricaoId, pergunta: perguntaId, valor });
+              });
+
+              await Promise.all(
+                respostas.map((resposta) =>
+                  fetch(`${directusUrl}/items/respostas_inscricao`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(resposta),
+                  }),
+                ),
+              );
 
               if (status) status.textContent = "Inscrição confirmada!";
               form.reset();
-              if (cidadeField) cidadeField.hidden = true;
             } catch {
               if (status) {
                 status.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";
@@ -271,6 +320,21 @@ const structuredData = startDate
       border-radius: var(--radius-md);
       padding: 1.75rem 2rem;
       background: var(--muted);
+    }
+
+    .contact-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--foreground);
+      font-size: 0.9375rem;
+      cursor: pointer;
+    }
+
+    .contact-checkbox input {
+      width: 1.1rem;
+      height: 1.1rem;
+      accent-color: var(--accent);
     }
 
     .article-image {

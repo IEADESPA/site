@@ -257,21 +257,42 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
         via `congregacaoEndereco()` em `src/lib/directus.ts`). O campo `location` (texto livre)
         continua existindo pra endereço avulso.
       - `responsavel`: quem organiza o evento (nome ou ministério).
-- [x] **Evento com inscrição simples** (seminário sem cobrança processada pelo site) — campos
-      `aceita_inscricao`, `vagas_limite` (informativo), `inscricoes_ate` (prazo, fecha o
-      formulário sozinho), `inscricoes_encerradas` (fechamento manual). Nova coleção
-      `inscricoes_eventos`: **nome, telefone e origem (congregação cadastrada OU cidade avulsa,
-      pra eventos regionais/convenções com gente de fora)** — só isso. Sem e-mail, sem
-      pagamento/status por pessoa. Permissão pública só de **criar** (testado e confirmado: sem
-      leitura pública). Testado de ponta a ponta: formulário, alternância "outra cidade", CORS
-      liberado pro domínio real, criação confirmada.
-      - **Certificado**: adiado deliberadamente. Quando for construído, a meta é não precisar de
-        nenhuma exportação — nome usado direto do banco pra gerar um link único por inscrição
-        (`/certificado/<código>/`), sem precisar de conta nem senha.
-      - **Campos personalizados por tipo de evento** (ex. "individual ou casal", perguntas
-        específicas de um seminário) ainda não têm solução — precisaria de um sistema de campos
-        dinâmicos por evento, mais parecido com o "Perguntas" de um módulo de eventos completo;
-        não construído ainda, avaliar quando surgir um caso real que precise disso.
+- [x] **Evento com inscrição, perguntas 100% personalizadas por evento** — a lição principal,
+      depois de ver na prática o processo real usado num seminário passado (planilha de
+      respostas de formulário, lista de chamada, controle financeiro por pessoa, fechamento de
+      caixa, ranking por congregação): **nada de campo fixo além de nome e telefone**. Cada
+      evento define suas próprias perguntas — igual à ideia do "Perguntas" de um módulo de
+      eventos completo, só que sem precisar de uma plataforma paga:
+      - `eventos`: `aceita_inscricao`, `vagas_limite` (informativo), `inscricoes_ate` (prazo,
+        fecha o formulário sozinho), `inscricoes_encerradas` (fechamento manual).
+      - Nova coleção **`perguntas_evento`**: cada linha é uma pergunta de um evento específico —
+        label, tipo (texto curto, texto longo, seleção única, seleção múltipla, número, data),
+        opções (quando for seleção) e se é obrigatória. Público só **lê** (precisa pro
+        formulário saber o que perguntar), nunca escreve.
+      - Nova coleção **`respostas_inscricao`**: a resposta de uma inscrição a uma pergunta
+        específica — vinculada por relação de verdade (aparece automaticamente no painel, dentro
+        de cada inscrição, sem nenhuma tela customizada). Público só **cria**.
+      - Nova coleção **`inscricoes_eventos`**: nome, telefone, e um campo `pago` (marcado
+        manualmente pela secretaria/tesouraria — controle financeiro por pessoa é legítimo e
+        necessário, só não pode ser *exportado* como se fosse a interface de gestão).
+      - **Detalhe técnico resolvido**: pra vincular as respostas à inscrição certa, o formulário
+        precisa saber o `id` gerado na hora de criar a inscrição — mas a coleção não tem leitura
+        pública. Solução: uma permissão de leitura pública restrita a **só o campo `id`** (nunca
+        nome/telefone) — testado e confirmado que a resposta de "criar" devolve o id, e que
+        listar a coleção só mostra números, nenhum dado pessoal.
+      - Testado de ponta a ponta com um evento fictício de 5 perguntas (baseado no seminário
+        real mostrado): formulário renderiza os tipos certos, inscrição criada, duas respostas
+        corretamente vinculadas a ela — confirmado via painel administrativo.
+      - **Certificado**: ainda adiado, mas confirmado como a dor real mais forte do processo
+        manual atual (49 certificados feitos um por um à mão). Quando for construído, a meta é
+        não precisar de nenhuma exportação — nome usado direto do banco pra gerar um link único
+        por inscrição (`/certificado/<código>/`), sem conta nem senha.
+      - **Lista de chamada / check-in**: não construído ainda, mas identificado como de baixo
+        esforço — uma página imprimível com nome, respostas relevantes e uma coluna em branco
+        pra assinatura, gerada direto dos dados já cadastrados.
+      - **Ranking por congregação/gráficos**: o Directus tem um recurso nativo de dashboards
+        ("Insights") que provavelmente cobre isso sem precisar construir nada customizado —
+        avaliar quando for relevante.
 
 ### Mais ideias (comunidade, crescimento e operação interna)
 
