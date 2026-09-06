@@ -191,7 +191,14 @@ const quickLinks = [
                   }
                   const textEl = document.querySelector("[data-verse-text]");
                   const refEl = document.querySelector("[data-verse-ref]");
-                  const texto = `${textEl?.textContent ?? ""}. ${refEl?.textContent ?? ""}`;
+                  /* "João 3:16" soa como hora ("3 horas e 16") pra síntese de
+                     voz em pt-BR — precisa virar "capítulo 3, versículo 16"
+                     antes de mandar pro SpeechSynthesis. */
+                  const refFalada = (refEl?.textContent ?? "").replace(
+                    /(\d+):(\d+)\s*$/,
+                    "capítulo $1, versículo $2",
+                  );
+                  const texto = `${textEl?.textContent ?? ""}. ${refFalada}`;
                   const fala = new SpeechSynthesisUtterance(texto);
                   fala.lang = "pt-BR";
                   fala.onend = parar;
