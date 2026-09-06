@@ -122,3 +122,21 @@ export const enderecoMapsQuery = (c: Configuracoes) =>
 /** Link "Ver rota": usa o link real cadastrado, ou monta uma busca a partir do endereço. */
 export const mapsHref = (c: Configuracoes) =>
   c.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoMapsQuery(c))}`;
+
+interface CongregacaoEndereco {
+  address: string | null;
+  neighborhood: string | null;
+  address_new: string | null;
+  neighborhood_new: string | null;
+  city: string | null;
+  state: string | null;
+}
+
+/** Endereço de uma congregação, formatado para exibição — usa o endereço
+ * novo (pós-mudança de CEP) quando cadastrado, senão o antigo. Centralizado
+ * aqui porque a mesma lógica já existia repetida em /congregacoes/. */
+export const congregacaoEndereco = (c: CongregacaoEndereco) => {
+  const line = c.address_new || c.address;
+  const neighborhood = c.neighborhood_new || c.neighborhood;
+  return [line, neighborhood, c.city && c.state ? `${c.city} – ${c.state}` : null].filter(Boolean).join(", ");
+};

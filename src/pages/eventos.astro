@@ -6,9 +6,20 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
+import { congregacaoEndereco, DIRECTUS_URL, fetchItems } from "@/lib/directus";
 import { hasEventPage } from "@/lib/eventos";
 import { getAllProgramacao } from "@/lib/programacao";
+
+interface Congregacao {
+  id: number;
+  name: string;
+  address: string | null;
+  neighborhood: string | null;
+  address_new: string | null;
+  neighborhood_new: string | null;
+  city: string | null;
+  state: string | null;
+}
 
 interface Evento {
   slug: string;
@@ -17,14 +28,15 @@ interface Evento {
   end_date: string | null;
   time: string | null;
   location: string | null;
+  congregacao: Congregacao | null;
+  responsavel: string | null;
   description: string;
   body: string | null;
   registration_url: string | null;
-  aceita_inscricao: boolean;
 }
 
 const allPosts = visiblePosts(await getAllMensagens());
-const events = (await fetchItems<Evento>("eventos")).sort((a, b) => {
+const events = (await fetchItems<Evento>("eventos", "fields=*,congregacao.*")).sort((a, b) => {
   const dateA = a.event_date ? new Date(a.event_date).getTime() : Number.POSITIVE_INFINITY;
   const dateB = b.event_date ? new Date(b.event_date).getTime() : Number.POSITIVE_INFINITY;
   return dateA - dateB;
@@ -150,13 +162,18 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
                           </span>
                         )}
                       </div>
-                      {event.location && <p class="mt-1 text-sm text-muted-foreground">{event.location}</p>}
+                      {
+                        (event.congregacao?.name || event.location) && (
+                          <p class="mt-1 text-sm text-muted-foreground">
+                            {event.congregacao ? event.congregacao.name : event.location}
+                            {event.congregacao && ` — ${congregacaoEndereco(event.congregacao)}`}
+                          </p>
+                        )
+                      }
                       <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{event.description}</p>
                       <div class="mt-3 flex flex-wrap gap-4">
                         {hasEventPage(event) && (
-                          <a href={`/evento/${event.slug}/`} class="link-sweep text-sm font-semibold text-accent">
-                            {event.aceita_inscricao ? "Ver detalhes e inscrever-se" : "Ver detalhes"}
-                          </a>
+                          <a href={`/evento/${event.slug}/`} class="link-sweep text-sm font-semibold text-accent">Ver detalhes</a>
                         )}
                         {event.registration_url && (
                           <a href={event.registration_url} target="_blank" rel="noreferrer" class="link-sweep text-sm font-semibold text-accent">Inscreva-se</a>

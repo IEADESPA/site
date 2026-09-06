@@ -236,33 +236,30 @@ seção é justamente para isso.
       agora junta mensagens e notícias, ordenado por data, com `<category>` pra diferenciar.
 - [ ] **QR code em cartazes físicos** — gerado automaticamente por evento, apontando direto para
       a página `/evento/<slug>/`.
-- [x] **Inscrição/gestão de eventos pelo próprio site** (3 camadas de evento) — sem precisar de
-      Sympla/Eventbrite nem outro app pago, e sem virar um sistema de contas de usuário:
-      - **Evento semanal** (culto) — já existia (coleção `programacao`).
-      - **Evento simples** (festa, aniversário) — já existia (coleção `eventos`); ganhou horário
-        de término real (`end_time`, ex. "8h às 17h"), além da data.
-      - **Evento com inscrição** (seminário, com ou sem custo) — campos novos em `eventos`:
-        `aceita_inscricao`, `vagas_limite` (só informativo — fechar vaga é decisão manual, ver
-        abaixo), `inscricoes_ate` (prazo, fecha o formulário sozinho), `valor` (vazio = grátis).
-        Nova coleção `inscricoes_eventos` (nome, telefone, e-mail, evento vinculado) — permissão
-        pública só de **criar**, confirmado que ninguém de fora lê a lista.
-      - **Gestão do pagamento é 100% manual, no próprio painel do Directus** — decisão deliberada
-        depois de descartar duas alternativas piores: anexar comprovante no formulário (barreira
-        real pra idosos, e não cobre quem paga na hora/depois) e exportar CSV (não é gestão de
-        verdade, só dado bruto). A secretaria marca `pago`, `valor_pago` e `data_pagamento` direto
-        no painel, do jeito que o dinheiro for chegando (Pix, dinheiro na porta, WhatsApp) — o
-        próprio Directus já é a "plataforma de gestão", sem precisar construir uma tela nova.
-      - **Fechamento de vaga também é manual** (`inscricoes_encerradas`), não por contagem
-        automática — evita expor, mesmo que só como número, dados de uma coleção privada.
-      - Testado de ponta a ponta com um evento fictício de teste: formulário renderiza os textos
-        certos (investimento, vagas, prazo), CORS confirmado liberado para o domínio real
-        (`www.ieadespa.org.br`), criação confirmada funcionando e sem leitura pública.
-      - De quebra, corrigido um bug real de fuso horário encontrado no caminho: datas do Directus
-        ("AAAA-MM-DD") formatadas sem `timeZone: "UTC"` podiam mostrar o dia anterior dependendo
-        do fuso do servidor de build — corrigido em todos os formatadores de data de eventos e
-        mensagens/notícias.
-      - **Ainda não incluído**: enquete de avaliação pós-evento (mesma lógica de formulário,
-        próximo passo natural depois de validar este fluxo na prática).
+### Módulo de eventos (3 camadas)
+
+Tentativa nº 1 (inscrição própria com controle de pagamento manual no Directus) foi construída,
+testada de ponta a ponta e **reprovada** na avaliação prática — parecia bom no papel, mas não se
+sustenta perto de uma plataforma de eventos de verdade (comparado com Even3 na prática). Decisão:
+para evento complexo (pago, com certificado, check-in), **usar Even3/Sympla mesmo**, apontando o
+já existente campo `registration_url` pra lá — não vale a pena reconstruir isso aqui.
+
+Foco agora nas duas primeiras camadas, que fazem sentido para um site institucional:
+
+- [x] **Evento semanal** (culto) — já existia (coleção `programacao`).
+- [x] **Evento simples, modelagem em andamento** (festa, aniversário, seminário sem cobrança) —
+      coleção `eventos`, melhorias recentes:
+      - `end_time`: horário de término real (ex. "8h às 17h"), além da data.
+      - `congregacao` (relação com a coleção `congregacoes`): quando o evento acontece numa
+        congregação cadastrada, o endereço é **puxado automaticamente** de lá (nome + endereço,
+        via `congregacaoEndereco()` em `src/lib/directus.ts`) — não precisa digitar de novo. O
+        campo `location` (texto livre) continua existindo pra endereço avulso (espaço alugado,
+        evento fora de qualquer congregação).
+      - `responsavel`: quem organiza o evento (nome ou ministério).
+      - Ainda em ajuste — aguardando referências visuais de outro módulo de eventos pra melhorar
+        a modelagem antes de considerar essa camada fechada.
+- [ ] **Evento com inscrição/pagamento**: descartado construir aqui — usar Even3/Sympla via
+      `registration_url` para esse caso.
 
 ### Mais ideias (comunidade, crescimento e operação interna)
 
