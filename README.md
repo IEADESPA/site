@@ -225,7 +225,13 @@ seção é justamente para isso.
       contraste de cor nas 15 páginas principais (axe-core) e confirmado 0 problemas nos dois
       temas — ver correções no histórico de commits.
 - [ ] **Player de áudio persistente (mini-player)** — ao abrir uma mensagem, o áudio continua
-      tocando enquanto se navega para outras páginas do site.
+      tocando enquanto se navega para outras páginas do site. **Pré-requisito real, ainda não
+      atendido**: hoje não existe nenhum áudio/vídeo de mensagem cadastrado (o campo `video_url`
+      é só um link de saída pro YouTube, sem player embutido) — precisa de gravações de verdade
+      antes de fazer sentido construir isso. Também exige adotar as "transições de página" do
+      Astro (`ClientRouter` + `transition:persist`) para o áudio sobreviver à navegação entre
+      páginas, já que hoje cada página carrega do zero — uma mudança de infraestrutura maior que
+      a maioria dos itens desta lista, vale planejar com calma quando o conteúdo existir.
 - [ ] **Transmissão ao vivo** — embutir o link do YouTube/Instagram Live nos dias de culto, com
       aviso automático "ao vivo agora" na home quando dentro do horário de culto.
 - [ ] **Aniversariantes do mês** — lista opcional (com autorização de cada membro) na página de
