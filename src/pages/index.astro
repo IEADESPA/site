@@ -1,4 +1,5 @@
 ---
+import LocalIcon from "@/components/LocalIcon.astro";
 import NoticiaCard from "@/components/NoticiaCard.astro";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
@@ -111,6 +112,11 @@ const quickLinks = [
     description: "Fotos dos cultos e eventos da igreja.",
     href: "/galeria/",
   },
+  {
+    label: "Mural de oração",
+    description: "Compartilhe um pedido e ore pelos pedidos de outras pessoas.",
+    href: "/mural-de-oracao/",
+  },
 ];
 ---
 
@@ -153,10 +159,50 @@ const quickLinks = [
             <blockquote class="verse-card">
               <p class="verse-text" data-verse-text>&ldquo;{versiculoInicial.t}&rdquo;</p>
               <footer class="verse-ref" data-verse-ref>{versiculoInicial.r}</footer>
+              <button type="button" class="verse-listen-btn" data-verse-listen-btn hidden>
+                <LocalIcon name="volume-up-fill" className="h-4 w-4" />
+                <span data-verse-listen-label>Ouvir</span>
+              </button>
             </blockquote>
             <p class="verse-credit">
               Texto: <a href="https://github.com/blivre/BibliaLivre" target="_blank" rel="noreferrer">Bíblia Livre (BLIVRE)</a>, licença CC-BY 3.0 Brasil.
             </p>
+            <script is:inline>
+              (() => {
+                /* Não grava nem guarda áudio nenhum: usa a leitura em voz
+                   embutida no próprio navegador (SpeechSynthesis), lendo o
+                   texto que já está na tela na hora do clique. */
+                if (!("speechSynthesis" in window)) return;
+                const btn = document.querySelector("[data-verse-listen-btn]");
+                const label = document.querySelector("[data-verse-listen-label]");
+                if (!btn || !label) return;
+                btn.hidden = false;
+
+                const parar = () => {
+                  window.speechSynthesis.cancel();
+                  label.textContent = "Ouvir";
+                  btn.dataset.playing = "";
+                };
+
+                btn.addEventListener("click", () => {
+                  if (btn.dataset.playing === "true") {
+                    parar();
+                    return;
+                  }
+                  const textEl = document.querySelector("[data-verse-text]");
+                  const refEl = document.querySelector("[data-verse-ref]");
+                  const texto = `${textEl?.textContent ?? ""}. ${refEl?.textContent ?? ""}`;
+                  const fala = new SpeechSynthesisUtterance(texto);
+                  fala.lang = "pt-BR";
+                  fala.onend = parar;
+                  fala.onerror = parar;
+                  window.speechSynthesis.cancel();
+                  window.speechSynthesis.speak(fala);
+                  label.textContent = "Parar";
+                  btn.dataset.playing = "true";
+                });
+              })();
+            </script>
             <script is:inline>
               (() => {
                 /* A Bíblia inteira (~31 mil versículos) fica em 4 arquivos
@@ -325,6 +371,25 @@ const quickLinks = [
     color: var(--accent-strong);
     font-weight: 600;
     font-size: 0.875rem;
+  }
+
+  .verse-listen-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.9rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full, 999px);
+    background: var(--background);
+    color: var(--accent-strong);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .verse-listen-btn:hover {
+    background: var(--muted);
   }
 
   .verse-credit {

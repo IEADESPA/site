@@ -1,0 +1,285 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DIRECTUS_URL } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getAllMensagens());
+---
+
+<BaseLayout
+  title="Mural de oração"
+  description="Compartilhe um pedido de oração e ore pelos pedidos de outras pessoas da nossa comunidade."
+>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas mural-canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Mural de oração</p>
+        <h1 class="pagehead-title">Ore com a gente</h1>
+        <p class="pagehead-description">
+          Compartilhe um pedido de oração e ore pelos pedidos de outras pessoas. Os pedidos passam
+          por uma breve moderação antes de aparecer aqui, e ficam visíveis por 90 dias.
+        </p>
+      </header>
+
+      <form class="mt-8 grid gap-4 max-w-lg" data-mural-form>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="mural-texto">Seu pedido de oração</label>
+          <textarea
+            id="mural-texto"
+            name="texto"
+            required
+            rows="4"
+            maxlength="500"
+            class="field"
+            placeholder="Escreva aqui o que você gostaria que orássemos com você…"
+          ></textarea>
+        </div>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="mural-nome">Seu nome (opcional)</label>
+          <input id="mural-nome" name="nome" type="text" maxlength="80" class="field" placeholder="Deixe em branco para publicar como anônimo" />
+        </div>
+        <button type="submit" class="btn btn-solid">Enviar pedido</button>
+        <p class="text-sm" data-mural-status role="status" aria-live="polite"></p>
+        <p class="text-xs leading-relaxed text-muted-foreground">
+          Não serão publicados: mensagens ofensivas, discurso de ódio, conteúdo político-partidário,
+          propaganda comercial, spam, ou dados sensíveis de terceiros (endereço, telefone, valores).
+          A equipe se reserva o direito de não publicar pedidos fora desse propósito.
+        </p>
+      </form>
+
+      <section class="mt-16" aria-labelledby="mural-lista-heading">
+        <h2 id="mural-lista-heading" class="section-title">Pedidos da comunidade</h2>
+        <div class="mt-6 grid gap-4" data-mural-lista></div>
+        <p class="mt-6 text-sm text-muted-foreground" data-mural-vazio hidden>
+          Nenhum pedido publicado ainda. Seja o primeiro a compartilhar.
+        </p>
+        <button type="button" class="btn btn-outline mt-8" data-mural-carregar-mais hidden>Carregar mais</button>
+      </section>
+    </div>
+  </main>
+  <SiteFooter />
+
+  <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
+    (() => {
+      const form = document.querySelector("[data-mural-form]");
+      const status = document.querySelector("[data-mural-status]");
+      const lista = document.querySelector("[data-mural-lista]");
+      const vazio = document.querySelector("[data-mural-vazio]");
+      const carregarMaisBtn = document.querySelector("[data-mural-carregar-mais]");
+
+      const PAGINA = 20;
+      let offset = 0;
+      let acabou = false;
+      const idsRenderizados = new Set();
+
+      const escapeHtml = (value) =>
+        String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+      const tempoRelativo = (isoDate) => {
+        const diffMs = Date.now() - new Date(isoDate).getTime();
+        const minutos = Math.floor(diffMs / 60000);
+        if (minutos < 1) return "agora há pouco";
+        if (minutos < 60) return `há ${minutos} min`;
+        const horas = Math.floor(minutos / 60);
+        if (horas < 24) return `há ${horas}h`;
+        const dias = Math.floor(horas / 24);
+        return `há ${dias} dia${dias === 1 ? "" : "s"}`;
+      };
+
+      const cardHtml = (item) => `
+        <article class="mural-card" data-mural-card data-id="${item.id}">
+          <p class="mural-card-texto">${escapeHtml(item.texto)}</p>
+          <footer class="mural-card-footer">
+            <span>${escapeHtml(item.nome?.trim() || "Anônimo")} · <span data-tempo>${tempoRelativo(item.date_created)}</span></span>
+            <button type="button" class="mural-orar-btn" data-orar-btn data-count="${item.orando_count}">
+              🙏 Orando por você <span data-orar-count>(${item.orando_count})</span>
+            </button>
+          </footer>
+        </article>
+      `;
+
+      const prependCard = (item) => {
+        if (idsRenderizados.has(item.id)) return;
+        idsRenderizados.add(item.id);
+        vazio.hidden = true;
+        lista.insertAdjacentHTML("afterbegin", cardHtml(item));
+      };
+
+      const appendCard = (item) => {
+        if (idsRenderizados.has(item.id)) return;
+        idsRenderizados.add(item.id);
+        vazio.hidden = true;
+        lista.insertAdjacentHTML("beforeend", cardHtml(item));
+      };
+
+      const atualizarContador = (id, count) => {
+        const card = lista.querySelector(`[data-mural-card][data-id="${id}"]`);
+        if (!card) return;
+        const btn = card.querySelector("[data-orar-btn]");
+        const span = card.querySelector("[data-orar-count]");
+        btn.dataset.count = String(count);
+        span.textContent = `(${count})`;
+      };
+
+      async function carregarPagina() {
+        const res = await fetch(
+          `${directusUrl}/items/mural_oracao?sort=-date_created&limit=${PAGINA}&offset=${offset}`,
+        );
+        const json = await res.json();
+        const itens = json.data ?? [];
+        itens.forEach(appendCard);
+        offset += itens.length;
+        acabou = itens.length < PAGINA;
+        carregarMaisBtn.hidden = acabou;
+        if (offset === itens.length && itens.length === 0) vazio.hidden = false;
+      }
+
+      carregarPagina().catch(() => {
+        status.textContent = "Não foi possível carregar o mural agora.";
+      });
+
+      carregarMaisBtn?.addEventListener("click", () => carregarPagina());
+
+      form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const texto = document.getElementById("mural-texto").value.trim();
+        const nome = document.getElementById("mural-nome").value.trim();
+        if (!texto) return;
+
+        status.textContent = "Enviando…";
+        try {
+          const res = await fetch(`${directusUrl}/items/mural_oracao`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ texto, nome: nome || null }),
+          });
+          if (!res.ok) throw new Error("falha ao enviar");
+          form.reset();
+          status.textContent = "Recebido! Seu pedido será revisado e publicado em breve.";
+        } catch {
+          status.textContent = "Não foi possível enviar agora. Tente novamente em instantes.";
+        }
+      });
+
+      lista?.addEventListener("click", async (event) => {
+        const btn = event.target.closest("[data-orar-btn]");
+        if (!btn) return;
+        const card = btn.closest("[data-mural-card]");
+        const id = card.dataset.id;
+        const novoCount = Number(btn.dataset.count) + 1;
+        atualizarContador(id, novoCount);
+        btn.disabled = true;
+        try {
+          await fetch(`${directusUrl}/items/mural_oracao/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orando_count: novoCount }),
+          });
+        } catch {
+          // silencioso: o contador local já refletiu o clique, tenta de novo depois via tempo real
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // Tempo real: aparecem pedidos recém-aprovados e o contador de "orando"
+      // atualiza sozinho pra quem estiver com a página aberta, via WebSocket
+      // do Directus (usa a mesma permissão pública de leitura da REST API).
+      const conectarTempoReal = () => {
+        let ws;
+        try {
+          const wsUrl = `${directusUrl.replace(/^http/, "ws")}/websocket`;
+          ws = new WebSocket(wsUrl);
+        } catch {
+          return;
+        }
+
+        ws.addEventListener("open", () => {
+          ws.send(
+            JSON.stringify({
+              type: "subscribe",
+              collection: "mural_oracao",
+              query: { fields: ["id", "texto", "nome", "orando_count", "date_created"] },
+            }),
+          );
+        });
+
+        ws.addEventListener("message", (event) => {
+          let msg;
+          try {
+            msg = JSON.parse(event.data);
+          } catch {
+            return;
+          }
+          if (msg.type !== "subscription" || !Array.isArray(msg.data)) return;
+          if (msg.event === "create") {
+            msg.data.forEach(prependCard);
+          } else if (msg.event === "update") {
+            msg.data.forEach((item) => {
+              if (idsRenderizados.has(item.id)) atualizarContador(item.id, item.orando_count);
+              else prependCard(item);
+            });
+          }
+        });
+
+        ws.addEventListener("close", () => {
+          setTimeout(conectarTempoReal, 5000);
+        });
+        ws.addEventListener("error", () => ws.close());
+      };
+
+      conectarTempoReal();
+    })();
+  </script>
+
+  <style>
+    .mural-canvas {
+      max-width: 44rem;
+    }
+
+    .mural-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      background: var(--muted);
+    }
+
+    .mural-card-texto {
+      margin: 0;
+      text-wrap: pretty;
+    }
+
+    .mural-card-footer {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--muted-foreground);
+    }
+
+    .mural-orar-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      background: var(--background);
+      font-weight: 600;
+      font-size: 0.8125rem;
+      color: var(--foreground);
+      cursor: pointer;
+    }
+
+    .mural-orar-btn:hover {
+      background: var(--accent);
+      color: var(--accent-foreground, var(--background));
+    }
+  </style>
+</BaseLayout>

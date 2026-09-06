@@ -314,7 +314,7 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
 
 ### Mais ideias (comunidade, crescimento e operação interna)
 
-- [ ] **Mural de oração público em tempo real** — diferente do "Pedido de oração" já existente em
+- [x] **Mural de oração público em tempo real** — diferente do "Pedido de oração" já existente em
       `/contato/` (esse continua privado, só a secretaria vê). Aqui a pessoa escolhe deixar o
       pedido **público**, com nome ou anônimo, e qualquer visitante pode ver e clicar em
       "🙏 Orando por você" — o contador sobe na hora pra todo mundo com a página aberta, via
@@ -337,8 +337,17 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
         recentes aprovados primeiro, carregado por página (não rolagem infinita) para não pesar
         com milhares de itens de uma vez. Só o contador atualiza sozinho; a ordem da lista não
         muda em tempo real, para não confundir quem está lendo.
-- [ ] **Devocional em áudio** — versículo do dia narrado (Text-to-Speech do navegador,
-      `SpeechSynthesis`, sem custo nem serviço externo).
+      - Construído em `/mural-de-oracao/`: coleção `mural_oracao` (`texto`, `nome`, `aprovado`,
+        `orando_count`). Permissão pública de criação só em `texto`/`nome`; leitura pública restrita
+        via filtro dinâmico (`aprovado = true` e `date_created >= $NOW(-90 days)`, resolvido pelo
+        próprio Directus, sem cron de limpeza); atualização pública restrita ao campo
+        `orando_count` — testado que tentar mudar `texto` ou `aprovado` é bloqueado. Tempo real via
+        WebSocket nativo do Directus (`/websocket`, usa a mesma permissão pública — conexão anônima
+        assume a policy Public), sem exigir nenhuma autenticação extra no navegador.
+- [x] **Devocional em áudio** — versículo do dia narrado (Text-to-Speech do navegador,
+      `SpeechSynthesis`, sem custo nem serviço externo). Botão "Ouvir" na home, ao lado do
+      versículo do dia — lê o texto que já está na tela, na hora, com a voz já instalada no
+      aparelho de quem visita; nenhum áudio é gravado ou armazenado.
 - [ ] **Linha do tempo/história interativa** — versão visual (scroll com marcos) da página
       "Nossa história", reaproveitando o conteúdo já cadastrado.
 - [ ] **Área "Batismo/Casamento/Dedicação de crianças"** — página com pré-requisitos e formulário

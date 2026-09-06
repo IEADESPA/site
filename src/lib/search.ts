@@ -122,6 +122,11 @@ const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
     excerpt: "Envie um pedido de oração direto para a liderança, com a opção de ser anônimo.",
     href: "/contato/?assunto=oracao#fale-conosco",
   },
+  {
+    title: "Mural de oração",
+    excerpt: "Compartilhe um pedido de oração público e ore pelos pedidos de outras pessoas.",
+    href: "/mural-de-oracao/",
+  },
 ];
 
 let cachedIndex: SearchItem[] | null = null;
