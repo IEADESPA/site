@@ -1,6 +1,6 @@
 import { fetchItems, type Configuracoes } from "@/lib/directus";
 
-export type Dia = "terca" | "quarta" | "quinta" | "sexta" | "sabado" | "domingo_manha" | "domingo_noite";
+export type Dia = "segunda" | "terca" | "quarta" | "quinta" | "sexta" | "sabado" | "domingo_manha" | "domingo_noite";
 export type Escopo = "sede" | "congregacoes" | "todas";
 export type Ocorrencia = "1" | "2" | "3" | "4_se_5" | "ultimo";
 
@@ -13,6 +13,7 @@ export interface ProgramacaoItem {
 }
 
 export const DAY_ORDER: Dia[] = [
+  "segunda",
   "terca",
   "quarta",
   "quinta",
@@ -23,6 +24,7 @@ export const DAY_ORDER: Dia[] = [
 ];
 
 export const DAY_LABEL: Record<Dia, string> = {
+  segunda: "Segunda-feira",
   terca: "Terça-feira",
   quarta: "Quarta-feira",
   quinta: "Quinta-feira",
@@ -76,13 +78,14 @@ export const groupByDay = (items: ProgramacaoItem[]) =>
 export function sedeProgramacaoCompacta(items: ProgramacaoItem[]) {
   return groupByDay(sedeProgramacao(items)).map((group) => {
     if (group.day === "domingo_noite") {
-      return { label: group.label, title: "Programação mensal (missões, assistência social, família, ceia)", time: null };
+      return { label: group.label, title: "Programação mensal (varia por semana do mês)", time: null };
     }
     return { label: group.label, title: group.items[0].title, time: group.items[0].time };
   });
 }
 
 const SCHEMA_DAY: Record<Dia, string | null> = {
+  segunda: null, // dia de descanso, sem culto
   terca: "Tuesday",
   quarta: "Wednesday",
   quinta: "Thursday",
