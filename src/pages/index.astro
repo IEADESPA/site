@@ -116,6 +116,9 @@ const quickLinks = [
               <p class="verse-text" data-verse-text>&ldquo;{versiculos[0].texto}&rdquo;</p>
               <footer class="verse-ref" data-verse-ref>{versiculos[0].referencia}</footer>
             </blockquote>
+            <p class="verse-credit">
+              Texto: <a href="https://github.com/blivre/BibliaLivre" target="_blank" rel="noreferrer">Bíblia Livre (BLIVRE)</a>, licença CC-BY 3.0 Brasil.
+            </p>
             <script is:inline type="application/json" id="verse-data" set:html={JSON.stringify(versiculos)} />
             <script is:inline>
               (() => {
@@ -241,6 +244,18 @@ const quickLinks = [
     color: var(--accent);
     font-weight: 600;
     font-size: 0.875rem;
+  }
+
+  .verse-credit {
+    margin: 0.6rem 0 0;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+  }
+
+  .verse-credit a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   .hero-title {

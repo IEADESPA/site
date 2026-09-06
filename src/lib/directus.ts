@@ -8,9 +8,19 @@ export const DIRECTUS_URL = "https://ieadespa-directus-gae4hfarf4a4ffcf.brazilso
 /** Painel administrativo (Directus Studio), onde o conteúdo é editado. */
 export const DIRECTUS_ADMIN_URL = `${DIRECTUS_URL}/admin`;
 
-/** Busca itens de uma coleção pública do Directus. Roda em tempo de build. */
+/**
+ * Busca itens de uma coleção pública do Directus. Roda em tempo de build.
+ *
+ * Sempre sem limite de itens (`limit=-1`) — o Directus, por padrão, corta a
+ * resposta em 100 itens, e todo lugar que chama isso aqui espera a coleção
+ * inteira, não uma página dela. Sem isso, uma coleção que crescesse além de
+ * 100 itens (galeria, eventos, versículos...) passaria a perder conteúdo
+ * silenciosamente, sem nenhum erro.
+ */
 export async function fetchItems<T>(collection: string, query = ""): Promise<T[]> {
-  const url = `${DIRECTUS_URL}/items/${collection}${query ? `?${query}` : ""}`;
+  const params = new URLSearchParams(query);
+  if (!params.has("limit")) params.set("limit", "-1");
+  const url = `${DIRECTUS_URL}/items/${collection}?${params.toString()}`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Falha ao buscar ${collection} no Directus: ${response.status}`);
