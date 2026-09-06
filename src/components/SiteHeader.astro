@@ -1,7 +1,7 @@
 ---
 import { navigation, siteConfig } from "@/config/site";
 import type { Post } from "@/lib/posts";
-import { buildSearchIndex } from "@/lib/search";
+import { buildSearchIndex, SEARCH_GROUPS, GROUP_LABEL_PLURAL } from "@/lib/search";
 
 interface Props {
   posts: Post[];
@@ -117,6 +117,17 @@ const isCurrentPath = (href: string) =>
         </button>
       </div>
 
+      <div class="search-filters" data-search-filters role="tablist" aria-label="Filtrar por tipo">
+        <button type="button" class="search-filter is-active" data-filter="" role="tab" aria-selected="true">Tudo</button>
+        {
+          SEARCH_GROUPS.map((group) => (
+            <button type="button" class="search-filter" data-filter={group} role="tab" aria-selected="false">
+              {GROUP_LABEL_PLURAL[group]}
+            </button>
+          ))
+        }
+      </div>
+
       <div class="search-body">
         <div class="search-body-head">
           <p class="eyebrow" data-search-heading></p>
@@ -184,9 +195,14 @@ const isCurrentPath = (href: string) =>
     const heading = dialog?.querySelector("[data-search-heading]");
     const summary = dialog?.querySelector("[data-search-summary]");
     const panel = dialog?.querySelector("[data-search-panel]");
+    const filters = dialog?.querySelectorAll("[data-filter]");
     const fallback = JSON.parse(document.getElementById("site-search-fallback")?.textContent || "[]");
     let index = [];
     let indexPromise;
+    let activeGroup = "";
+
+    // "à" -> "a", pra "familia" encontrar "família" e vice-versa.
+    const normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
     if (shortcutKey && /Mac|iPhone|iPad/.test(navigator.userAgent)) {
       shortcutKey.textContent = "⌘ K";
@@ -226,9 +242,9 @@ const isCurrentPath = (href: string) =>
     /* Lower is better: an exact title prefix beats a title match, which beats a
        category match, which beats a hit in the excerpt or author name. */
     const rank = (item, query) => {
-      const title = item.title.toLowerCase();
-      const group = (item.group || "").toLowerCase();
-      const supporting = [item.excerpt, item.meta].join(" ").toLowerCase();
+      const title = normalize(item.title);
+      const group = normalize(item.group || "");
+      const supporting = normalize([item.excerpt, item.meta].join(" "));
 
       if (title.startsWith(query)) return 0;
       if (title.includes(query)) return 1;
@@ -248,11 +264,12 @@ const isCurrentPath = (href: string) =>
       if (!input || !results || !heading || !summary) return;
 
       const raw = input.value.trim();
-      const query = raw.toLowerCase();
+      const query = normalize(raw);
 
-      /* Until the reader types, the palette collapses to just the input: no
-         latest-posts list and no placeholder copy. */
-      if (!query) {
+      /* Sem texto digitado e sem filtro escolhido, a paleta colapsa pra só o
+         campo — mas escolher um filtro (ex. "Eventos") já abre a lista pra
+         navegar por categoria, sem precisar digitar nada. */
+      if (!query && !activeGroup) {
         panel?.setAttribute("data-empty", "");
         heading.textContent = "";
         summary.textContent = "";
@@ -265,21 +282,28 @@ const isCurrentPath = (href: string) =>
       const items = await loadIndex();
 
       /* A newer keystroke may have landed while the index was loading. */
-      if (input.value.trim().toLowerCase() !== query) return;
+      if (normalize(input.value.trim()) !== query) return;
 
-      const matches = items
-        .map((item) => ({ item, score: rank(item, query) }))
-        .filter(({ score }) => Number.isFinite(score))
-        .sort((a, b) => a.score - b.score)
-        .slice(0, 7)
-        .map(({ item }) => item);
+      const scoped = activeGroup ? items.filter((item) => item.group === activeGroup) : items;
 
-      heading.textContent = "Resultados";
-      summary.textContent = `${matches.length} ${matches.length === 1 ? "resultado" : "resultados"} para “${raw}”.`;
+      const matches = query
+        ? scoped
+            .map((item) => ({ item, score: rank(item, query) }))
+            .filter(({ score }) => Number.isFinite(score))
+            .sort((a, b) => a.score - b.score)
+            .slice(0, 12)
+            .map(({ item }) => item)
+        : scoped.slice(0, 12);
+
+      const groupLabel = activeGroup ? ` em ${activeGroup}` : "";
+      heading.textContent = query ? "Resultados" : "Navegar";
+      summary.textContent = query
+        ? `${matches.length} ${matches.length === 1 ? "resultado" : "resultados"} para “${raw}”${groupLabel}.`
+        : `${matches.length} ${matches.length === 1 ? "item" : "itens"}${groupLabel}.`;
       results.innerHTML =
         matches.length > 0
           ? matches.map(resultMarkup).join("")
-          : `<p class="search-empty">Nenhuma mensagem encontrada ainda. Tente um título, tema ou pregador.</p>`;
+          : `<p class="search-empty">Nada encontrado${groupLabel}. Tente um título, tema ou pregador.</p>`;
     };
 
     const open = () => {
@@ -293,6 +317,19 @@ const isCurrentPath = (href: string) =>
     const close = () => {
       if (dialog?.open) dialog.close();
     };
+
+    filters?.forEach((button) => {
+      button.addEventListener("click", () => {
+        activeGroup = button.dataset.filter || "";
+        filters.forEach((other) => {
+          const isActive = other === button;
+          other.classList.toggle("is-active", isActive);
+          other.setAttribute("aria-selected", String(isActive));
+        });
+        void render();
+        input?.focus();
+      });
+    });
 
     toggle?.addEventListener("click", (event) => {
       if (!dialog || typeof dialog.showModal !== "function") return;
@@ -543,6 +580,48 @@ const isCurrentPath = (href: string) =>
   .search-input::-webkit-search-cancel-button {
     display: none;
     appearance: none;
+  }
+
+  .search-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 0.85rem;
+  }
+
+  .search-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .search-filter {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted-foreground);
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .search-filter:hover {
+    border-color: var(--border-strong);
+    color: var(--foreground);
+  }
+
+  .search-filter.is-active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
   }
 
   .search-body {

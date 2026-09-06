@@ -4,7 +4,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { buildSearchIndex } from "@/lib/search";
+import { buildSearchIndex, SEARCH_GROUPS, GROUP_LABEL_PLURAL } from "@/lib/search";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const searchItems = await buildSearchIndex();
@@ -39,9 +39,20 @@ const searchItems = await buildSearchIndex();
         </form>
 
         <p class="search-page-summary mt-4 text-sm text-muted-foreground" data-search-page-summary></p>
+
+        <div class="search-page-filters mt-5" data-search-page-filters role="tablist" aria-label="Filtrar por tipo">
+          <button type="button" class="search-page-filter is-active" data-filter="" role="tab" aria-selected="true">Tudo</button>
+          {
+            SEARCH_GROUPS.map((group) => (
+              <button type="button" class="search-page-filter" data-filter={group} role="tab" aria-selected="false">
+                {GROUP_LABEL_PLURAL[group]}
+              </button>
+            ))
+          }
+        </div>
       </header>
 
-      <div class="feed" data-search-page-results></div>
+      <div class="feed mt-10" data-search-page-results></div>
     </div>
   </main>
   <SiteFooter />
@@ -52,7 +63,9 @@ const searchItems = await buildSearchIndex();
       const input = document.querySelector("[data-search-page-input]");
       const results = document.querySelector("[data-search-page-results]");
       const summary = document.querySelector("[data-search-page-summary]");
+      const filterButtons = document.querySelectorAll("[data-search-page-filters] [data-filter]");
       const items = JSON.parse(document.getElementById("search-page-data")?.textContent || "[]");
+      let activeGroup = "";
 
       if (!input || !results || !summary) return;
 
@@ -65,22 +78,39 @@ const searchItems = await buildSearchIndex();
           "'": "&#39;",
         })[character]);
 
-      const matches = (item, query) =>
-        [item.title, item.excerpt, item.group, item.meta]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
+      // "à" -> "a", pra "familia" encontrar "família" e vice-versa.
+      const normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-      /* Nada é listado até que haja uma busca — esta página é para buscar,
-         não para navegar. As páginas de listagem cobrem a navegação. */
+      const matches = (item, query) =>
+        normalize([item.title, item.excerpt, item.group, item.meta].join(" ")).includes(query);
+
+      filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          activeGroup = button.dataset.filter || "";
+          filterButtons.forEach((other) => {
+            const isActive = other === button;
+            other.classList.toggle("is-active", isActive);
+            other.setAttribute("aria-selected", String(isActive));
+          });
+          render();
+        });
+      });
+
+      /* Sem texto e sem filtro, a página não lista nada — busca de verdade,
+         não navegação solta. Mas escolher um filtro já mostra os itens
+         daquela categoria, pra também servir de atalho de navegação. */
       const render = () => {
         const raw = input.value.trim();
-        const query = raw.toLowerCase();
-        const found = query ? items.filter((item) => matches(item, query)) : [];
+        const query = normalize(raw);
+        const scoped = activeGroup ? items.filter((item) => item.group === activeGroup) : items;
+        const found = query ? scoped.filter((item) => matches(item, query)) : activeGroup ? scoped : [];
 
+        const groupLabel = activeGroup ? ` em ${activeGroup}` : "";
         summary.textContent = query
-          ? `${found.length} ${found.length === 1 ? "resultado" : "resultados"} para “${raw}”.`
-          : "";
+          ? `${found.length} ${found.length === 1 ? "resultado" : "resultados"} para “${raw}”${groupLabel}.`
+          : activeGroup
+            ? `${found.length} ${found.length === 1 ? "item" : "itens"}${groupLabel}.`
+            : "";
 
         results.innerHTML = found
           .map(
@@ -106,6 +136,38 @@ const searchItems = await buildSearchIndex();
   <style is:global>
     .search-page-summary:empty {
       display: none;
+    }
+
+    .search-page-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .search-page-filter {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted-foreground);
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition:
+        background-color var(--duration-fast) var(--ease-out),
+        color var(--duration-fast) var(--ease-out),
+        border-color var(--duration-fast) var(--ease-out);
+    }
+
+    .search-page-filter:hover {
+      border-color: var(--border-strong);
+      color: var(--foreground);
+    }
+
+    .search-page-filter.is-active {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      color: var(--accent);
     }
 
     .search-page-title {
