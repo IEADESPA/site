@@ -12,6 +12,7 @@ interface Evento {
   slug: string;
   title: string;
   event_date: string | null;
+  end_date: string | null;
   time: string | null;
   location: string | null;
   description: string;
@@ -74,6 +75,7 @@ const structuredData = startDate
           {event.event_date && (
             <li>
               <strong class="text-foreground">Data:</strong> {dateFormatter.format(new Date(event.event_date))}
+              {event.end_date && event.end_date !== event.event_date && ` até ${dateFormatter.format(new Date(event.end_date))}`}
               {event.time && ` · ${event.time}`}
             </li>
           )}

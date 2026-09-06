@@ -7,6 +7,8 @@ export interface IcsEvent {
   location?: string;
   /** Data no formato "AAAA-MM-DD". */
   date: string;
+  /** Último dia (inclusive) para eventos de vários dias — opcional. */
+  endDate?: string | null;
   /** Horário livre tipo "19h30". Sem horário, o evento vira "dia inteiro". */
   time?: string | null;
   url?: string;
@@ -44,6 +46,10 @@ function eventLines(event: IcsEvent): string[] {
   if (time) {
     lines.push(`DTSTART:${formatDateTimeUtc(event.date, time.hour, time.minute)}`);
     lines.push(`DTEND:${formatDateTimeUtc(event.date, time.hour + 2, time.minute)}`);
+  } else if (event.endDate && event.endDate !== event.date) {
+    // DTEND de dia inteiro é exclusivo no padrão iCalendar — por isso +1.
+    lines.push(`DTSTART;VALUE=DATE:${formatDateOnly(event.date)}`);
+    lines.push(`DTEND;VALUE=DATE:${formatDateOnly(event.endDate, 1)}`);
   } else {
     lines.push(`DTSTART;VALUE=DATE:${formatDateOnly(event.date)}`);
     lines.push(`DTEND;VALUE=DATE:${formatDateOnly(event.date, 1)}`);

@@ -6,9 +6,11 @@ interface Evento {
   slug: string;
   title: string;
   event_date: string | null;
+  end_date: string | null;
   time: string | null;
   location: string | null;
   description: string;
+  body: string | null;
 }
 
 export async function getStaticPaths() {
@@ -30,8 +32,9 @@ export async function GET({ props }: { props: Props }) {
         description: event.description,
         location: event.location ?? undefined,
         date: event.event_date as string,
+        endDate: event.end_date,
         time: event.time,
-        url: `${siteConfig.siteUrl}/evento/${event.slug}/`,
+        url: event.body ? `${siteConfig.siteUrl}/evento/${event.slug}/` : undefined,
       },
     ],
     event.title,
