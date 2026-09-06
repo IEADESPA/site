@@ -354,10 +354,13 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       marcadores da timeline. **Populado com 21 marcos inventados (2006, fundação, até 2026, 20
       anos)** como texto-placeholder plausível, pra já mostrar a timeline funcionando — precisa
       trocar pelos fatos verídicos da igreja (textos e fotos reais) antes de considerar definitivo.
-- [ ] **Área "Batismo/Casamento/Dedicação de crianças"** — página com pré-requisitos e formulário
-      de solicitação de data, salvando no Directus como as inscrições de evento.
-- [ ] **Estatísticas públicas de crescimento** — gráfico simples (ex. nº de congregações ao longo
-      dos anos, atendendo à transparência) na página `/transparencia/`.
+- [x] **Estatísticas públicas de crescimento** — seção "Números da igreja" em `/transparencia/`:
+      contagens agregadas (nº de congregações, nº de órgãos/departamentos, anos de história desde
+      a fundação, calculado a partir de "Nossa história") — nunca dado individual de membro. Novo
+      campo opcional `fundacao_ano` em `congregacoes`: o gráfico de crescimento (congregações
+      acumuladas por ano) só aparece quando pelo menos duas congregações tiverem esse ano
+      preenchido no Directus — hoje nenhuma tem, então mostra um aviso no lugar do gráfico até
+      alguém preencher.
 - [ ] **Impressão amigável (modo impressão) da programação semanal** — CSS `@media print`
       dedicado, para quem prefere imprimir em vez de guardar a imagem compartilhável.
 - [ ] **Newsletter por e-mail** — resumo semanal automático (notícias + próximos eventos) via
@@ -416,6 +419,8 @@ novo sem necessidade.
   congregações — dado sensível demais pra pouco benefício.
 - **Escala de trabalho/voluntários** — já existe um sistema de gestão de membros usado pela
   igreja com essa função, mais completo do que valeria a pena reconstruir aqui do zero.
+- **Área "Batismo/Casamento/Dedicação de crianças"** — mesma razão: já existe no sistema interno
+  de gestão de membros usado pela igreja, não faz sentido duplicar aqui.
 - **Multilíngue (PT/EN/ES)** — a igreja não recebe público de outros idiomas com frequência que
   justifique manter traduções; o tradutor automático do navegador já cobre o caso raro.
 
