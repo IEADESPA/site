@@ -302,7 +302,10 @@ const quickLinks = [
 
   .verse-ref {
     margin-top: 0.6rem;
-    color: var(--accent);
+    /* var(--accent) contra este fundo dava só 4.27:1 (abaixo do mínimo
+       4.5:1 do WCAG AA em texto pequeno) — --accent-strong resolve com
+       folga (6.56:1). */
+    color: var(--accent-strong);
     font-weight: 600;
     font-size: 0.875rem;
   }
