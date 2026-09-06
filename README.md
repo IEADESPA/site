@@ -220,8 +220,10 @@ seção é justamente para isso.
         - `DIRECTUS_ADMIN_TOKEN` — o mesmo token de administrador do Directus.
         - `VAPID_PRIVATE_KEY` — chave privada gerada especificamente para o envio de push (pedir
           a quem configurou esta funcionalidade; nunca fica no código, só no GitHub).
-- [ ] **Modo escuro (dark mode)** — alternância manual, respeitando a preferência do sistema por
-      padrão.
+- [x] **Modo escuro (dark mode)** — já existia (botão no cabeçalho, ao lado da busca), com
+      preferência do sistema por padrão e alternância manual persistida por navegador. Testado
+      contraste de cor nas 15 páginas principais (axe-core) e confirmado 0 problemas nos dois
+      temas — ver correções no histórico de commits.
 - [ ] **Player de áudio persistente (mini-player)** — ao abrir uma mensagem, o áudio continua
       tocando enquanto se navega para outras páginas do site.
 - [ ] **Transmissão ao vivo** — embutir o link do YouTube/Instagram Live nos dias de culto, com
