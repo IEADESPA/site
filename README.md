@@ -207,8 +207,19 @@ seção é justamente para isso.
       (`/contato/?assunto=oracao#fale-conosco`, já indexado na busca do site) chega com essa opção
       pré-selecionada. Confirmado que a coleção `contato_mensagens` não é lida publicamente — só
       aceita criar, ninguém de fora consegue ver os pedidos.
-- [ ] **Notificações push de eventos** — quem visita o site pode ativar avisos do navegador para
-      eventos próximos, sem precisar de app nem WhatsApp.
+- [x] **Notificações push de eventos** — botão "Avisar quando um evento estiver chegando" em
+      `/eventos/`. Quem ativa recebe uma notificação do navegador (mesmo com o site fechado) na
+      véspera de qualquer evento especial. Arquitetura:
+      - Coleção `push_subscriptions` no Directus (só aceita criar — ninguém lê a lista).
+      - `public/sw.js`: service worker que recebe o push e mostra a notificação.
+      - `.github/workflows/event-notifications.yml`: roda todo dia às 08h (Brasília), busca os
+        eventos de amanhã e envia a notificação a quem estiver inscrito
+        (`.github/scripts/send-event-reminders.mjs`, usa a biblioteca `web-push`).
+      - **Exige 2 segredos no GitHub** (Settings → Secrets and variables → Actions → New
+        repository secret, no repositório `IEADESPA/site`), sem os quais o envio diário falha:
+        - `DIRECTUS_ADMIN_TOKEN` — o mesmo token de administrador do Directus.
+        - `VAPID_PRIVATE_KEY` — chave privada gerada especificamente para o envio de push (pedir
+          a quem configurou esta funcionalidade; nunca fica no código, só no GitHub).
 - [ ] **Modo escuro (dark mode)** — alternância manual, respeitando a preferência do sistema por
       padrão.
 - [ ] **Player de áudio persistente (mini-player)** — ao abrir uma mensagem, o áudio continua
