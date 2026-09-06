@@ -288,6 +288,29 @@ seção é justamente para isso.
       evento, gerado em PDF a partir de um formulário simples (reaproveita `sharp`, já usado no
       gerador de imagem compartilhável).
 
+### Google for Nonprofits — aproveitando os benefícios já disponíveis
+
+A igreja já é verificada no Google for Nonprofits (é de lá que vem o e-mail profissional). O
+pacote inclui mais dois benefícios avaliados:
+
+- **Google Ad Grants** (até US$ 10.000/mês em anúncios Google grátis) — **decidido não usar**:
+  exige manutenção técnica contínua (estrutura de campanha, taxa de cliques mínima, regras de
+  palavras-chave) sob risco real de a conta ser suspensa por não conformidade. Sem alguém
+  disponível pra cuidar disso com regularidade, o risco de a conta ser bloqueada supera o
+  benefício, ainda mais sem tráfego orgânico grande o suficiente hoje.
+- [ ] **Google Maps Platform** (créditos a partir de US$ 250/mês) — **decidido perseguir**. Troca
+  o mapa de congregações (hoje Leaflet + OpenStreetMap, sem custo) e o embed de `/contato/` (hoje
+  um iframe sem chave) pelo Google Maps de verdade: rotas reais calculadas a partir de onde a
+  pessoa está, Street View da sede, visual mais familiar pra quem já usa o app do Google Maps
+  no dia a dia.
+  - Passo a passo pra ativar em [google.com/nonprofits](https://www.google.com/nonprofits/):
+    Google Maps Platform → Ativar → criar projeto no Google Cloud → cadastrar um método de
+    pagamento (cobra só se ultrapassar o crédito — configurar um alerta de orçamento, ex. US$
+    20, evita qualquer susto) → Credenciais → Criar chave de API → **restringir a chave** ao
+    domínio `www.ieadespa.org.br/*`.
+  - Depois de ativado e com a chave em mãos, é só entregar (nunca fica salva em nenhum arquivo do
+    repositório) para trocar os mapas do site.
+
 ## Licença
 
 Uso restrito — ver [LICENSE](./LICENSE). O código é público apenas para fins de transparência e
