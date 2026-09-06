@@ -12,6 +12,7 @@ interface Evento {
   location: string | null;
   description: string;
   body: string | null;
+  aceita_inscricao?: boolean;
 }
 
 export async function getStaticPaths() {

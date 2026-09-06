@@ -6,7 +6,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { congregacaoEndereco, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { congregacaoEndereco, DIRECTUS_URL, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
 import { hasEventPage } from "@/lib/eventos";
 
 interface Congregacao {
@@ -22,6 +22,7 @@ interface Congregacao {
 }
 
 interface Evento {
+  id: number;
   slug: string;
   title: string;
   event_date: string | null;
@@ -35,6 +36,10 @@ interface Evento {
   body: string | null;
   cover: string | null;
   registration_url: string | null;
+  aceita_inscricao: boolean;
+  vagas_limite: number | null;
+  inscricoes_ate: string | null;
+  inscricoes_encerradas: boolean;
 }
 
 export async function getStaticPaths() {
@@ -62,6 +67,17 @@ const timeRange = event.time ? `${event.time}${event.end_time ? ` às ${event.en
 // `location` (espaço alugado, sede, etc.).
 const localNome = event.congregacao ? event.congregacao.name : event.location;
 const localEndereco = event.congregacao ? congregacaoEndereco(event.congregacao) : null;
+
+// Inscrição fecha por prazo vencido (data pública do evento, sem precisar
+// contar inscrições — não expõe nada da coleção privada) ou por decisão
+// manual da secretaria (vagas esgotadas, por exemplo).
+const inscricaoVencida = event.inscricoes_ate ? new Date(event.inscricoes_ate).getTime() < Date.now() : false;
+const inscricaoAberta = event.aceita_inscricao && !event.inscricoes_encerradas && !inscricaoVencida;
+const inscricaoEncerradaMotivo = event.inscricoes_encerradas ? "encerradas" : inscricaoVencida ? "vencido" : null;
+
+const congregacoes = event.aceita_inscricao
+  ? await fetchItems<{ id: number; name: string }>("congregacoes", "sort=name&fields=id,name")
+  : [];
 
 /* "19h30" -> "19:30", exigido pelo ISO 8601 do schema.org. Se não bater
    com o padrão esperado, a hora fica de fora em vez de gerar dado inválido. */
@@ -137,6 +153,54 @@ const structuredData = startDate
 
       <div class="prose mt-10" set:html={bodyHtml} />
 
+      {
+        event.aceita_inscricao && (
+          <section class="inscricao-card canvas mt-16" aria-labelledby="inscricao-heading">
+            <h2 id="inscricao-heading" class="section-title">Inscrição</h2>
+
+            <ul class="mt-3 grid gap-1 text-sm text-muted-foreground">
+              {event.vagas_limite && <li><strong class="text-foreground">Vagas limitadas:</strong> {event.vagas_limite}</li>}
+              {event.inscricoes_ate && (
+                <li><strong class="text-foreground">Inscrições até:</strong> {dateFormatter.format(new Date(event.inscricoes_ate))}</li>
+              )}
+            </ul>
+
+            {inscricaoAberta ? (
+              <form class="mt-6 grid gap-4 max-w-md" data-inscricao-form data-evento-id={event.id}>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="inscricao-nome">Nome</label>
+                  <input id="inscricao-nome" name="nome" type="text" autocomplete="name" required class="field" />
+                </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="inscricao-telefone">Telefone / WhatsApp</label>
+                  <input id="inscricao-telefone" name="telefone" type="tel" autocomplete="tel" required class="field" />
+                </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="inscricao-congregacao">Congregação</label>
+                  <select id="inscricao-congregacao" name="congregacao" class="field" data-congregacao-select>
+                    <option value="">Selecione…</option>
+                    {congregacoes.map((c) => <option value={c.id}>{c.name}</option>)}
+                    <option value="outra">Outra cidade / não sou de nenhuma congregação daqui</option>
+                  </select>
+                </div>
+                <div class="grid gap-2" data-cidade-outra-field hidden>
+                  <label class="text-sm font-semibold" for="inscricao-cidade">Cidade</label>
+                  <input id="inscricao-cidade" name="cidade_outra" type="text" class="field" />
+                </div>
+                <div class="flex flex-wrap items-center gap-4">
+                  <button type="submit" class="btn btn-solid">Confirmar inscrição</button>
+                  <p class="text-sm leading-relaxed text-muted-foreground" role="status" aria-live="polite" data-inscricao-status />
+                </div>
+              </form>
+            ) : (
+              <p class="mt-6 text-sm leading-relaxed text-muted-foreground">
+                {inscricaoEncerradaMotivo === "vencido" ? "O prazo de inscrição para este evento já encerrou." : "As inscrições para este evento estão encerradas."}
+              </p>
+            )}
+          </section>
+        )
+      }
+
       <div class="prose mt-16">
         <p><a href="/eventos/">&larr; Voltar para Eventos</a></p>
       </div>
@@ -144,7 +208,71 @@ const structuredData = startDate
   </main>
   <SiteFooter />
 
+  {
+    event.aceita_inscricao && inscricaoAberta && (
+      <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
+        document.querySelectorAll("[data-inscricao-form]").forEach((form) => {
+          const congregacaoSelect = form.querySelector("[data-congregacao-select]");
+          const cidadeField = form.querySelector("[data-cidade-outra-field]");
+          const cidadeInput = form.querySelector("#inscricao-cidade");
+
+          congregacaoSelect?.addEventListener("change", () => {
+            const isOutra = congregacaoSelect.value === "outra";
+            if (cidadeField) cidadeField.hidden = !isOutra;
+            if (cidadeInput) cidadeInput.required = isOutra;
+          });
+
+          form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const status = form.querySelector("[data-inscricao-status]");
+            const button = form.querySelector("button[type=submit]");
+            const data = new FormData(form);
+            const eventoId = Number(form.dataset.eventoId);
+            const congregacaoValue = data.get("congregacao");
+            const isOutra = congregacaoValue === "outra";
+
+            if (button) button.disabled = true;
+            if (status) status.textContent = "Enviando…";
+
+            try {
+              const response = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  evento: eventoId,
+                  nome: data.get("nome"),
+                  telefone: data.get("telefone"),
+                  congregacao: congregacaoValue && !isOutra ? Number(congregacaoValue) : null,
+                  cidade_outra: isOutra ? data.get("cidade_outra") : null,
+                }),
+              });
+
+              if (!response.ok) throw new Error("request failed");
+
+              if (status) status.textContent = "Inscrição confirmada!";
+              form.reset();
+              if (cidadeField) cidadeField.hidden = true;
+            } catch {
+              if (status) {
+                status.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";
+              }
+            } finally {
+              if (button) button.disabled = false;
+            }
+          });
+        });
+      </script>
+    )
+  }
+
   <style>
+    .inscricao-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.75rem 2rem;
+      background: var(--muted);
+    }
+
     .article-image {
       margin-bottom: 0;
     }

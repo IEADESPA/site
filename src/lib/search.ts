@@ -98,6 +98,7 @@ interface Evento {
   location: string | null;
   description: string;
   body: string | null;
+  aceita_inscricao?: boolean;
 }
 
 /** Páginas institucionais que não vêm de nenhuma coleção do Directus, mas

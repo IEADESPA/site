@@ -236,30 +236,42 @@ seção é justamente para isso.
       agora junta mensagens e notícias, ordenado por data, com `<category>` pra diferenciar.
 - [ ] **QR code em cartazes físicos** — gerado automaticamente por evento, apontando direto para
       a página `/evento/<slug>/`.
+
 ### Módulo de eventos (3 camadas)
 
-Tentativa nº 1 (inscrição própria com controle de pagamento manual no Directus) foi construída,
-testada de ponta a ponta e **reprovada** na avaliação prática — parecia bom no papel, mas não se
-sustenta perto de uma plataforma de eventos de verdade (comparado com Even3 na prática). Decisão:
-para evento complexo (pago, com certificado, check-in), **usar Even3/Sympla mesmo**, apontando o
-já existente campo `registration_url` pra lá — não vale a pena reconstruir isso aqui.
+Tentativa nº 1 (inscrição própria com controle de pagamento manual no Directus, por pessoa) foi
+construída, testada de ponta a ponta e **reprovada** na avaliação prática — comparado com uma
+plataforma de eventos de verdade (Even3), não se sustentava. Revisado depois de analisar prints
+reais de um módulo de eventos completo: a lição principal foi que **controle financeiro por
+pessoa não é o objetivo** — só interessa um total geral do evento, lançado manualmente no sistema
+de membros (fora do site). E-mail também ficou fora — nunca é armazenado.
 
-Foco agora nas duas primeiras camadas, que fazem sentido para um site institucional:
+Para evento complexo de verdade (pago, com certificado, check-in), **usar Even3/Sympla**,
+apontando o já existente campo `registration_url` pra lá — não vale a pena reconstruir isso aqui.
 
 - [x] **Evento semanal** (culto) — já existia (coleção `programacao`).
-- [x] **Evento simples, modelagem em andamento** (festa, aniversário, seminário sem cobrança) —
-      coleção `eventos`, melhorias recentes:
+- [x] **Evento simples** (festa, aniversário) — coleção `eventos`:
       - `end_time`: horário de término real (ex. "8h às 17h"), além da data.
       - `congregacao` (relação com a coleção `congregacoes`): quando o evento acontece numa
         congregação cadastrada, o endereço é **puxado automaticamente** de lá (nome + endereço,
-        via `congregacaoEndereco()` em `src/lib/directus.ts`) — não precisa digitar de novo. O
-        campo `location` (texto livre) continua existindo pra endereço avulso (espaço alugado,
-        evento fora de qualquer congregação).
+        via `congregacaoEndereco()` em `src/lib/directus.ts`). O campo `location` (texto livre)
+        continua existindo pra endereço avulso.
       - `responsavel`: quem organiza o evento (nome ou ministério).
-      - Ainda em ajuste — aguardando referências visuais de outro módulo de eventos pra melhorar
-        a modelagem antes de considerar essa camada fechada.
-- [ ] **Evento com inscrição/pagamento**: descartado construir aqui — usar Even3/Sympla via
-      `registration_url` para esse caso.
+- [x] **Evento com inscrição simples** (seminário sem cobrança processada pelo site) — campos
+      `aceita_inscricao`, `vagas_limite` (informativo), `inscricoes_ate` (prazo, fecha o
+      formulário sozinho), `inscricoes_encerradas` (fechamento manual). Nova coleção
+      `inscricoes_eventos`: **nome, telefone e origem (congregação cadastrada OU cidade avulsa,
+      pra eventos regionais/convenções com gente de fora)** — só isso. Sem e-mail, sem
+      pagamento/status por pessoa. Permissão pública só de **criar** (testado e confirmado: sem
+      leitura pública). Testado de ponta a ponta: formulário, alternância "outra cidade", CORS
+      liberado pro domínio real, criação confirmada.
+      - **Certificado**: adiado deliberadamente. Quando for construído, a meta é não precisar de
+        nenhuma exportação — nome usado direto do banco pra gerar um link único por inscrição
+        (`/certificado/<código>/`), sem precisar de conta nem senha.
+      - **Campos personalizados por tipo de evento** (ex. "individual ou casal", perguntas
+        específicas de um seminário) ainda não têm solução — precisaria de um sistema de campos
+        dinâmicos por evento, mais parecido com o "Perguntas" de um módulo de eventos completo;
+        não construído ainda, avaliar quando surgir um caso real que precise disso.
 
 ### Mais ideias (comunidade, crescimento e operação interna)
 
