@@ -115,6 +115,17 @@
   --danger: #f87171;
 }
 
+/* Modo de leitura fácil: texto maior, mais espaçado e com mais contraste,
+   pensado para idosos e baixa visão. Sobrepõe só o necessário — o resto do
+   tema (cores de marca, layout) continua igual. */
+:root[data-readable="true"]:not([data-theme="dark"]) {
+  --muted-foreground: #40495c;
+}
+
+:root[data-theme="dark"][data-readable="true"] {
+  --muted-foreground: #c3c9d6;
+}
+
 /* -------------------------------------------------------------------- base --- */
 
 @layer base {
@@ -152,6 +163,29 @@
   ::selection {
     background: color-mix(in srgb, var(--accent) 20%, transparent);
     color: var(--foreground);
+  }
+
+  /* Modo de leitura fácil: ~20px de base (em vez de 16px) — como quase todo
+     o site usa `rem`, isso escala títulos, textos e espaçamentos juntos,
+     sem precisar sobrescrever cada componente. */
+  html[data-readable="true"] {
+    font-size: 20px;
+  }
+
+  html[data-readable="true"] body {
+    line-height: 1.7;
+  }
+
+  html[data-readable="true"] :focus-visible {
+    outline-width: 3px;
+    outline-offset: 4px;
+  }
+
+  html[data-readable="true"] .prose a,
+  html[data-readable="true"] .search-result,
+  html[data-readable="true"] .link-title {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 }
 
@@ -518,6 +552,17 @@
   .icon-btn:focus-visible {
     background: var(--muted);
     color: var(--accent);
+  }
+
+  .icon-btn[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+  }
+
+  .readable-icon {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
   /* -------------------------------------------------------------- header --- */

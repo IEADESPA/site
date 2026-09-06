@@ -43,7 +43,7 @@ const schema = structuredData ?? defaultStructuredData;
 ---
 
 <!doctype html>
-<html lang={siteConfig.language} data-theme="light">
+<html lang={siteConfig.language} data-theme="light" data-readable="false">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -124,11 +124,50 @@ const schema = structuredData ?? defaultStructuredData;
           setTheme(event.matches ? "dark" : "light");
         });
 
+        // Modo de leitura fácil: texto maior e mais contraste, pensado para
+        // idosos e baixa visão. Independente do tema claro/escuro.
+        const readableKey = "ieadespa-readable";
+        let readable = false;
+
+        try {
+          readable = localStorage.getItem(readableKey) === "true";
+        } catch {}
+
+        const updateReadableToggles = (isReadable) => {
+          document.querySelectorAll("[data-readable-toggle]").forEach((button) => {
+            button.setAttribute("aria-pressed", String(isReadable));
+            button.setAttribute(
+              "aria-label",
+              isReadable ? "Desativar modo de leitura fácil" : "Ativar modo de leitura fácil",
+            );
+          });
+        };
+
+        const setReadable = (isReadable, persist = false) => {
+          readable = isReadable;
+          root.dataset.readable = String(isReadable);
+          if (persist) {
+            try {
+              localStorage.setItem(readableKey, String(isReadable));
+            } catch {}
+          }
+          updateReadableToggles(isReadable);
+        };
+
+        setReadable(readable);
+
         window.addEventListener("DOMContentLoaded", () => {
           updateToggles(root.dataset.theme || preferredTheme);
           document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
             button.addEventListener("click", () => {
               setTheme(root.dataset.theme === "dark" ? "light" : "dark", true);
+            });
+          });
+
+          updateReadableToggles(readable);
+          document.querySelectorAll("[data-readable-toggle]").forEach((button) => {
+            button.addEventListener("click", () => {
+              setReadable(!readable, true);
             });
           });
         });

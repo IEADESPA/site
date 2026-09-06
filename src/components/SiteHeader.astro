@@ -50,6 +50,17 @@ const isCurrentPath = (href: string) =>
 
         <button
           type="button"
+          class="icon-btn"
+          data-readable-toggle
+          aria-pressed="false"
+          aria-label="Ativar modo de leitura fácil"
+          title="Modo de leitura fácil (texto maior e mais contraste)"
+        >
+          <span aria-hidden="true" class="readable-icon">A+</span>
+        </button>
+
+        <button
+          type="button"
           class="theme-switch ml-1"
           role="switch"
           aria-checked="false"

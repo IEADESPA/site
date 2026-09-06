@@ -194,10 +194,13 @@ Lista aberta de funcionalidades ainda não construídas, para avaliar e prioriza
 sentido. Marque com `[x]` o que decidir construir, ou adicione novos itens livremente — esta
 seção é justamente para isso.
 
-- [ ] **Atalho de busca rápida (Ctrl+K)** — abre a busca já existente (`/busca/`) de qualquer
-      página, sem precisar rolar até o campo.
-- [ ] **Modo alto-contraste / leitura fácil** — botão que aumenta fonte e contraste, pensado para
-      idosos e pessoas com baixa visão (público real de igreja).
+- [x] **Atalho de busca rápida (Ctrl+K)** — melhorado: agora cobre eventos, temas, pregadores e
+      páginas institucionais (10 tipos de conteúdo), com filtros por categoria e busca sem
+      distinção de acento.
+- [x] **Modo alto-contraste / leitura fácil** — botão "A+" no cabeçalho: aumenta a fonte em ~25%
+      (16px → 20px, escala junto com todo o layout por ser baseado em `rem`), reforça o contraste
+      dos textos secundários e o anel de foco, e sublinha links — pensado para idosos e pessoas
+      com baixa visão. Persiste por navegador (`localStorage`), independente do tema claro/escuro.
 - [ ] **Pedido de oração** — formulário simples que salva no Directus, visível só para a
       liderança no painel (não aparece publicamente quem pediu).
 - [ ] **Notificações push de eventos** — quem visita o site pode ativar avisos do navegador para
