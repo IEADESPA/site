@@ -35,18 +35,17 @@ const heroSchedule = sedeProgramacaoCompacta(programacao);
 /* `process.cwd()` (não `import.meta.url`) porque o build empacota este
    arquivo em outra pasta (dist/.prerender/chunks/...) — resolver relativo
    ao próprio módulo apontaria pro lugar errado depois de empacotado. */
-type VerseBuckets = { madrugada: Verse[]; manha: Verse[]; tarde: Verse[]; noite: Verse[] };
 type Verse = { r: string; t: string };
-const versiculosPath = join(process.cwd(), "public", "versiculos.json");
-const versiculoBuckets = JSON.parse(readFileSync(versiculosPath, "utf8")) as VerseBuckets;
+type Periodo = "madrugada" | "manha" | "tarde" | "noite";
 
 /* Classificação automática por padrão de texto (palavras-chave e
    estrutura), não leitura manual verso a verso — ver
    scratchpad/classify-verses.mjs para o critério usado. Cada período do
-   dia tem seu próprio balde de versículos, embaralhado, e avança um
-   índice por dia — dá 4 versículos diferentes por dia (um a cada 6h),
-   sem repetir enquanto o balde for maior que os dias decorridos. */
-function periodoDoHorario(hora: number): keyof VerseBuckets {
+   dia tem seu próprio arquivo (não um arquivo único com tudo dentro):
+   um celular numa conexão lenta só baixa ~1-2MB de um período, em vez
+   de baixar os ~4,7MB dos 4 juntos pra usar só 1/4 disso (era a causa
+   real de um LCP de quase 11s no mobile, visto no PageSpeed Insights). */
+function periodoDoHorario(hora: number): Periodo {
   if (hora < 6) return "madrugada";
   if (hora < 12) return "manha";
   if (hora < 18) return "tarde";
@@ -60,7 +59,9 @@ const epochDays = Math.floor(Date.now() / 86400000);
 const horaBuild = Number(
   new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(new Date()),
 );
-const baldeInicial = versiculoBuckets[periodoDoHorario(horaBuild)];
+const periodoBuild = periodoDoHorario(horaBuild);
+const versiculosPath = join(process.cwd(), "public", `versiculos-${periodoBuild}.json`);
+const baldeInicial = JSON.parse(readFileSync(versiculosPath, "utf8")) as Verse[];
 const versiculoInicial = baldeInicial[epochDays % baldeInicial.length];
 const structuredData = [
   {
@@ -158,12 +159,14 @@ const quickLinks = [
             </p>
             <script is:inline>
               (() => {
-                /* A Bíblia inteira (~31 mil versículos, em 4 baldes por
-                   período do dia) fica num arquivo à parte, não embutida
-                   na página — buscada uma vez por visita (cache do
-                   navegador cuida do resto). Muda a cada 6h: madrugada
-                   (0-6h), manhã (6-12h), tarde (12-18h), noite (18-24h),
-                   no horário local de quem está vendo. */
+                /* A Bíblia inteira (~31 mil versículos) fica em 4 arquivos
+                   à parte, um por período do dia (madrugada 0-6h, manhã
+                   6-12h, tarde 12-18h, noite 18-24h) — só o arquivo do
+                   período atual é baixado (~0,7 a 1,9MB), não os 4 juntos.
+                   A busca também só começa depois que a página termina de
+                   carregar, pra não competir por banda com CSS/imagens em
+                   conexões lentas — foi exatamente isso que deixava o LCP
+                   em ~11s no mobile (visto no PageSpeed Insights). */
                 const periodoDoHorario = (hora) => {
                   if (hora < 6) return "madrugada";
                   if (hora < 12) return "manha";
@@ -171,28 +174,42 @@ const quickLinks = [
                   return "noite";
                 };
 
-                fetch("/versiculos.json")
-                  .then((response) => (response.ok ? response.json() : null))
-                  .then((buckets) => {
-                    if (!buckets) return;
-                    const textEl = document.querySelector("[data-verse-text]");
-                    const refEl = document.querySelector("[data-verse-ref]");
+                const cache = {};
+                const fetchPeriodo = (periodo) => {
+                  if (cache[periodo]) return Promise.resolve(cache[periodo]);
+                  return fetch(`/versiculos-${periodo}.json`)
+                    .then((response) => (response.ok ? response.json() : null))
+                    .then((data) => {
+                      if (data) cache[periodo] = data;
+                      return data;
+                    })
+                    .catch(() => null);
+                };
 
-                    const render = () => {
-                      const balde = buckets[periodoDoHorario(new Date().getHours())];
-                      if (!balde || !balde.length) return;
-                      const epochDays = Math.floor(Date.now() / 86400000);
-                      const verse = balde[epochDays % balde.length];
-                      if (textEl) textEl.textContent = `“${verse.t}”`;
-                      if (refEl) refEl.textContent = verse.r;
-                    };
+                const textEl = document.querySelector("[data-verse-text]");
+                const refEl = document.querySelector("[data-verse-ref]");
 
-                    render();
-                    // Sem precisar recarregar a página: confere a cada 5
-                    // minutos se entrou num novo período de 6h.
-                    setInterval(render, 5 * 60 * 1000);
-                  })
-                  .catch(() => {});
+                const render = async () => {
+                  const balde = await fetchPeriodo(periodoDoHorario(new Date().getHours()));
+                  if (!balde || !balde.length) return;
+                  const epochDays = Math.floor(Date.now() / 86400000);
+                  const verse = balde[epochDays % balde.length];
+                  if (textEl) textEl.textContent = `“${verse.t}”`;
+                  if (refEl) refEl.textContent = verse.r;
+                };
+
+                const iniciar = () => {
+                  render();
+                  // Sem precisar recarregar a página: confere a cada 5
+                  // minutos se entrou num novo período de 6h.
+                  setInterval(render, 5 * 60 * 1000);
+                };
+
+                const adiarParaOcioso = (fn) =>
+                  window.requestIdleCallback ? window.requestIdleCallback(fn) : setTimeout(fn, 200);
+
+                if (document.readyState === "complete") adiarParaOcioso(iniciar);
+                else window.addEventListener("load", () => adiarParaOcioso(iniciar));
               })();
             </script>
           </section>
