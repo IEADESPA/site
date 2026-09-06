@@ -348,8 +348,12 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       `SpeechSynthesis`, sem custo nem serviço externo). Botão "Ouvir" na home, ao lado do
       versículo do dia — lê o texto que já está na tela, na hora, com a voz já instalada no
       aparelho de quem visita; nenhum áudio é gravado ou armazenado.
-- [ ] **Linha do tempo/história interativa** — versão visual (scroll com marcos) da página
-      "Nossa história", reaproveitando o conteúdo já cadastrado.
+- [x] **Linha do tempo/história interativa** — versão visual (scroll com marcos) da página
+      "Nossa história": navegação sticky de anos ao lado (rola até o marco ao clicar, e destaca
+      sozinha o ano visível na tela via `IntersectionObserver`), com a linha vertical e os
+      marcadores da timeline. **Populado com 21 marcos inventados (2006, fundação, até 2026, 20
+      anos)** como texto-placeholder plausível, pra já mostrar a timeline funcionando — precisa
+      trocar pelos fatos verídicos da igreja (textos e fotos reais) antes de considerar definitivo.
 - [ ] **Área "Batismo/Casamento/Dedicação de crianças"** — página com pré-requisitos e formulário
       de solicitação de data, salvando no Directus como as inscrições de evento.
 - [ ] **Estatísticas públicas de crescimento** — gráfico simples (ex. nº de congregações ao longo
