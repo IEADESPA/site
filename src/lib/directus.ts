@@ -9,6 +9,32 @@ export const DIRECTUS_URL = "https://ieadespa-directus-gae4hfarf4a4ffcf.brazilso
 export const DIRECTUS_ADMIN_URL = `${DIRECTUS_URL}/admin`;
 
 /**
+ * Busca uma URL do Directus com tentativas automáticas em caso de erro
+ * transitório (5xx ou falha de rede) — o Directus no plano gratuito
+ * ocasionalmente fica "sob pressão" por alguns segundos, e sem isso um
+ * único soluço passageiro derruba o build inteiro (já aconteceu de
+ * verdade: 503 bem na hora de gerar /transparencia/). Erros 4xx (coleção
+ * sem permissão, não existe etc.) não são tentados de novo — são erros
+ * reais, não transitórios, e tentar de novo só esconderia o problema.
+ */
+async function fetchWithRetry(url: string, attempts = 3): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return response;
+      if (response.status < 500 || attempt === attempts) return response;
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (err) {
+      lastError = err;
+      if (attempt === attempts) throw err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+  }
+  throw lastError;
+}
+
+/**
  * Busca itens de uma coleção pública do Directus. Roda em tempo de build.
  *
  * Sempre sem limite de itens (`limit=-1`) — o Directus, por padrão, corta a
@@ -21,7 +47,7 @@ export async function fetchItems<T>(collection: string, query = ""): Promise<T[]
   const params = new URLSearchParams(query);
   if (!params.has("limit")) params.set("limit", "-1");
   const url = `${DIRECTUS_URL}/items/${collection}?${params.toString()}`;
-  const response = await fetch(url);
+  const response = await fetchWithRetry(url);
   if (!response.ok) {
     throw new Error(`Falha ao buscar ${collection} no Directus: ${response.status}`);
   }
@@ -31,7 +57,7 @@ export async function fetchItems<T>(collection: string, query = ""): Promise<T[]
 
 /** Busca uma coleção "singleton" do Directus (um registro único, sem lista). */
 export async function fetchSingleton<T>(collection: string): Promise<T> {
-  const response = await fetch(`${DIRECTUS_URL}/items/${collection}`);
+  const response = await fetchWithRetry(`${DIRECTUS_URL}/items/${collection}`);
   if (!response.ok) {
     throw new Error(`Falha ao buscar ${collection} no Directus: ${response.status}`);
   }
