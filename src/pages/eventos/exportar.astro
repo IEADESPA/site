@@ -1,0 +1,286 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DIRECTUS_URL } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getAllMensagens());
+
+const categorias = [
+  { value: "diretoria", label: "Diretoria" },
+  { value: "conselho", label: "Conselho" },
+  { value: "congregacao", label: "Congregação" },
+  { value: "departamento", label: "Departamento/Ministério" },
+  { value: "area", label: "Área/Regional" },
+  { value: "", label: "Sem categoria definida" },
+];
+---
+
+<BaseLayout
+  title="Baixar PDF de eventos"
+  description="Escolha o período e o responsável, e baixe um PDF resumido da programação de eventos para imprimir ou compartilhar."
+>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas exportar-canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Eventos</p>
+        <h1 class="pagehead-title">Baixar PDF de eventos</h1>
+        <p class="pagehead-description">
+          Escolha o período e quem é responsável pelos eventos, e baixe um PDF resumido — pronto
+          pra imprimir ou postar nos grupos. O arquivo é gerado direto no seu navegador.
+        </p>
+      </header>
+
+      <form class="mt-8 grid gap-6 max-w-xl" data-exportar-form data-directus-url={DIRECTUS_URL}>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="exportar-de">De (mês)</label>
+            <input id="exportar-de" type="month" class="field" data-exportar-de />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="exportar-ate">Até (mês)</label>
+            <input id="exportar-ate" type="month" class="field" data-exportar-ate />
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="btn btn-outline btn-sm" data-preset="mes">Este mês</button>
+          <button type="button" class="btn btn-outline btn-sm" data-preset="trimestre">Próximos 3 meses</button>
+          <button type="button" class="btn btn-outline btn-sm" data-preset="ano">Ano inteiro</button>
+        </div>
+
+        <fieldset class="grid gap-2">
+          <legend class="text-sm font-semibold">Responsável pelo evento</legend>
+          <div class="grid gap-2 sm:grid-cols-2">
+            {
+              categorias.map((categoria) => (
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" value={categoria.value} checked data-exportar-categoria />
+                  {categoria.label}
+                </label>
+              ))
+            }
+          </div>
+        </fieldset>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="exportar-titulo">Título do PDF (opcional)</label>
+          <input
+            id="exportar-titulo"
+            type="text"
+            class="field"
+            maxlength="80"
+            placeholder="Ex.: Programação — Departamento de Jovens"
+            data-exportar-titulo
+          />
+        </div>
+
+        <p class="text-sm text-muted-foreground" data-exportar-contagem role="status" aria-live="polite">
+          Carregando eventos…
+        </p>
+
+        <button type="submit" class="btn btn-solid" data-exportar-submit disabled>Baixar PDF</button>
+      </form>
+    </div>
+  </main>
+  <SiteFooter />
+
+  <script>
+    import { jsPDF } from "jspdf";
+
+    interface EventoExport {
+      title: string;
+      event_date: string | null;
+      end_date: string | null;
+      time: string | null;
+      location: string | null;
+      responsavel: string | null;
+      tipo_responsavel: string | null;
+      congregacao: { name: string } | null;
+    }
+
+    const form = document.querySelector<HTMLFormElement>("[data-exportar-form]");
+    if (!form) throw new Error("formulário de exportação ausente");
+
+    const directusUrl = form.dataset.directusUrl ?? "";
+    const deInput = form.querySelector<HTMLInputElement>("[data-exportar-de]")!;
+    const ateInput = form.querySelector<HTMLInputElement>("[data-exportar-ate]")!;
+    const categoriaInputs = form.querySelectorAll<HTMLInputElement>("[data-exportar-categoria]");
+    const tituloInput = form.querySelector<HTMLInputElement>("[data-exportar-titulo]");
+    const contagem = form.querySelector<HTMLElement>("[data-exportar-contagem]")!;
+    const submitBtn = form.querySelector<HTMLButtonElement>("[data-exportar-submit]")!;
+
+    const mesAtual = () => new Date().toISOString().slice(0, 7);
+    const somarMeses = (mesIso: string, n: number) => {
+      const [ano, mes] = mesIso.split("-").map(Number);
+      const data = new Date(Date.UTC(ano, mes - 1 + n, 1));
+      return `${data.getUTCFullYear()}-${String(data.getUTCMonth() + 1).padStart(2, "0")}`;
+    };
+
+    deInput.value = mesAtual();
+    ateInput.value = somarMeses(mesAtual(), 2);
+
+    document.querySelectorAll<HTMLButtonElement>("[data-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const hoje = mesAtual();
+        if (btn.dataset.preset === "mes") {
+          deInput.value = hoje;
+          ateInput.value = hoje;
+        } else if (btn.dataset.preset === "trimestre") {
+          deInput.value = hoje;
+          ateInput.value = somarMeses(hoje, 2);
+        } else if (btn.dataset.preset === "ano") {
+          deInput.value = `${hoje.slice(0, 4)}-01`;
+          ateInput.value = `${hoje.slice(0, 4)}-12`;
+        }
+        atualizarContagem();
+      });
+    });
+
+    let eventos: EventoExport[] = [];
+
+    async function carregarEventos() {
+      const res = await fetch(
+        `${directusUrl}/items/eventos?fields=title,event_date,end_date,time,responsavel,tipo_responsavel,congregacao.name&filter[event_date][_nnull]=true&sort=event_date&limit=-1`,
+      );
+      const json = await res.json();
+      eventos = json.data ?? [];
+      submitBtn.disabled = false;
+      atualizarContagem();
+    }
+
+    function categoriasAtivas() {
+      return new Set([...categoriaInputs].filter((input) => input.checked).map((input) => input.value));
+    }
+
+    function eventosFiltrados() {
+      const de = deInput.value;
+      const ate = ateInput.value;
+      const ativas = categoriasAtivas();
+      return eventos.filter((evento) => {
+        const mesEvento = (evento.event_date ?? "").slice(0, 7);
+        if (de && mesEvento < de) return false;
+        if (ate && mesEvento > ate) return false;
+        return ativas.has(evento.tipo_responsavel ?? "");
+      });
+    }
+
+    function atualizarContagem() {
+      const filtrados = eventosFiltrados();
+      contagem.textContent =
+        filtrados.length === 0
+          ? "Nenhum evento encontrado com esses filtros."
+          : `${filtrados.length} evento${filtrados.length === 1 ? "" : "s"} selecionado${filtrados.length === 1 ? "" : "s"}.`;
+      submitBtn.disabled = filtrados.length === 0;
+    }
+
+    [deInput, ateInput, ...categoriaInputs].forEach((el) => el.addEventListener("change", atualizarContagem));
+
+    const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+    const monthFormatter = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+
+    const rotuloCategoria: Record<string, string> = {
+      diretoria: "Diretoria",
+      conselho: "Conselho",
+      congregacao: "Congregação",
+      departamento: "Departamento/Ministério",
+      area: "Área/Regional",
+      "": "Sem categoria",
+    };
+
+    function gerarPdf() {
+      const filtrados = eventosFiltrados();
+      if (filtrados.length === 0) return;
+
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const margem = 48;
+      const larguraUtil = doc.internal.pageSize.getWidth() - margem * 2;
+      const alturaPagina = doc.internal.pageSize.getHeight();
+      let y = margem;
+
+      const tituloPersonalizado = tituloInput?.value.trim();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(tituloPersonalizado || "Programação de eventos — IEADESPA", margem, y);
+      y += 22;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(110);
+      doc.text(`${deInput.value} a ${ateInput.value} · gerado em ${new Date().toLocaleDateString("pt-BR")}`, margem, y);
+      y += 24;
+      doc.setTextColor(20);
+
+      let mesAtualLabel = "";
+      filtrados.forEach((evento) => {
+        const mesLabel = evento.event_date ? monthFormatter.format(new Date(evento.event_date)) : "Sem data";
+        if (mesLabel !== mesAtualLabel) {
+          mesAtualLabel = mesLabel;
+          if (y > alturaPagina - margem - 60) {
+            doc.addPage();
+            y = margem;
+          }
+          y += 8;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.text(mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), margem, y);
+          y += 16;
+        }
+
+        const data = evento.event_date ? dateFormatter.format(new Date(evento.event_date)) : "--/--";
+        const local = evento.congregacao?.name || evento.location || "";
+        const categoria = rotuloCategoria[evento.tipo_responsavel ?? ""] ?? "";
+        const linha1 = `${data}${evento.time ? ` às ${evento.time}` : ""} — ${evento.title}`;
+        const linha2 = [local, categoria].filter(Boolean).join(" · ");
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10.5);
+        const linhas1 = doc.splitTextToSize(linha1, larguraUtil);
+        const linhas2 = linha2 ? doc.splitTextToSize(linha2, larguraUtil) : [];
+        const alturaBloco = (linhas1.length + linhas2.length) * 13 + 8;
+
+        if (y + alturaBloco > alturaPagina - margem) {
+          doc.addPage();
+          y = margem;
+        }
+
+        doc.text(linhas1, margem, y);
+        y += linhas1.length * 13;
+        if (linhas2.length) {
+          doc.setTextColor(110);
+          doc.text(linhas2, margem, y);
+          doc.setTextColor(20);
+          y += linhas2.length * 13;
+        }
+        y += 8;
+      });
+
+      const nomeArquivo = `eventos-${deInput.value}-a-${ateInput.value}.pdf`;
+      doc.save(nomeArquivo);
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      gerarPdf();
+    });
+
+    carregarEventos().catch(() => {
+      contagem.textContent = "Não foi possível carregar os eventos agora.";
+    });
+
+    atualizarContagem();
+  </script>
+</BaseLayout>
+
+<style>
+  .exportar-canvas {
+    max-width: 40rem;
+  }
+
+  .btn-sm {
+    padding: 0.4rem 0.85rem;
+    font-size: 0.8125rem;
+  }
+</style>

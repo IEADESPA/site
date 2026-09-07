@@ -110,6 +110,11 @@ const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
   { title: "Ministérios", excerpt: "Ministérios e departamentos da igreja.", href: "/ministerios/" },
   { title: "Congregações", excerpt: "Congregações e pontos de pregação vinculados.", href: "/congregacoes/" },
   { title: "Eventos", excerpt: "Programação semanal e eventos especiais.", href: "/eventos/" },
+  {
+    title: "Baixar PDF de eventos",
+    excerpt: "Escolha o período e o responsável, e baixe um PDF resumido da programação de eventos.",
+    href: "/eventos/exportar/",
+  },
   { title: "Mensagens", excerpt: "Arquivo completo de mensagens.", href: "/mensagens/" },
   { title: "Notícias", excerpt: "Comunicados e novidades da igreja.", href: "/noticias/" },
   { title: "Doações", excerpt: "Dízimos, ofertas e chave Pix da igreja.", href: "/doacoes/" },

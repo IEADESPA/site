@@ -123,6 +123,9 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
             {events.length > 0 && (
               <a href="/eventos.ics" class="link-sweep text-sm font-semibold text-accent">Assinar a agenda</a>
             )}
+            {events.length > 0 && (
+              <a href="/eventos/exportar/" class="link-sweep text-sm font-semibold text-accent">Baixar PDF de eventos</a>
+            )}
             <button type="button" class="link-sweep text-sm font-semibold text-accent" data-notify-toggle hidden>
               Avisar quando um evento estiver chegando
             </button>

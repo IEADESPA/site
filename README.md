@@ -361,8 +361,16 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       acumuladas por ano) só aparece quando pelo menos duas congregações tiverem esse ano
       preenchido no Directus — hoje nenhuma tem, então mostra um aviso no lugar do gráfico até
       alguém preencher.
-- [ ] **Impressão amigável (modo impressão) da programação semanal** — CSS `@media print`
-      dedicado, para quem prefere imprimir em vez de guardar a imagem compartilhável.
+- [x] **Baixar PDF personalizado de eventos** — foi além da ideia original de "modo impressão":
+      em `/eventos/exportar/`, escolhe-se o período (mês a mês, ou um preset — este mês, próximos
+      3 meses, ano inteiro) e o(s) responsável(is) pelo evento (Diretoria, Conselho, Congregação,
+      Departamento/Ministério, Área/Regional, ou sem categoria), com contagem ao vivo de quantos
+      eventos batem com o filtro, e um título opcional pra personalizar o PDF. O PDF (agrupado por
+      mês, com data, horário, local e responsável) é gerado inteiramente no navegador
+      (`jsPDF`, sem serviço externo) — é "salvar", não "imprimir": quem quiser imprimir, imprime o
+      PDF depois. Exige um novo campo `tipo_responsavel` (seleção) em `eventos` — os eventos já
+      cadastrados ainda não têm esse campo preenchido, e precisam ser categorizados aos poucos
+      pelo Directus pra aparecerem nos filtros por responsável.
 - [ ] **Newsletter por e-mail** — resumo semanal automático (notícias + próximos eventos) via
       Flow do Directus, para quem se cadastra com o e-mail.
 - [ ] **Progressive Web App (PWA)** — permite "instalar" o site na tela inicial do celular como
