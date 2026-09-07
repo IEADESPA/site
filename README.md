@@ -787,12 +787,26 @@ foi "o que muda quando o evento é grande?", não só "quais botões faltam":
       Testado de ponta a ponta contra o Directus real: evento no futuro fica fechado com a
       mensagem certa, evento já no horário fica aberto, e o botão de liberação manual força aberto
       mesmo com o evento ainda no futuro.
-- [ ] **Check-in por QR Code** — hoje a pessoa digita o código de 6 caracteres; poderia mostrar
-      também um QR Code (gerado na hora da confirmação, sem servidor extra) pra escanear com a
-      câmera do celular na entrada — mais rápido que digitar quando a fila é grande. Desenhado em
-      conversa com o usuário: cada pessoa teria seu próprio QR (mesmo código de 6 caracteres,
-      só codificado em imagem), e a portaria leria com a câmera do aparelho (biblioteca de leitura
-      de QR no navegador) — reaproveitando a mesma função de confirmar presença que já existe.
+- [x] **Check-in por QR Code** — discutido bastante com o usuário antes de construir: o problema
+      real não é "qual tecnologia de check-in", é **entrega do código** — se a pessoa não guardou
+      nada, nenhuma tecnologia resolve sozinha. Por isso o desenho final combina duas coisas, sem
+      exigir que ninguém tenha salvo nada com antecedência:
+      - **`/qrcode/<slug do evento>/`** (nova página pública): a pessoa gera o próprio QR Code na
+        hora, ali na fila mesmo — digita o código (ou busca pelo nome, mesmo padrão do check-in)
+        e o navegador desenha a imagem na hora (biblioteca `qrcode-generator`, carregada via CDN,
+        **sem nenhum armazenamento novo** — o QR não é salvo em lugar nenhum, é só uma forma
+        visual do código de 6 caracteres que já existe, gerada sob demanda; não tem nada pra
+        limpar/excluir depois, ao contrário do que se imaginava no início).
+      - **Leitor de QR por câmera em `/checkin/<slug>/`**: botão "Ler QR Code" abre a câmera
+        (qualquer celular/tablet — não precisa de leitor dedicado nem sistema de câmera especial)
+        e decodifica com a biblioteca `jsQR`, caindo no mesmo fluxo de confirmação de presença que
+        já existia pro código digitado — o QR só torna esse fluxo mais rápido, não muda a
+        segurança: assim como antes, quem realmente impede uso indevido é a pessoa da portaria
+        reconhecendo quem está na fila, não o sigilo do código.
+      Testado de ponta a ponta com as bibliotecas de verdade (não só a lógica): gerado um QR real
+      com `qrcode-generator` e decodificado com `jsQR` pra confirmar que os dois formatos batem
+      (`<id do evento>:<código>`), e simulado o fluxo completo da câmera (webcam falsa exibindo um
+      QR real gerado na hora) até a confirmação de presença no Directus.
 - [ ] **Registrar o portão/local do check-in** — pra eventos com mais de uma entrada, guardar em
       qual ponto cada pessoa confirmou presença. Desenho discutido: sem geolocalização — a equipe
       escolhe uma vez qual portão aquele aparelho representa (guardado no navegador daquele

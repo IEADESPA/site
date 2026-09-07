@@ -1,0 +1,182 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+interface Evento {
+  id: number;
+  slug: string;
+  title: string;
+  aceita_inscricao: boolean;
+}
+
+export async function getStaticPaths() {
+  const events = await fetchItems<Evento>("eventos", "filter[aceita_inscricao][_eq]=true");
+  return events.map((event) => ({ params: { slug: event.slug }, props: { event } }));
+}
+
+interface Props {
+  event: Evento;
+}
+
+const { event } = Astro.props;
+const allPosts = visiblePosts(await getAllMensagens());
+---
+
+<BaseLayout title={`Meu QR Code — ${event.title}`} description="Gere seu QR Code de check-in — mostre pra portaria na entrada." noindex>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas qrcode-canvas">
+      <header class="pagehead">
+        <p class="eyebrow">Meu QR Code</p>
+        <h1 class="pagehead-title">{event.title}</h1>
+        <p class="pagehead-description">
+          Gere seu QR Code de check-in aqui mesmo na fila — não precisa ter salvo nada antes. É só
+          mostrar a tela pra portaria escanear.
+        </p>
+      </header>
+
+      <form class="mt-8 grid gap-4 max-w-sm" data-qrcode-form data-evento-id={event.id}>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="qrcode-codigo">Código de confirmação</label>
+          <input
+            id="qrcode-codigo"
+            type="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            maxlength="6"
+            class="field qrcode-codigo-input"
+            placeholder="A3F9K2"
+          />
+        </div>
+        <button type="submit" class="btn btn-solid">Gerar QR Code</button>
+      </form>
+
+      <details class="mt-6">
+        <summary class="cursor-pointer text-sm font-semibold text-accent">Esqueceu o código? Buscar pelo nome</summary>
+        <div class="mt-4 grid gap-3 max-w-sm">
+          <input type="text" class="field" placeholder="Digite seu nome…" data-qrcode-busca-nome autocomplete="off" />
+          <div class="grid gap-2" data-qrcode-resultados-nome></div>
+        </div>
+      </details>
+
+      <p class="mt-6 text-lg font-semibold" data-qrcode-resultado role="status" aria-live="polite" />
+      <div class="mt-4 qrcode-imagem" data-qrcode-imagem></div>
+    </div>
+  </main>
+  <SiteFooter />
+
+  <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, eventoId: event.id }}>
+    (() => {
+      const form = document.querySelector("[data-qrcode-form]");
+      const resultado = document.querySelector("[data-qrcode-resultado]");
+      const imagemEl = document.querySelector("[data-qrcode-imagem]");
+      const buscaInput = document.querySelector("[data-qrcode-busca-nome]");
+      const resultadosNome = document.querySelector("[data-qrcode-resultados-nome]");
+      let pessoas = null;
+
+      const escapeHtml = (value) =>
+        String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+      function gerarQrCode(nome, codigo) {
+        const qr = qrcode(0, "M");
+        qr.addData(`${eventoId}:${codigo}`);
+        qr.make();
+        imagemEl.innerHTML = qr.createImgTag(8, 8);
+        resultado.textContent = `✅ QR Code de ${nome} pronto — mostre pra portaria.`;
+      }
+
+      async function buscarPorCodigo(codigo) {
+        const res = await fetch(
+          `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][codigo][_eq]=${encodeURIComponent(codigo)}`,
+        );
+        const json = await res.json();
+        return json.data?.[0] ?? null;
+      }
+
+      form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const codigo = document.getElementById("qrcode-codigo").value.trim().toUpperCase();
+        imagemEl.innerHTML = "";
+        resultado.textContent = "Verificando…";
+
+        try {
+          const pessoa = await buscarPorCodigo(codigo);
+          if (!pessoa) {
+            resultado.textContent = "Código não encontrado. Confira e tente de novo, ou busque pelo nome abaixo.";
+            return;
+          }
+          gerarQrCode(pessoa.nome, pessoa.codigo);
+        } catch {
+          resultado.textContent = "Não foi possível buscar agora. Tente novamente em instantes.";
+        }
+      });
+
+      buscaInput?.addEventListener("input", async () => {
+        const termo = buscaInput.value.trim().toLowerCase();
+        if (termo.length < 2) {
+          resultadosNome.innerHTML = "";
+          return;
+        }
+
+        if (!pessoas) {
+          const res = await fetch(`${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=id,nome&limit=-1`);
+          const json = await res.json();
+          pessoas = json.data ?? [];
+        }
+
+        const encontrados = pessoas.filter((p) => p.nome.toLowerCase().includes(termo)).slice(0, 8);
+        resultadosNome.innerHTML = encontrados
+          .map((p) => `<button type="button" class="btn btn-outline" data-pessoa-id="${p.id}">${escapeHtml(p.nome)}</button>`)
+          .join("");
+      });
+
+      resultadosNome?.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-pessoa-id]");
+        if (!button) return;
+        imagemEl.innerHTML = "";
+        resultado.textContent = "Gerando…";
+        try {
+          const res = await fetch(
+            `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][id][_eq]=${button.dataset.pessoaId}`,
+          );
+          const json = await res.json();
+          const pessoa = json.data?.[0];
+          if (!pessoa) {
+            resultado.textContent = "Não foi possível encontrar essa inscrição.";
+            return;
+          }
+          gerarQrCode(pessoa.nome, pessoa.codigo);
+          resultadosNome.innerHTML = "";
+          buscaInput.value = "";
+        } catch {
+          resultado.textContent = "Não foi possível gerar agora. Tente novamente em instantes.";
+        }
+      });
+    })();
+  </script>
+
+  <style>
+    .qrcode-canvas {
+      max-width: 40rem;
+    }
+
+    .qrcode-codigo-input {
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-size: 1.5rem;
+      text-align: center;
+      font-family: var(--font-mono);
+    }
+
+    .qrcode-imagem :global(img) {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      background: #fff;
+    }
+  </style>
+</BaseLayout>

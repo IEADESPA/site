@@ -61,6 +61,22 @@ const allPosts = visiblePosts(await getAllMensagens());
         <button type="submit" class="btn btn-solid">Confirmar presença</button>
       </form>
 
+      <div class="mt-4">
+        <button type="button" class="btn btn-outline" data-qr-abrir>Ler QR Code (câmera)</button>
+        <p class="mt-2 text-xs text-muted-foreground">
+          Peça pra pessoa gerar o QR Code dela em{" "}
+          <a href={`/qrcode/${event.slug}/`} class="text-accent underline underline-offset-2">
+            /qrcode/{event.slug}/
+          </a>{" "}
+          e mostrar a tela — mais rápido que digitar quando a fila é grande.
+        </p>
+        <div class="mt-3 qr-leitor" data-qr-leitor hidden>
+          <video data-qr-video playsinline muted class="qr-video"></video>
+          <canvas data-qr-canvas hidden></canvas>
+          <button type="button" class="btn btn-outline mt-2" data-qr-fechar>Fechar câmera</button>
+        </div>
+      </div>
+
       <p class="mt-6 text-lg font-semibold" data-checkin-resultado role="status" aria-live="polite" />
 
       <details class="mt-10">
@@ -81,6 +97,7 @@ const allPosts = visiblePosts(await getAllMensagens());
   </main>
   <SiteFooter />
 
+  <script is:inline src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script
     is:inline
     define:vars={{
@@ -138,11 +155,8 @@ const allPosts = visiblePosts(await getAllMensagens());
         resultado.textContent = `✅ ${nome} — presença confirmada!`;
       }
 
-      form?.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const codigo = document.getElementById("checkin-codigo").value.trim().toUpperCase();
+      async function confirmarPorCodigo(codigo) {
         resultado.textContent = "Verificando…";
-
         try {
           const res = await fetch(
             `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][codigo][_eq]=${encodeURIComponent(codigo)}`,
@@ -154,11 +168,77 @@ const allPosts = visiblePosts(await getAllMensagens());
             return;
           }
           await confirmarPresenca(pessoa.id, pessoa.nome);
-          form.reset();
         } catch {
           resultado.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";
         }
+      }
+
+      form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const codigo = document.getElementById("checkin-codigo").value.trim().toUpperCase();
+        await confirmarPorCodigo(codigo);
+        form.reset();
       });
+
+      // Leitor de QR Code por câmera — o QR (gerado em /qrcode/<slug>/) carrega
+      // "eventoId:codigo"; decodificado, cai no mesmo fluxo de confirmação que
+      // já existe pro código digitado. Só um jeito mais rápido de usar o
+      // mesmo código, não muda nada da segurança do check-in.
+      const qrAbrirBtn = document.querySelector("[data-qr-abrir]");
+      const qrFecharBtn = document.querySelector("[data-qr-fechar]");
+      const qrLeitor = document.querySelector("[data-qr-leitor]");
+      const qrVideo = document.querySelector("[data-qr-video]");
+      const qrCanvas = document.querySelector("[data-qr-canvas]");
+      let qrStream = null;
+      let qrAnimId = null;
+
+      function pararLeituraQr() {
+        if (qrAnimId) cancelAnimationFrame(qrAnimId);
+        qrAnimId = null;
+        if (qrStream) qrStream.getTracks().forEach((track) => track.stop());
+        qrStream = null;
+        if (qrLeitor) qrLeitor.hidden = true;
+      }
+
+      function lerFrameQr() {
+        if (!qrVideo || qrVideo.readyState !== qrVideo.HAVE_ENOUGH_DATA) {
+          qrAnimId = requestAnimationFrame(lerFrameQr);
+          return;
+        }
+        const ctx = qrCanvas.getContext("2d");
+        qrCanvas.width = qrVideo.videoWidth;
+        qrCanvas.height = qrVideo.videoHeight;
+        ctx.drawImage(qrVideo, 0, 0, qrCanvas.width, qrCanvas.height);
+        const imageData = ctx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+        const codigo = window.jsQR ? jsQR(imageData.data, imageData.width, imageData.height) : null;
+
+        if (codigo) {
+          const [eventoIdLido, codigoLido] = codigo.data.split(":");
+          pararLeituraQr();
+          if (Number(eventoIdLido) !== eventoId) {
+            resultado.textContent = "Esse QR Code é de outro evento.";
+            return;
+          }
+          confirmarPorCodigo((codigoLido ?? "").toUpperCase());
+          return;
+        }
+        qrAnimId = requestAnimationFrame(lerFrameQr);
+      }
+
+      qrAbrirBtn?.addEventListener("click", async () => {
+        if (qrLeitor) qrLeitor.hidden = false;
+        try {
+          qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+          qrVideo.srcObject = qrStream;
+          await qrVideo.play();
+          qrAnimId = requestAnimationFrame(lerFrameQr);
+        } catch {
+          resultado.textContent = "Não foi possível acessar a câmera. Digite o código manualmente.";
+          pararLeituraQr();
+        }
+      });
+
+      qrFecharBtn?.addEventListener("click", pararLeituraQr);
 
       buscaInput?.addEventListener("input", async () => {
         const termo = buscaInput.value.trim().toLowerCase();
@@ -205,6 +285,17 @@ const allPosts = visiblePosts(await getAllMensagens());
       font-size: 1.5rem;
       text-align: center;
       font-family: var(--font-mono);
+    }
+
+    .qr-leitor {
+      max-width: 24rem;
+    }
+
+    .qr-video {
+      width: 100%;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: #000;
     }
   </style>
 </BaseLayout>
