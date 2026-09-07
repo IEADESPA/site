@@ -55,6 +55,21 @@ const allPosts = visiblePosts(await getAllMensagens());
           </div>
         </div>
 
+        <div class="mt-6">
+          <button type="button" class="btn btn-outline" data-abrir-novo>+ Adicionar inscrito</button>
+          <div class="mt-4 pergunta-card" data-form-novo hidden>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <input type="text" class="field" placeholder="Nome" data-novo-nome />
+              <input type="text" class="field" placeholder="Telefone (opcional)" data-novo-telefone />
+            </div>
+            <div class="mt-4 grid gap-3" data-novo-perguntas></div>
+            <div class="mt-4 flex items-center gap-3">
+              <button type="button" class="btn btn-solid" data-salvar-novo>Adicionar</button>
+              <p class="text-sm" data-novo-status role="status" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+
         <div class="mt-5 overflow-x-auto">
           <table class="inscritos-tabela">
             <thead>
@@ -95,6 +110,9 @@ const allPosts = visiblePosts(await getAllMensagens());
       id: number;
       label: string;
       ordem: number | null;
+      tipo: string;
+      opcoes: string[] | null;
+      obrigatoria: boolean;
     }
 
     interface Resposta {
@@ -130,6 +148,61 @@ const allPosts = visiblePosts(await getAllMensagens());
       return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
     }
 
+    // Mesmo alfabeto usado no check-in público — sem 0/O/1/I/L, pra não confundir.
+    const ALFABETO_CODIGO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    function gerarCodigo(): string {
+      const bytes = new Uint8Array(6);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (b) => ALFABETO_CODIGO[b % ALFABETO_CODIGO.length]).join("");
+    }
+
+    /** Um campo de pergunta, pra formulário de nova pessoa ou edição de resposta. */
+    function campoHtml(pergunta: Pergunta, valorAtual: string) {
+      const attrs = `data-pergunta-id="${pergunta.id}" data-pergunta-tipo="${pergunta.tipo}"`;
+      if (pergunta.tipo === "texto_longo") {
+        return `<textarea class="field" rows="2" ${attrs}>${escapeHtml(valorAtual)}</textarea>`;
+      }
+      if (pergunta.tipo === "numero") {
+        return `<input type="number" class="field" value="${escapeHtml(valorAtual)}" ${attrs} />`;
+      }
+      if (pergunta.tipo === "data") {
+        return `<input type="date" class="field" value="${escapeHtml(valorAtual)}" ${attrs} />`;
+      }
+      if (pergunta.tipo === "selecao_unica") {
+        return `<select class="field" ${attrs}>
+          <option value="">—</option>
+          ${(pergunta.opcoes ?? [])
+            .map((o) => `<option value="${escapeHtml(o)}" ${o === valorAtual ? "selected" : ""}>${escapeHtml(o)}</option>`)
+            .join("")}
+        </select>`;
+      }
+      if (pergunta.tipo === "selecao_multipla") {
+        const marcadas = valorAtual.split(",").map((v) => v.trim());
+        return `<div class="grid gap-1" ${attrs}>
+          ${(pergunta.opcoes ?? [])
+            .map(
+              (o) => `<label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" value="${escapeHtml(o)}" ${marcadas.includes(o) ? "checked" : ""} /> ${escapeHtml(o)}
+              </label>`,
+            )
+            .join("")}
+        </div>`;
+      }
+      return `<input type="text" class="field" value="${escapeHtml(valorAtual)}" ${attrs} />`;
+    }
+
+    function lerCampo(campoEl: Element): string {
+      if (campoEl.matches("[data-pergunta-tipo='selecao_multipla']")) {
+        const marcadas = Array.from(campoEl.querySelectorAll("input[type=checkbox]:checked")).map((el) => (el as HTMLInputElement).value);
+        return marcadas.join(", ");
+      }
+      return (campoEl as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value.trim();
+    }
+
+    function perguntasOrdenadas(): Pergunta[] {
+      return Array.from(perguntasPorId.values()).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+    }
+
     function atualizarStats() {
       const total = inscricoes.length;
       const pagos = inscricoes.filter((i) => i.pago);
@@ -155,14 +228,30 @@ const allPosts = visiblePosts(await getAllMensagens());
     }
 
     function respostasHtml(inscricaoId: number) {
+      const perguntas = perguntasOrdenadas();
+      if (!perguntas.length) return `<p class="text-sm text-muted-foreground">Este evento não tem perguntas.</p>`;
       const respostas = respostasPorInscricao.get(inscricaoId) ?? [];
-      if (!respostas.length) return `<p class="text-sm text-muted-foreground">Sem respostas registradas.</p>`;
-      return `<ul class="grid gap-1">${respostas
-        .map((r) => {
-          const pergunta = perguntasPorId.get(r.pergunta);
-          return `<li><strong>${escapeHtml(pergunta?.label ?? "Pergunta")}:</strong> ${escapeHtml(r.valor)}</li>`;
-        })
-        .join("")}</ul>`;
+      const respostaPorPergunta = new Map(respostas.map((r) => [r.pergunta, r]));
+
+      return `
+        <div class="grid gap-3" data-respostas-form data-inscricao-id="${inscricaoId}">
+          ${perguntas
+            .map((p) => {
+              const resposta = respostaPorPergunta.get(p.id);
+              return `
+                <div class="grid gap-1">
+                  <label class="text-xs font-semibold text-muted-foreground">${escapeHtml(p.label)}</label>
+                  ${campoHtml(p, resposta?.valor ?? "")}
+                </div>
+              `;
+            })
+            .join("")}
+          <div class="flex items-center gap-3">
+            <button type="button" class="btn btn-outline" data-salvar-respostas>Salvar respostas</button>
+            <p class="text-sm" data-respostas-status role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      `;
     }
 
     function renderizar() {
@@ -243,6 +332,48 @@ const allPosts = visiblePosts(await getAllMensagens());
 
     corpoTabela?.addEventListener("click", async (event) => {
       const target = event.target as HTMLElement;
+
+      if (target.matches("[data-salvar-respostas]")) {
+        const formEl = target.closest<HTMLElement>("[data-respostas-form]");
+        const statusEl = formEl?.querySelector<HTMLElement>("[data-respostas-status]");
+        if (!formEl) return;
+        const inscricaoId = Number(formEl.dataset.inscricaoId);
+        if (statusEl) statusEl.textContent = "Salvando…";
+
+        const existentes = new Map((respostasPorInscricao.get(inscricaoId) ?? []).map((r) => [r.pergunta, r]));
+        const campos = formEl.querySelectorAll<HTMLElement>("[data-pergunta-id]");
+
+        try {
+          for (const campoEl of campos) {
+            const perguntaId = Number(campoEl.dataset.perguntaId);
+            const valor = lerCampo(campoEl);
+            const existente = existentes.get(perguntaId);
+            if (existente) {
+              await fetch(`${directusUrl}/items/respostas_inscricao/${existente.id}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ valor }),
+              });
+              existente.valor = valor;
+            } else if (valor) {
+              const res = await fetch(`${directusUrl}/items/respostas_inscricao`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ inscricao: inscricaoId, pergunta: perguntaId, valor }),
+              });
+              const novaResposta = (await res.json()).data;
+              const lista = respostasPorInscricao.get(inscricaoId) ?? [];
+              lista.push({ id: novaResposta.id, inscricao: inscricaoId, pergunta: perguntaId, valor });
+              respostasPorInscricao.set(inscricaoId, lista);
+            }
+          }
+          if (statusEl) statusEl.textContent = "✅ Respostas salvas!";
+        } catch {
+          if (statusEl) statusEl.textContent = "Não foi possível salvar agora.";
+        }
+        return;
+      }
+
       const linha = target.closest<HTMLElement>("[data-linha-id]");
       if (!linha) return;
       const id = Number(linha.dataset.linhaId);
@@ -303,6 +434,71 @@ const allPosts = visiblePosts(await getAllMensagens());
         });
         Object.assign(inscricao, payload);
         atualizarStats();
+      }
+    });
+
+    const abrirNovoBtn = document.querySelector<HTMLButtonElement>("[data-abrir-novo]");
+    const formNovo = document.querySelector<HTMLElement>("[data-form-novo]");
+    const novoPerguntasEl = document.querySelector<HTMLElement>("[data-novo-perguntas]");
+
+    abrirNovoBtn?.addEventListener("click", () => {
+      if (!formNovo) return;
+      formNovo.hidden = !formNovo.hidden;
+      if (!formNovo.hidden && novoPerguntasEl) {
+        novoPerguntasEl.innerHTML = perguntasOrdenadas()
+          .map(
+            (p) => `
+              <div class="grid gap-1">
+                <label class="text-xs font-semibold text-muted-foreground">${escapeHtml(p.label)}${p.obrigatoria ? " *" : ""}</label>
+                ${campoHtml(p, "")}
+              </div>
+            `,
+          )
+          .join("");
+      }
+    });
+
+    document.querySelector("[data-salvar-novo]")?.addEventListener("click", async () => {
+      const nomeInput = document.querySelector<HTMLInputElement>("[data-novo-nome]");
+      const telefoneInput = document.querySelector<HTMLInputElement>("[data-novo-telefone]");
+      const statusEl = document.querySelector<HTMLElement>("[data-novo-status]");
+      if (!nomeInput?.value.trim()) {
+        if (statusEl) statusEl.textContent = "Digite o nome.";
+        return;
+      }
+      if (statusEl) statusEl.textContent = "Adicionando…";
+
+      try {
+        const res = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            evento: Number(eventoId),
+            nome: nomeInput.value.trim(),
+            telefone: telefoneInput?.value.trim() || null,
+            codigo: gerarCodigo(),
+          }),
+        });
+        const nova = (await res.json()).data;
+
+        const campos = novoPerguntasEl?.querySelectorAll<HTMLElement>("[data-pergunta-id]") ?? [];
+        for (const campoEl of campos) {
+          const valor = lerCampo(campoEl);
+          if (!valor) continue;
+          await fetch(`${directusUrl}/items/respostas_inscricao`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ inscricao: nova.id, pergunta: Number(campoEl.dataset.perguntaId), valor }),
+          });
+        }
+
+        nomeInput.value = "";
+        if (telefoneInput) telefoneInput.value = "";
+        if (formNovo) formNovo.hidden = true;
+        if (statusEl) statusEl.textContent = "";
+        await carregarTudo();
+      } catch {
+        if (statusEl) statusEl.textContent = "Não foi possível adicionar agora.";
       }
     });
 

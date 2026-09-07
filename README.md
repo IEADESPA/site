@@ -484,10 +484,23 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
          - Cada linha: nome e telefone editáveis, valor (R$) editável, e dois selos clicáveis —
            **Pago** e **Presente** — que já salvam na hora do clique (o check-in também pode ser
            feito por aqui, não só pela página pública de check-in por código).
-         - "Respostas": expande e mostra as respostas daquela pessoa às perguntas do evento.
+         - "Respostas": expande e mostra as respostas daquela pessoa às perguntas do evento — e
+           **edita** também (não só visualiza), reaproveitando o mesmo gerador de campo por tipo
+           de pergunta (texto, número, data, seleção) usado no formulário público.
          - "Excluir": remove a inscrição (e as respostas ligadas a ela) com confirmação.
+         - **"+ Adicionar inscrito"**: cadastro manual (nome, telefone, respostas às perguntas do
+           evento), pra quando alguém se inscreve por telefone/pessoalmente em vez de pelo
+           formulário público — gera código de check-in igual ao de quem se inscreve sozinho.
          Testado de ponta a ponta (Playwright): estatísticas corretas, filtros, busca, alternar
-         pago/presente, editar e salvar, ver respostas, excluir.
+         pago/presente, editar e salvar, ver e editar respostas, excluir, cadastro manual.
+         - **Excluir evento** (no editor, `/painel-eventos/evento/`): remove o evento inteiro em
+           cascata (respostas → inscrições → perguntas → evento), com confirmação — não existia
+           antes, e sem isso um evento criado por engano ficava pra sempre.
+         - **Faixas de valor (opcional)**: campo novo `faixas_valor` em `eventos` — uma lista
+           configurável (descrição + valor) editável no evento, tipo "Individual" R$50, "Casal"
+           R$80, "Grupo (3+, por pessoa)" R$40. Só informativo, aparece na página pública do
+           evento como tabela de preços — continua sem processar pagamento nenhum, é só
+           comunicar os valores de forma organizada quando o preço muda por tamanho de grupo.
       4. [x] **Certificado** — construído de forma independente desta aba, em
          `/certificado/<slug-do-evento>/` (ver acima), usando o mesmo código do check-in, sem
          conta nem senha, sem exportação.

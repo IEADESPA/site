@@ -51,6 +51,7 @@ interface Evento {
   vagas_limite: number | null;
   inscricoes_ate: string | null;
   inscricoes_encerradas: boolean;
+  faixas_valor: { descricao: string; valor: number }[] | null;
 }
 
 export async function getStaticPaths() {
@@ -193,6 +194,24 @@ const structuredData = startDate
                 <li><strong class="text-foreground">Inscrições até:</strong> {dateFormatter.format(new Date(event.inscricoes_ate))}</li>
               )}
             </ul>
+
+            {
+              event.faixas_valor && event.faixas_valor.length > 0 && (
+                <div class="mt-4 valores-tabela">
+                  <p class="text-sm font-semibold">Valores</p>
+                  <ul class="mt-2 grid gap-1 text-sm text-muted-foreground">
+                    {event.faixas_valor.map((faixa) => (
+                      <li class="flex items-baseline justify-between gap-3">
+                        <span>{faixa.descricao}</span>
+                        <span class="text-foreground font-semibold">
+                          R$ {Number(faixa.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            }
 
             {inscricaoAberta ? (
               <form class="mt-6 grid gap-4 max-w-md" data-inscricao-form data-evento-id={event.id}>
@@ -348,6 +367,11 @@ const structuredData = startDate
       border-radius: var(--radius-md);
       padding: 1.75rem 2rem;
       background: var(--muted);
+    }
+
+    .valores-tabela {
+      border-top: 1px solid var(--border);
+      padding-top: 0.85rem;
     }
 
     .contact-checkbox {

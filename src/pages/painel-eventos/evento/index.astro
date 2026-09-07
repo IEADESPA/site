@@ -129,6 +129,16 @@ const tipoPerguntaOpcoes = [
           </div>
         </div>
 
+        <fieldset class="grid gap-2">
+          <legend class="text-sm font-semibold">Faixas de valor (opcional)</legend>
+          <p class="text-xs text-muted-foreground">
+            Só informativo, aparece na página pública do evento — não processa pagamento nenhum.
+            Ex.: "Individual" R$50, "Casal" R$80, "Grupo (3 ou mais, por pessoa)" R$40.
+          </p>
+          <div class="grid gap-2" data-faixas-lista></div>
+          <button type="button" class="btn btn-outline mt-1" data-faixa-adicionar>+ Adicionar faixa</button>
+        </fieldset>
+
         <div class="grid gap-3">
           <label class="flex items-center gap-2 text-sm">
             <input id="f-inscricoes-encerradas" type="checkbox" /> Encerrar inscrições manualmente agora
@@ -140,6 +150,16 @@ const tipoPerguntaOpcoes = [
           <p class="text-sm" data-evento-status role="status" aria-live="polite"></p>
         </div>
       </form>
+
+      <div hidden class="mt-10 zona-perigo" data-zona-perigo>
+        <p class="text-sm font-semibold text-red-700">Excluir evento</p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Remove o evento, suas perguntas e todas as inscrições (com respostas). Não pode ser
+          desfeito.
+        </p>
+        <button type="button" class="btn btn-outline btn-excluir-evento mt-3" data-excluir-evento>Excluir evento</button>
+        <p class="mt-2 text-sm" data-excluir-status role="status" aria-live="polite"></p>
+      </div>
 
       <section hidden class="mt-16" data-perguntas-secao aria-labelledby="perguntas-heading">
         <h2 id="perguntas-heading" class="section-title">Perguntas do formulário de inscrição</h2>
@@ -191,6 +211,7 @@ const tipoPerguntaOpcoes = [
       vagas_limite: number | null;
       inscricoes_ate: string | null;
       inscricoes_encerradas: boolean;
+      faixas_valor: { descricao: string; valor: number }[] | null;
     }
 
     interface Pergunta {
@@ -263,6 +284,7 @@ const tipoPerguntaOpcoes = [
       fVagas.value = evento.vagas_limite ? String(evento.vagas_limite) : "";
       fInscricoesAte.value = evento.inscricoes_ate ?? "";
       fInscricoesEncerradas.checked = Boolean(evento.inscricoes_encerradas);
+      renderizarFaixas(evento.faixas_valor ?? []);
     }
 
     function lerFormulario() {
@@ -282,9 +304,48 @@ const tipoPerguntaOpcoes = [
         vagas_limite: fVagas.value ? Number(fVagas.value) : null,
         inscricoes_ate: fInscricoesAte.value || null,
         inscricoes_encerradas: fInscricoesEncerradas.checked,
+        faixas_valor: lerFaixas(),
         aceita_inscricao: true,
       };
     }
+
+    const faixasListaEl = document.querySelector<HTMLElement>("[data-faixas-lista]");
+
+    function linhaFaixaHtml(descricao: string, valor: string) {
+      return `
+        <div class="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-center faixa-linha">
+          <input type="text" class="field" placeholder="Ex.: Casal" value="${descricao.replace(/"/g, "&quot;")}" data-faixa-descricao />
+          <input type="number" step="0.01" class="field faixa-valor" placeholder="R$" value="${valor}" data-faixa-valor />
+          <button type="button" class="btn btn-outline" data-faixa-remover>Remover</button>
+        </div>
+      `;
+    }
+
+    function renderizarFaixas(faixas: { descricao: string; valor: number }[]) {
+      if (!faixasListaEl) return;
+      faixasListaEl.innerHTML = faixas.map((f) => linhaFaixaHtml(f.descricao, String(f.valor ?? ""))).join("");
+    }
+
+    function lerFaixas(): { descricao: string; valor: number }[] {
+      if (!faixasListaEl) return [];
+      return Array.from(faixasListaEl.querySelectorAll<HTMLElement>(".faixa-linha"))
+        .map((linha) => {
+          const descricao = linha.querySelector<HTMLInputElement>("[data-faixa-descricao]")?.value.trim() ?? "";
+          const valor = Number(linha.querySelector<HTMLInputElement>("[data-faixa-valor]")?.value ?? 0);
+          return { descricao, valor };
+        })
+        .filter((f) => f.descricao);
+    }
+
+    document.querySelector("[data-faixa-adicionar]")?.addEventListener("click", () => {
+      if (!faixasListaEl) return;
+      faixasListaEl.insertAdjacentHTML("beforeend", linhaFaixaHtml("", ""));
+    });
+
+    faixasListaEl?.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      if (target.matches("[data-faixa-remover]")) target.closest(".faixa-linha")?.remove();
+    });
 
     const rotuloTipoPergunta: Record<string, string> = {
       texto_curto: "Texto curto",
@@ -370,7 +431,64 @@ const tipoPerguntaOpcoes = [
       if (form) form.hidden = false;
       if (perguntasSecao) perguntasSecao.hidden = false;
 
+      const zonaPerigo = document.querySelector<HTMLElement>("[data-zona-perigo]");
+      if (zonaPerigo) zonaPerigo.hidden = false;
+
       await carregarPerguntas(token, eventoId);
+
+      document.querySelector("[data-excluir-evento]")?.addEventListener("click", async () => {
+        const excluirStatus = document.querySelector<HTMLElement>("[data-excluir-status]");
+        if (!confirm(`Excluir "${evento.title}" e todas as inscrições? Essa ação não pode ser desfeita.`)) return;
+        if (excluirStatus) excluirStatus.textContent = "Excluindo…";
+
+        try {
+          const inscricoesRes = await fetch(`${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=id&limit=-1`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const inscricoesIds: number[] = ((await inscricoesRes.json()).data ?? []).map((i: { id: number }) => i.id);
+
+          if (inscricoesIds.length) {
+            const respostasRes = await fetch(
+              `${directusUrl}/items/respostas_inscricao?filter[inscricao][_in]=${inscricoesIds.join(",")}&fields=id&limit=-1`,
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+            const respostasIds: number[] = ((await respostasRes.json()).data ?? []).map((r: { id: number }) => r.id);
+            if (respostasIds.length) {
+              await fetch(`${directusUrl}/items/respostas_inscricao`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify(respostasIds),
+              });
+            }
+            await fetch(`${directusUrl}/items/inscricoes_eventos`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify(inscricoesIds),
+            });
+          }
+
+          const perguntasRes = await fetch(`${directusUrl}/items/perguntas_evento?filter[evento][_eq]=${eventoId}&fields=id&limit=-1`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const perguntasIds: number[] = ((await perguntasRes.json()).data ?? []).map((p: { id: number }) => p.id);
+          if (perguntasIds.length) {
+            await fetch(`${directusUrl}/items/perguntas_evento`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify(perguntasIds),
+            });
+          }
+
+          await fetch(`${directusUrl}/items/eventos/${eventoId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          window.location.href = "/painel-eventos/";
+        } catch {
+          if (excluirStatus) excluirStatus.textContent = "Não foi possível excluir agora. Tente novamente.";
+        }
+      });
 
       form?.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -483,6 +601,22 @@ const tipoPerguntaOpcoes = [
   </script>
 
   <style is:global>
+    .zona-perigo {
+      border: 1px solid color-mix(in srgb, #b3261e 35%, var(--border));
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.25rem;
+      max-width: 40rem;
+    }
+
+    .btn-excluir-evento {
+      border-color: #b3261e;
+      color: #b3261e;
+    }
+
+    .btn-excluir-evento:hover {
+      background: color-mix(in srgb, #b3261e 10%, transparent);
+    }
+
     .evento-canvas {
       max-width: 48rem;
     }
@@ -495,6 +629,10 @@ const tipoPerguntaOpcoes = [
 
     .ordem-input {
       max-width: 5rem;
+    }
+
+    .faixa-valor {
+      max-width: 7rem;
     }
   </style>
 </BaseLayout>
