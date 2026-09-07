@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { siteConfig } from "@/config/site";
+import { DIRECTUS_URL } from "@/lib/directus";
 import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
 import { congregacaoProgramacao, getAllProgramacao, sedeProgramacao, type ProgramacaoItem } from "@/lib/programacao";
 
@@ -77,6 +78,11 @@ const versiculoInicial = baldeInicial[epochDays % baldeInicial.length];
           <div class="painel-itens" data-painel-itens>
             <p class="painel-carregando">Carregando programação…</p>
           </div>
+        </section>
+
+        <section class="painel-evento-hoje" data-painel-evento-hoje hidden aria-label="Presença ao vivo do evento de hoje">
+          <p class="painel-section-label" data-painel-evento-hoje-titulo></p>
+          <p class="painel-evento-hoje-numero" data-painel-evento-hoje-numero></p>
         </section>
 
         {
@@ -164,6 +170,51 @@ const versiculoInicial = baldeInicial[epochDays % baldeInicial.length];
         renderRelogio();
         setInterval(renderRelogio, 15000);
         setInterval(renderHoje, 5 * 60 * 1000);
+      })();
+    </script>
+
+    <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
+      (() => {
+        /* "Hoje na igreja": presença ao vivo de um evento especial em
+           andamento hoje — mesma contagem usada no check-in, só reaproveitada
+           aqui pra quem está de olho no telão não precisar abrir outra tela. */
+        const secaoEl = document.querySelector("[data-painel-evento-hoje]");
+        const tituloEl = document.querySelector("[data-painel-evento-hoje-titulo]");
+        const numeroEl = document.querySelector("[data-painel-evento-hoje-numero]");
+        if (!secaoEl || !tituloEl || !numeroEl) return;
+
+        async function atualizarEventoHoje() {
+          try {
+            const hoje = new Date().toISOString().slice(0, 10);
+            const res = await fetch(
+              `${directusUrl}/items/eventos?filter[_and][0][aceita_inscricao][_eq]=true&filter[_and][1][event_date][_lte]=${hoje}&fields=id,title,event_date,end_date,vagas_limite&limit=-1`,
+            );
+            const json = await res.json();
+            const eventos = json.data ?? [];
+            const emAndamento = eventos.find((e) => hoje >= e.event_date && hoje <= (e.end_date || e.event_date));
+            if (!emAndamento) {
+              secaoEl.hidden = true;
+              return;
+            }
+
+            const contagemRes = await fetch(
+              `${directusUrl}/items/inscricoes_eventos?aggregate[count]=id&filter[_and][0][evento][_eq]=${emAndamento.id}&filter[_and][1][presente][_eq]=true`,
+            );
+            const contagemJson = await contagemRes.json();
+            const presentes = Number(contagemJson.data?.[0]?.count?.id ?? 0);
+
+            tituloEl.textContent = `Hoje na igreja — ${emAndamento.title}`;
+            numeroEl.textContent = emAndamento.vagas_limite
+              ? `${presentes} presentes de ${emAndamento.vagas_limite} vagas`
+              : `${presentes} presentes`;
+            secaoEl.hidden = false;
+          } catch {
+            secaoEl.hidden = true;
+          }
+        }
+
+        atualizarEventoHoje();
+        setInterval(atualizarEventoHoje, 20000);
       })();
     </script>
 
@@ -352,6 +403,18 @@ const versiculoInicial = baldeInicial[epochDays % baldeInicial.length];
       .painel-carregando {
         color: #c7cede;
         font-size: clamp(1.25rem, 2vw, 1.75rem);
+      }
+
+      .painel-evento-hoje {
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.06);
+        padding: clamp(0.85rem, 1.5vw, 1.25rem) clamp(1.25rem, 2.5vw, 2rem);
+      }
+
+      .painel-evento-hoje-numero {
+        margin: 0.35rem 0 0;
+        font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+        font-weight: 700;
       }
 
       .painel-aviso {

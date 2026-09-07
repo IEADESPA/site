@@ -828,17 +828,47 @@ foi "o que muda quando o evento é grande?", não só "quais botões faltam":
       paga confirma direto, pessoa não paga abre o aviso de exceção, motivo aceito grava a
       observação, e cancelar a exceção não grava nada — e que o local escolhido sobrevive a
       recarregar a página (guardado no navegador).
-- [ ] **Lotação em tempo real visível pra quem está na porta** — um contador ao vivo de "quantos
-      já confirmaram presença" (derivado do que já existe), pra saber quando parar de deixar
-      entrar mais gente num espaço com capacidade limitada — questão de segurança, não só
-      estatística.
-- [ ] **Check-in funciona mesmo se a internet cair** — hoje o check-in depende de internet no
-      aparelho; num evento grande, se a rede do local falhar, ninguém confirma presença. Guardar
-      as confirmações no aparelho e sincronizar depois que a conexão voltar resolveria isso —
-      mais complexo de construir bem, por isso separado como item à parte.
-- [ ] **Contador de presença ao vivo no telão "hoje na igreja"** — conectar o painel de telão já
-      existente ao número de presentes do evento em andamento, pra equipe acompanhar o
-      andamento sem abrir o painel de inscritos numa outra tela.
+- [x] **Lotação/presença em tempo real + check-in offline** — os três últimos itens desta seção
+      foram construídos juntos, por decisão do usuário (são a mesma base de dados, só duas
+      vitrines diferentes):
+      - **Contador ao vivo em `/checkin/<slug>/`**: mostra "X presentes" (ou "X presentes de Y
+        vagas", se o evento tiver limite), atualizado a cada 20s — resolve exatamente o pedido de
+        não precisar abrir a tela de inscritos só pra saber quantos já chegaram.
+      - **Mesmo contador no telão "hoje na igreja"** (`/painel/sede/` e `/painel/congregacoes/`):
+        se houver um evento especial acontecendo hoje, aparece um bloco "Hoje na igreja — <nome>"
+        com a mesma contagem, reaproveitando a mesma consulta agregada do check-in.
+      - **Check-in funciona mesmo sem internet**: a lista de inscritos do evento (nome, código,
+        pago, presente) fica em cache no navegador do aparelho, atualizada a cada 20s enquanto
+        online; se a rede cair, a busca por código/nome cai automaticamente pra esse cache. Toda
+        confirmação é **otimista** — confirma na tela na hora (não espera resposta de rede, pra
+        nunca passar de alguns segundos, nem em fila grande), e só se a gravação de verdade falhar
+        (offline ou erro de rede) é que vira uma "pendência" guardada no aparelho, sincronizada
+        sozinha em segundo plano assim que a conexão volta (tentativa a cada 8s, e também no
+        evento `online` do navegador). Um aviso de status ("Tudo sincronizado" / "Sincronizando
+        X…" / "Sem internet — X guardado(s)") deixa isso visível pra equipe o tempo todo.
+      Testado de ponta a ponta (rede real cortada via mock, não só a lógica isolada): confirmação
+      offline leva menos de 100ms pra aparecer na tela, o contador atualiza mesmo sem rede, a
+      pendência é criada corretamente, e sincroniza sozinha assim que a "conexão" volta.
+      - **Bug real corrigido durante a revisão final desta aba**: a atualização periódica do cache
+        (a cada 20s) podia "desconfirmar" visualmente alguém que acabara de ser confirmado, se o
+        PATCH de verdade ainda não tivesse voltado do servidor — corrigido pra nunca regredir uma
+        confirmação já feita neste aparelho. Aproveitado o mesmo ajuste pra impedir confirmar a
+        mesma pessoa duas vezes (toque duplo) e pra evitar pendência duplicada na fila de
+        sincronização.
+
+**Revisão de bugs ao encerrar esta aba** (pedida explicitamente pelo usuário antes de fechar o
+assunto de eventos) — revisão de código de toda a área (inscrição, check-in, cupons, painel),
+sem alterar comportamento visível além de corrigir estes três problemas reais encontrados:
+- Check-in de evento **sem horário cadastrado** (só data) liberava sozinho às 23h da véspera, em
+  vez de à meia-noite do próprio dia — o cálculo de "minutos antes" não fazia sentido sem hora.
+- Contagem de vagas confirmadas (tanto na página pública quanto no painel, ao promover a lista de
+  espera) não contava corretamente uma inscrição cujo campo "lista de espera" nunca tivesse sido
+  definido (`null`, em vez de `true`/`false`) — só acontecia em dado criado fora do fluxo normal,
+  mas corrigido pra bater com o mesmo critério já usado na tela de inscritos.
+- Num cupom de desconto com limite de usos, se a inscrição em grupo falhasse no meio (rede caiu
+  com algumas pessoas já criadas), o contador de usos do cupom não registrava os descontos já
+  aplicados às pessoas que chegaram a ser criadas — corrigido pra contar uso por pessoa, na hora,
+  em vez de só uma vez no fim do grupo inteiro.
 
 **Fora do escopo, por decisão já tomada antes** (não incluído acima de propósito): qualquer coisa
 que exija processamento real de pagamento (checkout, cartão, PIX automático) — isso exigiria uma

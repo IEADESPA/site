@@ -478,7 +478,10 @@ const structuredData = startDate
 
         async function contarConfirmados(eventoId) {
           const res = await fetch(
-            `${directusUrl}/items/inscricoes_eventos?aggregate[count]=id&filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][aguardando_vaga][_eq]=false`,
+            // "_eq=false" sozinho não bateria com uma linha onde o campo
+            // nunca foi definido (null) — o "_or" cobre os dois casos, pra
+            // combinar com o mesmo critério usado no painel de inscritos.
+            `${directusUrl}/items/inscricoes_eventos?aggregate[count]=id&filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][_or][0][aguardando_vaga][_eq]=false&filter[_and][1][_or][1][aguardando_vaga][_null]=true`,
           );
           const json = await res.json();
           return Number(json.data?.[0]?.count?.id ?? 0);
@@ -616,7 +619,11 @@ const structuredData = startDate
               });
 
               const resultados = [];
-              let usosConsumidosCupom = 0;
+              // Contador de usos do cupom é gravado pessoa por pessoa, na
+              // hora (não só uma vez no fim) — se a rede cair no meio de um
+              // grupo grande, os usos já aplicados às pessoas já criadas com
+              // sucesso não ficam "esquecidos" sem contar no limite do cupom.
+              let usosAtuaisCupom = cupom?.usos ?? 0;
               for (const nome of nomes) {
                 const codigo = gerarCodigo();
                 let aguardandoVaga = false;
@@ -635,7 +642,6 @@ const structuredData = startDate
                   valorFinal = aplicarDesconto(valorFaixa, cupom);
                   cupomAplicado = cupom.codigo;
                   usosRestantesCupom -= 1;
-                  usosConsumidosCupom += 1;
                 }
 
                 const inscricaoRes = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
@@ -665,15 +671,16 @@ const structuredData = startDate
                   ),
                 );
 
-                resultados.push({ nome, codigo, aguardandoVaga, inscricaoId });
-              }
+                if (cupomAplicado) {
+                  usosAtuaisCupom += 1;
+                  await fetch(`${directusUrl}/items/cupons_desconto/${cupom.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ usos: usosAtuaisCupom }),
+                  });
+                }
 
-              if (cupom && usosConsumidosCupom > 0) {
-                await fetch(`${directusUrl}/items/cupons_desconto/${cupom.id}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ usos: cupom.usos + usosConsumidosCupom }),
-                });
+                resultados.push({ nome, codigo, aguardandoVaga, inscricaoId });
               }
 
               if (status) {

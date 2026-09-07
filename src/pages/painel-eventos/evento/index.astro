@@ -1265,7 +1265,7 @@ const tipoPerguntaOpcoes = [
           const abriuMaisVagas = limiteNovo === null || (vagasAntes !== null && limiteNovo > vagasAntes);
           if (abriuMaisVagas) {
             const resConfirmados = await fetch(
-              `${directusUrl}/items/inscricoes_eventos?aggregate[count]=id&filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][aguardando_vaga][_eq]=false`,
+              `${directusUrl}/items/inscricoes_eventos?aggregate[count]=id&filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][_or][0][aguardando_vaga][_eq]=false&filter[_and][1][_or][1][aguardando_vaga][_null]=true`,
               { headers: { Authorization: `Bearer ${token}` } },
             );
             const confirmados = Number((await resConfirmados.json()).data?.[0]?.count?.id ?? 0);
