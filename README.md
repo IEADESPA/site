@@ -575,8 +575,6 @@ decidir o que vale a pena:
         evento, antes do check-in acontecer).
       Testado de ponta a ponta: PDF em lote com o número certo de páginas/posições, excluindo
       quem está na lista de espera.
-- [ ] **Link rápido de WhatsApp por inscrito** — ao lado do telefone, na tela de inscritos, um
-      link `wa.me/55...` pra equipe chamar a pessoa direto, sem copiar/colar o número.
 - [ ] **Gráfico visual de uma pergunta de seleção** — ex.: quantas pessoas escolheram cada opção
       de "Qual sua congregação?", em barra/pizza — hoje só dá pra ver resposta por resposta,
       pessoa por pessoa.
@@ -657,6 +655,13 @@ novo sem necessidade.
   dados pessoais que passa a circular fora do sistema (e-mail, pendrive, WhatsApp) é pior do ponto
   de vista de segurança do que manter tudo dentro do painel, com autenticação e controle de
   acesso. A tela de inscritos já cobre visualização, busca e filtro sem precisar exportar nada.
+- **Link rápido de WhatsApp por inscrito** — pesquisado e descartado: o WhatsApp lançou (rollout
+  mundial a partir de setembro/2026) um recurso de nome de usuário que deixa a pessoa **esconder
+  o próprio número** de quem não é contato salvo — a intenção declarada é impedir justamente esse
+  tipo de contato ("eu tenho seu telefone, então posso te chamar"). O link direto por número
+  (`wa.me/55...`) parece continuar funcionando por enquanto, mas é uma função nova, feita com esse
+  propósito específico, sem garantia de continuar funcionando conforme mais gente ativar essa
+  configuração. Não vale a pena construir algo que pode parar de funcionar sozinho, sem aviso.
 - **Newsletter por e-mail** — pesquisado a fundo (Resend, Mailjet, Brevo). O Brevo (o mais
   recomendado, contatos ilimitados de graça) exige um clique manual ("Requeue") pra completar o
   envio sempre que a lista passar de 300 inscritos, porque o plano grátis não permite programar
