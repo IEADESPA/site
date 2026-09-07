@@ -147,6 +147,8 @@ const allPosts = visiblePosts(await getAllMensagens());
       presente: boolean;
       aguardando_vaga: boolean;
       cupom_usado: string | null;
+      local_checkin: string | null;
+      observacao_checkin: string | null;
     }
 
     interface Pergunta {
@@ -415,7 +417,11 @@ const allPosts = visiblePosts(await getAllMensagens());
                 ${i.cupom_usado ? `<p class="cupom-nota" title="Cupom de desconto usado">🎟️ ${escapeHtml(i.cupom_usado)}</p>` : ""}
               </td>
               <td><button type="button" class="badge-toggle ${i.pago ? "is-on" : ""}" data-acao="pago">${i.pago ? "Pago" : "Pendente"}</button></td>
-              <td><button type="button" class="badge-toggle ${i.presente ? "is-on" : ""}" data-acao="presente">${i.presente ? "Presente" : "Ausente"}</button></td>
+              <td>
+                <button type="button" class="badge-toggle ${i.presente ? "is-on" : ""}" data-acao="presente">${i.presente ? "Presente" : "Ausente"}</button>
+                ${i.local_checkin ? `<p class="cupom-nota" title="Local do check-in">📍 ${escapeHtml(i.local_checkin)}</p>` : ""}
+                ${i.observacao_checkin ? `<p class="cupom-nota" title="Check-in excepcional">⚠️ ${escapeHtml(i.observacao_checkin)}</p>` : ""}
+              </td>
               <td>${
                 i.aguardando_vaga
                   ? `<button type="button" class="badge-toggle badge-espera" data-acao="espera">Na espera</button>`

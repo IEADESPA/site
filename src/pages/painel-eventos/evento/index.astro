@@ -214,6 +214,18 @@ const tipoPerguntaOpcoes = [
           </p>
         </div>
 
+        <fieldset class="grid gap-2">
+          <legend class="text-sm font-semibold">Locais de check-in (opcional)</legend>
+          <p class="text-xs text-muted-foreground">
+            Se o evento tem mais de uma portaria/entrada, cadastre os nomes aqui — quem for fazer
+            check-in escolhe uma vez qual local aquele aparelho representa (fica guardado só
+            naquele aparelho), e toda confirmação feita dali em diante já leva essa marcação
+            sozinha. Deixe em branco se só existe um jeito de entrar.
+          </p>
+          <div class="grid gap-2" data-locais-checkin-lista></div>
+          <button type="button" class="btn btn-outline mt-1" data-local-checkin-adicionar>+ Adicionar local</button>
+        </fieldset>
+
         <div class="grid gap-3">
           <label class="flex items-center gap-2 text-sm">
             <input id="f-inscricoes-encerradas" type="checkbox" /> Encerrar inscrições manualmente agora
@@ -435,6 +447,7 @@ const tipoPerguntaOpcoes = [
       estatisticas_finais: EstatisticasFinais | null;
       checkin_libera_minutos_antes: number | null;
       checkin_liberado_manualmente: boolean;
+      locais_checkin: string[] | null;
     }
 
     interface EstatisticasFinais {
@@ -569,6 +582,7 @@ const tipoPerguntaOpcoes = [
       fEventoAnterior.value = evento.evento_anterior ? String(evento.evento_anterior) : "";
       fCheckinMinutos.value = evento.checkin_libera_minutos_antes != null ? String(evento.checkin_libera_minutos_antes) : "60";
       fCheckinManual.checked = Boolean(evento.checkin_liberado_manualmente);
+      renderizarLocaisCheckin(evento.locais_checkin ?? []);
       renderizarFaixas(evento.faixas_valor ?? []);
     }
 
@@ -593,6 +607,7 @@ const tipoPerguntaOpcoes = [
         evento_anterior: fEventoAnterior.value ? Number(fEventoAnterior.value) : null,
         checkin_libera_minutos_antes: fCheckinMinutos.value ? Number(fCheckinMinutos.value) : 60,
         checkin_liberado_manualmente: fCheckinManual.checked,
+        locais_checkin: lerLocaisCheckin(),
         faixas_valor: lerFaixas(),
         aceita_inscricao: true,
       };
@@ -634,6 +649,39 @@ const tipoPerguntaOpcoes = [
     faixasListaEl?.addEventListener("click", (event) => {
       const target = event.target as HTMLElement;
       if (target.matches("[data-faixa-remover]")) target.closest(".faixa-linha")?.remove();
+    });
+
+    const locaisCheckinListaEl = document.querySelector<HTMLElement>("[data-locais-checkin-lista]");
+
+    function linhaLocalCheckinHtml(nome: string) {
+      return `
+        <div class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center local-checkin-linha">
+          <input type="text" class="field" placeholder="Ex.: Portaria Leste" value="${nome.replace(/"/g, "&quot;")}" data-local-checkin-nome />
+          <button type="button" class="btn btn-outline" data-local-checkin-remover>Remover</button>
+        </div>
+      `;
+    }
+
+    function renderizarLocaisCheckin(locais: string[]) {
+      if (!locaisCheckinListaEl) return;
+      locaisCheckinListaEl.innerHTML = locais.map(linhaLocalCheckinHtml).join("");
+    }
+
+    function lerLocaisCheckin(): string[] {
+      if (!locaisCheckinListaEl) return [];
+      return Array.from(locaisCheckinListaEl.querySelectorAll<HTMLInputElement>("[data-local-checkin-nome]"))
+        .map((input) => input.value.trim())
+        .filter(Boolean);
+    }
+
+    document.querySelector("[data-local-checkin-adicionar]")?.addEventListener("click", () => {
+      if (!locaisCheckinListaEl) return;
+      locaisCheckinListaEl.insertAdjacentHTML("beforeend", linhaLocalCheckinHtml(""));
+    });
+
+    locaisCheckinListaEl?.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      if (target.matches("[data-local-checkin-remover]")) target.closest(".local-checkin-linha")?.remove();
     });
 
     const rotuloTipoPergunta: Record<string, string> = {

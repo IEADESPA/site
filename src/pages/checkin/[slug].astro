@@ -14,6 +14,7 @@ interface Evento {
   time: string | null;
   checkin_libera_minutos_antes: number | null;
   checkin_liberado_manualmente: boolean;
+  locais_checkin: string[] | null;
 }
 
 export async function getStaticPaths() {
@@ -44,6 +45,21 @@ const allPosts = visiblePosts(await getAllMensagens());
       </div>
 
       <div hidden data-checkin-aberto>
+      {
+        event.locais_checkin && event.locais_checkin.length > 0 && (
+          <div class="mt-6 grid gap-2 max-w-sm local-checkin-bloco">
+            <label class="text-sm font-semibold" for="checkin-local">Local deste aparelho (portaria)</label>
+            <select id="checkin-local" class="field" data-checkin-local-select>
+              <option value="">Selecione…</option>
+              {event.locais_checkin.map((local) => <option value={local}>{local}</option>)}
+            </select>
+            <p class="text-xs text-muted-foreground">
+              Escolha uma vez só — fica guardado neste aparelho, e toda confirmação feita por ele
+              já leva essa marcação sozinha.
+            </p>
+          </div>
+        )
+      }
       <form class="mt-8 grid gap-4 max-w-sm" data-checkin-form data-evento-id={event.id}>
         <div class="grid gap-2">
           <label class="text-sm font-semibold" for="checkin-codigo">Código de confirmação</label>
@@ -103,6 +119,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     define:vars={{
       directusUrl: DIRECTUS_URL,
       eventoId: event.id,
+      eventoSlug: event.slug,
       eventDate: event.event_date,
       eventTime: event.time,
       minutosAntes: event.checkin_libera_minutos_antes,
@@ -140,19 +157,52 @@ const allPosts = visiblePosts(await getAllMensagens());
       const resultado = document.querySelector("[data-checkin-resultado]");
       const buscaInput = document.querySelector("[data-checkin-busca-nome]");
       const resultadosNome = document.querySelector("[data-checkin-resultados-nome]");
+      const localSelect = document.querySelector("[data-checkin-local-select]");
       let pessoas = null;
 
       const escapeHtml = (value) =>
         String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-      async function confirmarPresenca(id, nome) {
+      // O local escolhido fica só no navegador deste aparelho, por evento —
+      // um tablet reaproveitado noutro evento escolhe de novo.
+      const LOCAL_STORAGE_KEY = `ieadespa-checkin-local-${eventoSlug}`;
+      if (localSelect) {
+        try {
+          const salvo = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (salvo) localSelect.value = salvo;
+        } catch {}
+        localSelect.addEventListener("change", () => {
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, localSelect.value);
+          } catch {}
+        });
+      }
+
+      async function confirmarPresenca(id, nome, pago) {
+        let observacao = null;
+        if (!pago) {
+          observacao = window.prompt(
+            `${nome} ainda não está marcada como paga. Confirmar a entrada mesmo assim é uma exceção — digite o motivo (ex.: "vai pagar depois") ou cancele.`,
+          );
+          if (observacao === null) {
+            resultado.textContent = `Check-in de ${nome} não confirmado (ainda não pago).`;
+            return;
+          }
+        }
+
         const res = await fetch(`${directusUrl}/items/inscricoes_eventos/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ presente: true }),
+          body: JSON.stringify({
+            presente: true,
+            local_checkin: localSelect?.value || null,
+            observacao_checkin: observacao || null,
+          }),
         });
         if (!res.ok) throw new Error("falha ao confirmar");
-        resultado.textContent = `✅ ${nome} — presença confirmada!`;
+        resultado.textContent = observacao
+          ? `✅ ${nome} — presença confirmada (exceção: ${observacao}).`
+          : `✅ ${nome} — presença confirmada!`;
       }
 
       async function confirmarPorCodigo(codigo) {
@@ -167,7 +217,7 @@ const allPosts = visiblePosts(await getAllMensagens());
             resultado.textContent = "Código não encontrado. Confira e tente de novo, ou busque pelo nome abaixo.";
             return;
           }
-          await confirmarPresenca(pessoa.id, pessoa.nome);
+          await confirmarPresenca(pessoa.id, pessoa.nome, pessoa.pago);
         } catch {
           resultado.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";
         }
@@ -248,14 +298,17 @@ const allPosts = visiblePosts(await getAllMensagens());
         }
 
         if (!pessoas) {
-          const res = await fetch(`${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=id,nome&limit=-1`);
+          const res = await fetch(`${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=id,nome,pago&limit=-1`);
           const json = await res.json();
           pessoas = json.data ?? [];
         }
 
         const encontrados = pessoas.filter((p) => p.nome.toLowerCase().includes(termo)).slice(0, 8);
         resultadosNome.innerHTML = encontrados
-          .map((p) => `<button type="button" class="btn btn-outline" data-pessoa-id="${p.id}" data-pessoa-nome="${escapeHtml(p.nome)}">${escapeHtml(p.nome)}</button>`)
+          .map(
+            (p) =>
+              `<button type="button" class="btn btn-outline" data-pessoa-id="${p.id}" data-pessoa-nome="${escapeHtml(p.nome)}" data-pessoa-pago="${p.pago}">${escapeHtml(p.nome)}${p.pago ? "" : " (não pago)"}</button>`,
+          )
           .join("");
       });
 
@@ -264,7 +317,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         if (!button) return;
         resultado.textContent = "Confirmando…";
         try {
-          await confirmarPresenca(button.dataset.pessoaId, button.dataset.pessoaNome);
+          await confirmarPresenca(button.dataset.pessoaId, button.dataset.pessoaNome, button.dataset.pessoaPago === "true");
           resultadosNome.innerHTML = "";
           buscaInput.value = "";
         } catch {

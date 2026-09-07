@@ -807,11 +807,27 @@ foi "o que muda quando o evento é grande?", não só "quais botões faltam":
       com `qrcode-generator` e decodificado com `jsQR` pra confirmar que os dois formatos batem
       (`<id do evento>:<código>`), e simulado o fluxo completo da câmera (webcam falsa exibindo um
       QR real gerado na hora) até a confirmação de presença no Directus.
-- [ ] **Registrar o portão/local do check-in** — pra eventos com mais de uma entrada, guardar em
-      qual ponto cada pessoa confirmou presença. Desenho discutido: sem geolocalização — a equipe
-      escolhe uma vez qual portão aquele aparelho representa (guardado no navegador daquele
-      aparelho, mesmo padrão já usado na preferência de notificação), e todo check-in feito dali
-      em diante já leva essa marcação sozinho.
+- [x] **Registrar o local do check-in + check-in condicionado a pagamento** — dois pontos que
+      surgiram juntos numa conversa sobre operar check-in com várias pessoas ao mesmo tempo:
+      - **Locais de check-in**: campo novo no evento (`locais_checkin`, lista simples, mesmo
+        padrão de repetidor das faixas de valor) — quem administra cadastra os nomes das
+        portarias/entradas antes de abrir o check-in. Sem geolocalização nenhuma: cada aparelho
+        (celular/tablet da equipe) escolhe uma vez qual local ele representa, isso fica guardado
+        só naquele navegador (mesmo padrão já usado na preferência de notificação), e toda
+        confirmação feita dali em diante já leva essa marcação sozinha — tanto pelo código
+        digitado, quanto pela busca por nome, quanto pelo QR Code (os três caem no mesmo fluxo de
+        confirmação por baixo). **Não duplica a lista de inscritos em lugar nenhum** — o check-in
+        continua sendo a mesma linha de `inscricoes_eventos` de sempre, só ganhou um campo a mais.
+      - **Só confirma direto quem já está pago** — discutido com o usuário: por padrão, check-in
+        de quem ainda não está marcado como pago pede uma confirmação extra ("é uma exceção,
+        digite o motivo — ex.: 'vai pagar depois' — ou cancele"), em vez de bloquear ou de deixar
+        passar batido. O motivo fica registrado (`observacao_checkin`), visível na tela de
+        inscritos, junto com o local do check-in.
+      Testado de ponta a ponta contra o Directus real: leitura pública do campo `pago` e escrita
+      de `local_checkin`/`observacao_checkin` funcionando; e simulado o fluxo completo — pessoa
+      paga confirma direto, pessoa não paga abre o aviso de exceção, motivo aceito grava a
+      observação, e cancelar a exceção não grava nada — e que o local escolhido sobrevive a
+      recarregar a página (guardado no navegador).
 - [ ] **Lotação em tempo real visível pra quem está na porta** — um contador ao vivo de "quantos
       já confirmaram presença" (derivado do que já existe), pra saber quando parar de deixar
       entrar mais gente num espaço com capacidade limitada — questão de segurança, não só
