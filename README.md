@@ -569,6 +569,31 @@ Terceira leva de pesquisa (comparativos de ferramentas de gestão de eventos em 
 - [ ] **Relatório-resumo do evento em PDF** — uma visão geral (não só o fechamento de caixa) pra
       prestação de contas à diretoria: nº de inscritos, presentes, congregações representadas.
 
+Quarta leva de pesquisa — dessa vez focada em **operação de eventos grandes de verdade**
+(credenciamento em massa, congressos com milhares de pessoas), não só telas bonitas. A pergunta
+foi "o que muda quando o evento é grande?", não só "quais botões faltam":
+
+- [x] **Já resolvido, sem precisar de nada novo** — dois pontos que grandes operações levam a
+      sério e que o desenho atual já cobre de graça: (1) **múltiplos pontos de check-in
+      simultâneos** — a página de check-in é pública e sem login, então quantos aparelhos
+      quiserem podem abri-la ao mesmo tempo, em portões diferentes, sem qualquer trava; (2)
+      **múltiplos pontos de cadastro no dia** — o "+ Adicionar inscrito" funciona do mesmo jeito
+      pra qualquer pessoa autenticada, então várias mesas de credenciamento podem cadastrar gente
+      ao mesmo tempo sem conflito.
+- [ ] **Registrar o portão/local do check-in** — pra eventos com mais de uma entrada, guardar em
+      qual ponto cada pessoa confirmou presença (útil pra saber qual portão está mais cheio).
+- [ ] **Lotação em tempo real visível pra quem está na porta** — um contador ao vivo de "quantos
+      já confirmaram presença" (derivado do que já existe), pra saber quando parar de deixar
+      entrar mais gente num espaço com capacidade limitada — questão de segurança, não só
+      estatística.
+- [ ] **Check-in funciona mesmo se a internet cair** — hoje o check-in depende de internet no
+      aparelho; num evento grande, se a rede do local falhar, ninguém confirma presença. Guardar
+      as confirmações no aparelho e sincronizar depois que a conexão voltar resolveria isso —
+      mais complexo de construir bem, por isso separado como item à parte.
+- [ ] **Contador de presença ao vivo no telão "hoje na igreja"** — conectar o painel de telão já
+      existente ao número de presentes do evento em andamento, pra equipe acompanhar o
+      andamento sem abrir o painel de inscritos numa outra tela.
+
 **Fora do escopo, por decisão já tomada antes** (não incluído acima de propósito): cupom de
 desconto com código de verdade, e qualquer coisa que exija processamento real de pagamento —
 ambos exigiriam uma plataforma de pagamento de verdade, o que já foi avaliado e descartado.
