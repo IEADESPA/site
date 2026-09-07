@@ -257,6 +257,19 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
         via `congregacaoEndereco()` em `src/lib/directus.ts`). O campo `location` (texto livre)
         continua existindo pra endereço avulso.
       - `responsavel`: quem organiza o evento (nome ou ministério).
+      - **Arquivamento automático de eventos passados** — com mais de 100 eventos cadastrados
+        (a agenda anual inteira) e outros ~100 chegando a cada ano, a lista estava ficando
+        impossível de navegar no Directus. Resolvido com o recurso nativo de arquivamento do
+        próprio Directus (não é uma tela nova, é configuração): novo campo `arquivado` (marcado
+        automaticamente, ninguém edita à mão) e um Flow agendado ("Arquivar eventos passados",
+        todo dia às 3h da manhã) que marca como arquivado todo evento cuja data já passou.
+        Eventos arquivados somem da lista principal (mas nunca são apagados — segue um filtro
+        "Mostrar itens arquivados" no próprio Directus pra ver o histórico). Também mudou a
+        ordenação padrão da lista de manual (campo `sort`, impraticável com 100+ itens) para
+        automática por `event_date`. Testado de ponta a ponta: 85 eventos já passados foram
+        arquivados na hora, e o Flow foi validado ao vivo (rodou a cada minuto por um teste
+        curto com um evento fictício de data antiga, confirmado arquivado sozinho, depois
+        restaurado pro agendamento diário normal).
 - [x] **Evento com inscrição, perguntas 100% personalizadas por evento** — a lição principal,
       depois de ver na prática o processo real usado num seminário passado (planilha de
       respostas de formulário, lista de chamada, controle financeiro por pessoa, fechamento de
@@ -445,7 +458,10 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       1. [x] **Autenticação da aba** — `/painel-eventos/entrar/` (login) e `/painel-eventos/`
          (verifica sessão, mostra e-mail autenticado, botão "Sair"). Testado de ponta a ponta:
          login, renovação silenciosa de sessão (aba nova, sem token em memória, cookie válido),
-         sessão inexistente redirecionando pro login, e logout.
+         sessão inexistente redirecionando pro login, e logout. De propósito, sem link nenhum na
+         navegação nem na busca do site (não é área pra visitante) — só um link discreto no
+         rodapé ("Gestão de eventos", ao lado do "Painel de conteúdo" que já existia), pra quem
+         administra achar sem precisar decorar a URL.
       2. [ ] Criar evento + suas perguntas (substitui o cadastro no Directus).
       3. [ ] Inscritos, pagamento e check-in reunidos numa única tela.
       4. [x] **Certificado** — construído de forma independente desta aba, em
