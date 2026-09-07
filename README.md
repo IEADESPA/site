@@ -332,7 +332,70 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
   2-3 perguntas reais (de onde vêm as pessoas, quais páginas usam) — não pageview bruto, que é
   métrica de vaidade sem decisão nenhuma do outro lado.
 
-**Nada deste plano foi construído ainda** (fases 0 a 10). O detalhe completo de cada achado (com a
+O usuário pediu ainda mais uma rodada — comparando referências de sites de igreja no Brasil e no
+exterior, pra deixar este "o melhor site de igreja". Mais 5 fases, detalhadas na mesma seção de
+pesquisa transversal mais abaixo:
+
+- **Fase 11 — design/UX de referência (Brasil e exterior)**: o maior gap visual comparado a
+  qualquer site de igreja de referência é o hero 100% textual (sem foto/vídeo nenhum) — a correção
+  possível já agora, mesmo sem foto real disponível ainda (essa depende da igreja, já registrado na
+  Fase 4), é preparar o layout em duas colunas (texto + área de imagem) e decidir a técnica de
+  tratamento (overlay em degradê ou duotone nas cores da marca) para a foto encaixar sem redesenho
+  quando chegar; ativar a fonte serifada já prevista no próprio CSS (`--font-display`) em títulos,
+  hoje só sans-serif em tudo; formalizar uma escala de tipografia em tokens (hoje cada componente
+  define seu próprio tamanho solto, risco real de inconsistência conforme o site cresce); variar o
+  tratamento visual dos cards de destaque (sombra em vez de borda uniforme em todo elemento);
+  transição simples de página (crossfade via `ClientRouter` do Astro, sem o `transition:persist` do
+  áudio, que segue bloqueado por falta de conteúdo); agrupar o rodapé por seção (ministérios,
+  visite, institucional) em vez de lista única, à medida que a Fase 5 adicionar mais páginas.
+
+- **Fase 12 — Libras e acessibilidade específica do Brasil**: nenhuma exigência legal clara e
+  específica pra igreja privada, mas recomendado por inclusão genuína — a legenda em português nos
+  vídeos de mensagem (quando existirem de fato, já é pré-requisito da Fase 4/`videoUrl`) é a
+  melhoria de maior retorno (o YouTube já gera legenda automática grátis, só precisa revisão de
+  termos religiosos); um widget gratuito de tradução automática pra Libras existe e é fácil de
+  instalar, mas só traduz texto sob demanda, não vídeo/áudio, e não deve ser tratado como "site
+  acessível em Libras" — só ajuda como complemento parcial em páginas institucionais (Sobre,
+  Visitante, horários); se um dia a igreja gravar um vídeo de mensagem com intérprete de verdade,
+  isso vale muito mais que qualquer tradução automática.
+
+- **Fase 13 — app instalável (PWA)**: ⚠️ **já construído e testado, ao contrário do que a pesquisa
+  poderia sugerir** — manifest, ícones, service worker com cache de 3 páginas essenciais, botão
+  "Instalar app" no cabeçalho (Android/desktop via `beforeinstallprompt`, instrução manual no iOS) e
+  o check-in offline-capable já existem e passaram por teste de ponta a ponta (ver histórico de
+  commits). Só sobraram dois retoques pequenos: um ícone com variante "maskable" (pra não cortar em
+  launcher Android que recorta em círculo) e `shortcuts` no manifest espelhando as mesmas 3 páginas
+  já privilegiadas no cache offline. Expandir o cache pra mais páginas foi avaliado e **não é
+  recomendado** — a pesquisa confirma que cache pequeno e deliberado é a prática certa pra esse
+  porte, e cache demais é o erro clássico de PWA mal feita.
+
+- **Fase 14 — WhatsApp e automação de FAQ**: o link `wa.me` institucional já existe em `/contato/`
+  (usa o telefone cadastrado no Directus, não um número fixo no código) mas está enterrado como
+  texto simples entre "Outros contatos" — destacar mais e usar mensagem pré-preenchida por contexto
+  (`?text=`, como o `?assunto=` já faz no formulário interno) resolve a maior parte do valor sem
+  nenhuma automação de verdade. Botão flutuante de WhatsApp é melhoria menor, só em páginas de
+  contato/institucionais (não em conteúdo devocional, onde seria ruído). Chatbot de FAQ automatizado
+  (regras ou IA) **avaliado e não recomendado** — exige volume de perguntas que uma igreja pequena
+  sem equipe técnica não tem, e a API paga por conversa não cabe no orçamento; o FAQ estático já
+  existente na página Visitante, reforçado pelo link de WhatsApp, já cobre a necessidade real.
+  Ponto de atenção de LGPD (liga com a Fase 7): confirmar que o número cadastrado é uma linha
+  institucional, não o celular pessoal de um líder específico.
+
+- **Fase 15 — comunidade (pequenos grupos e voluntariado)**: "servir/seja voluntário" já havia sido
+  avaliado e rejeitado (Fase 5) por precisar de vagas reais primeiro — a pesquisa aprofunda o
+  motivo: o formato "lista de vagas abertas" tem uma causa estrutural de ficar desatualizado numa
+  operação pequena e voluntária, e isso não desaparece só porque surgem vagas reais no futuro,
+  precisa trocar de formato. Alternativa de baixíssimo risco e esforço mínimo: uma opção "Quero
+  servir" dentro de `/contato/`, no mesmo molde já construído e testado do "Pedido de oração" —
+  formulário de interesse que a liderança direciona manualmente, sem lista pública de vagas que
+  possa envelhecer. Pequenos grupos/células: modelo de dado existiria (nome/tema, líder, dia,
+  bairro aproximado — não endereço exato, por privacidade), mas **depende de confirmar com a
+  liderança se existe de fato um programa formal de grupos pequenos** (a estrutura visível hoje é
+  por congregação/ponto de pregação, não célula doméstica) — sem essa confirmação, não construir,
+  pelo mesmo motivo que já levou a não inventar dado na Fase 4 (história).
+
+**Nada deste plano foi construído ainda** (fases 0 a 15, exceto o app instalável da Fase 13, que já
+existia). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
 fontes consultadas.
@@ -1295,6 +1358,123 @@ texto acima): [Resolução CD/ANPD nº 2/2022 (gov.br)](https://www.gov.br/anpd/
 [Transformar RSS em newsletter por e-mail (beehiiv)](https://blog.beehiiv.com/p/rss-to-email-newsletter),
 [E-mail marketing gratuito pra nonprofit (Zeffy)](https://www.zeffy.com/blog/mailchimp-alternatives-for-nonprofits),
 [Métricas de vaidade — o que medir de verdade (NN/g)](https://www.nngroup.com/articles/vanity-metrics/).
+
+#### Pesquisa detalhada — "melhor site de igreja" (suporte às fases 11-15 lá em cima)
+
+Terceira rodada de pesquisa, pedida pelo usuário depois das duas primeiras (página por página, e
+temas transversais de segurança/LGPD/acessibilidade/performance/analytics) — comparando
+referências de sites de igreja no Brasil e no exterior, pra elevar o padrão do site ao máximo.
+**Nada disto foi construído ainda, exceto onde indicado.**
+
+**Design/UX de referência**: o próprio levantamento do código mostrou um projeto já maduro em
+infraestrutura de design (tokens de cor/radius/motion centralizados, paleta ajustada pra WCAG AA
+nos dois temas, microinterações reais) — os gaps são de decisão editorial, não de engenharia. O
+maior: o hero da home é 100% texto, sem nenhuma foto/vídeo, o que lê como landing page de SaaS, não
+como igreja — toda referência internacional (igrejas grandes nos EUA) usa mídia autêntica ocupando
+metade do hero. A foto em si depende da igreja (já registrado na Fase 4), mas a arquitetura visual
+(duas colunas, técnica de overlay/duotone pra legibilidade do texto) dá pra preparar desde já.
+Tipografia é hoje monocórdica (só sans-serif, mesmo com uma fonte serifada já disponível no CSS,
+nunca ativada) — usar serifada em títulos daria a "voz editorial" que caracteriza site de igreja
+grande. Falta uma escala de tipografia formalizada em tokens (cada componente define seu próprio
+tamanho solto hoje, risco real de inconsistência com mais páginas). Cards/superfícies usam sempre a
+mesma receita (borda 1px + radius pequeno), visualmente uniforme demais — variar (sombra em cards
+de destaque) aproximaria do padrão "acolhedor" das referências. Sem transição entre páginas (só
+microinteração local) — o Astro suporta crossfade nativo de baixo custo. Rodapé sem agrupamento
+visual por seção, ok hoje mas vai pesar conforme a Fase 5 adicionar páginas. A pesquisa em
+português não achou uma cultura de crítica de design de site de igreja tão desenvolvida quanto a
+internacional — sinal de que o padrão brasileiro médio tende a repetir templates genéricos com
+vídeo de fundo automático e pouca curadoria, o oposto do que a tendência internacional recomenda
+(foto autêntica parada + tipografia expressiva + espaço em branco generoso).
+
+**Libras e acessibilidade específica do Brasil**: não existe hoje nenhuma integração de Libras nem
+legenda em vídeo de mensagem (o campo `videoUrl` é só link de saída pro YouTube, sem player
+embutido — mesmo pré-requisito já registrado na Fase 4). Não há exigência legal clara e específica
+de Libras pra entidade religiosa privada — Lei Brasileira de Inclusão e Decreto 5.296/2004 tratam
+acessibilidade de forma mais ampla, sem obrigação inequívoca pra site de igreja, e o e-MAG (Modelo
+de Acessibilidade em Governo Eletrônico) vale só pra site de governo, não traz achado adicional além
+do que a Fase 8 (WCAG geral) já cobre. Maior valor real, custo zero: legenda em português no vídeo
+de mensagem quando existir (o YouTube já gera automaticamente, só precisa revisão de termos
+religiosos que a legenda automática costuma errar). Um widget gratuito de tradução automática pra
+Libras (mantido por órgão do governo federal) é fácil de instalar, mas traduz só texto sob demanda,
+não vídeo/áudio, com qualidade reconhecidamente limitada pra conteúdo de fé — vale como complemento
+parcial em páginas de texto institucional, nunca como substituto de legenda ou de um intérprete
+humano de verdade (se um dia a igreja gravar isso).
+
+**App instalável (PWA)**: ao verificar o código antes de pesquisar, confirmado que isto **já está
+construído e testado** — `public/site.webmanifest`, `public/sw.js` (cache de 3 páginas essenciais:
+início, eventos, contato, ~380 KB), botão "Instalar app" no cabeçalho (`beforeinstallprompt` no
+Android/desktop, instrução manual no iOS, sem popup intrusivo), e o check-in offline-capable com
+fila própria de sincronização. Só sobraram dois retoques pequenos: ícone com variante "maskable"
+(evita corte em launcher Android que recorta em círculo) e `shortcuts` no manifest espelhando as
+mesmas 3 páginas já privilegiadas no cache. Expandir o cache offline pra mais páginas foi avaliado e
+**não é recomendado** — cache pequeno e deliberado é a prática certa pra esse porte de site; cache
+demais é o erro clássico de PWA mal feita (storage inchado, conteúdo velho servido por engano). Um
+app nativo de loja também não se justifica: nenhum recurso de hardware avançado (Bluetooth, NFC) é
+necessário além da câmera do leitor de QR, que a PWA já usa sem problema.
+
+**WhatsApp e automação de FAQ**: o link `wa.me` institucional já existe em `/contato/` (usa o
+telefone cadastrado no Directus, não um número fixo no código), mas aparece como texto simples
+entre "Outros contatos" — destacá-lo mais e usar mensagem pré-preenchida por contexto (`?text=`,
+mesmo princípio do `?assunto=` que o formulário interno já usa) entrega a maior parte do valor sem
+nenhuma automação. Botão flutuante de WhatsApp é melhoria menor, restrita a páginas de
+contato/institucionais — seria ruído em página de conteúdo devocional. Chatbot de FAQ automatizado
+(regras ou IA) **avaliado e não recomendado**: exige volume de perguntas repetitivas que uma igreja
+pequena sem equipe técnica não tem, e a API oficial paga por conversa não cabe no orçamento — o FAQ
+estático já existente em `/visitante/`, reforçado pelo link de WhatsApp, já cobre a necessidade.
+Ponto de atenção que liga com a Fase 7 (LGPD): confirmar que o número cadastrado é uma linha
+institucional, não o celular pessoal de um líder específico — evita expor a vida pessoal de quem
+atende e não depende de uma pessoa só estar disponível.
+
+**Comunidade — pequenos grupos e voluntariado**: "servir/seja voluntário" já havia sido avaliado e
+rejeitado (Fase 5) por precisar de vagas reais primeiro; a pesquisa qualifica esse achado — o
+formato "lista de vagas abertas" tem uma causa estrutural de ficar desatualizado numa operação
+pequena e voluntária (conteúdo velho ativamente passa a impressão de organização inativa), e isso
+não desaparece só porque aparecem vagas reais no futuro, precisa trocar de formato. Alternativa de
+esforço mínimo e risco baixo: opção "Quero servir" dentro de `/contato/`, no mesmo molde já
+construído e testado do "Pedido de oração" — formulário de interesse que a liderança direciona
+manualmente, sem catálogo público de vagas que possa envelhecer. Pequenos grupos/células teriam
+modelo de dado simples (nome/tema, líder, dia da semana, bairro aproximado — não endereço exato, por
+privacidade, já que costumam ser reuniões em casa), mas **depende de confirmar com a liderança se
+existe de fato um programa formal de grupos pequenos** — a estrutura visível hoje é por
+congregação/ponto de pregação, não célula doméstica; sem essa confirmação, não construir, pelo
+mesmo motivo que já evitou inventar dado na Fase 4 (história).
+
+Fontes consultadas (as 5 rodadas desta leva, título e domínio — sem nome de produto/plataforma/
+software de gestão de igreja comercial específico no texto acima):
+[Melhores sites de igreja 2026 — 43 exemplos](https://mycodelesswebsite.com/church-website-design/),
+[43 melhores sites de igreja de todos os tempos (Sage)](https://sage.agency/industry/best-church-websites/),
+[25 melhores sites de igreja — exemplos (Colorlib)](https://colorlib.com/wp/church-websites/),
+[Tendências de design de site de igreja pra 2025 (One Eighty)](https://oneeighty.digital/2025/01/13/church-website-design-trends-for-2025/),
+[23 melhores sites de igreja 2026 (ReachRight)](https://reachrightstudios.com/blog/best-church-websites/),
+[Tendências de design de site pra 2026 (Figma)](https://www.figma.com/resource-library/web-design-trends/),
+[Tendências de design de site nonprofit 2026 (Advanced Systemics)](https://www.advancedsystemics.com/nonprofit-website-design-trends-2026/),
+[Estrutura de site de igreja — guia definitivo (Missional Marketing)](https://missionalmarketing.com/church-website-site-structure-the-definitive-guide/),
+[Estratégia digital das principais igrejas no Brasil 2025 (Sociedade Tecnológica)](https://sociedadetecnologica.com/2025/02/17/estrategia-digital-das-principais-igrejas-no-brasil-2025/),
+[Sites de igreja pra se inspirar (blog inChurch)](https://inchurch.com.br/blog/8-sites-de-igrejas-para-voce-se-inspirar/),
+[Microinterações em web design (Stan Vision)](https://www.stan.vision/journal/micro-interactions-2025-in-web-design),
+[Design tokens explicado (Contentful)](https://www.contentful.com/blog/design-token-system/),
+[Transições de página com Astro e View Transitions (Codrops)](https://tympanus.net/codrops/2023/10/03/animating-multi-page-navigations-with-browser-view-transitions-and-astro/),
+[Texto acessível sobre imagem (Smashing Magazine)](https://www.smashingmagazine.com/2023/08/designing-accessible-text-over-images-part1/),
+[Widget de Libras — Governo Digital (gov.br)](https://www.gov.br/governodigital/pt-br/estrategias-e-governanca-digital/sisp/guia-do-gestor/guia-orientativo-de-padroes-e-fluxos-das-tecnologias-de-transformacao-digital/vlibras-widget),
+[Desafios da tradução automática de vídeo pra Libras (artigo acadêmico)](https://www.academia.edu/113689108/Tecnologia_assistiva_e_tradu%C3%A7%C3%A3o_para_Libras_desafios_da_ferramenta_de_tradu%C3%A7%C3%A3o_autom%C3%A1tica_de_v%C3%ADdeos_VLibras),
+[Leis federais de acessibilidade na web (WPT)](https://mwpt.com.br/acessibilidade-digital/leis-federais-sobre-acessibilidade-na-web/),
+[Modelo de Acessibilidade em Governo Eletrônico (e-MAG)](https://emag.governoeletronico.gov.br/),
+[Legendas automáticas — Ajuda do YouTube](https://support.google.com/youtube/answer/6373554?hl=pt-BR),
+[Intérprete de Libras na igreja (Sinal e Imagem)](https://www.sinaleimagem.com.br/interprete-igreja/),
+[Tamanhos de ícone PWA (Imagcon)](https://imagcon.app/pwa-icon-sizes),
+[PWA vs. app nativo em 2026 (InstinctTools)](https://www.instinctools.com/blog/pwa-vs-native-app/),
+[Boas práticas de UX do prompt de instalação de PWA (Michael Samuel Naeem)](https://blog.michaelsam94.com/pwa-install-prompt-ux/),
+[`shortcuts` no manifest de app web (MDN)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/shortcuts),
+[Estratégias de cache em PWA (Chrome for Developers/Workbox)](https://developer.chrome.com/docs/workbox/caching-strategies-overview),
+[Gerador de link do WhatsApp com mensagem pré-preenchida (Eazybe)](https://eazybe.com/whatsapp-chat-link-generator),
+[Chatbot pra ONG — quando vale a pena (BotPenguin)](https://botpenguin.com/blogs/chatbot-for-nonprofits),
+[Botão flutuante de WhatsApp em site (Infobip)](https://www.infobip.com/blog/add-whatsapp-button-to-website),
+[WhatsApp pra igrejas — guia de comunicação (ePastor)](https://epastor.com.br/blog/whatsapp-para-igrejas-guia-completo),
+[6 layouts de site pensados pra igreja (Ekklesia360)](https://hello.ekklesia360.com/blog/6-website-layouts-designed-for-the-church),
+[Encontre um grupo pequeno — página de referência (City Hills Church)](https://cityhills.com/groups/),
+[Como criar a página de voluntariado perfeita (ServeHQ)](https://servehq.church/blog/how-to-create-volunteer-page-on-church-website/),
+[Como manter o conteúdo do site de igreja sempre atualizado (Church Web Global)](https://www.churchwebglobal.com/blog/keep-church-website-content-fresh),
+[Modelo de formulário de interesse de voluntário (WNC UMC)](https://www.wnccumc.org/formdetail/sample-volunteer-interest-form-12240485).
 
 ### Ideias rejeitadas
 
