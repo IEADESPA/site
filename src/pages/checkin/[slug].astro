@@ -10,6 +10,10 @@ interface Evento {
   slug: string;
   title: string;
   aceita_inscricao: boolean;
+  event_date: string | null;
+  time: string | null;
+  checkin_libera_minutos_antes: number | null;
+  checkin_liberado_manualmente: boolean;
 }
 
 export async function getStaticPaths() {
@@ -35,6 +39,11 @@ const allPosts = visiblePosts(await getAllMensagens());
         <p class="pagehead-description">Digite seu código de confirmação pra registrar sua presença.</p>
       </header>
 
+      <div hidden class="gallery-empty mt-8" data-checkin-fechado>
+        <p class="text-sm text-muted-foreground" data-checkin-fechado-texto />
+      </div>
+
+      <div hidden data-checkin-aberto>
       <form class="mt-8 grid gap-4 max-w-sm" data-checkin-form data-evento-id={event.id}>
         <div class="grid gap-2">
           <label class="text-sm font-semibold" for="checkin-codigo">Código de confirmação</label>
@@ -67,12 +76,49 @@ const allPosts = visiblePosts(await getAllMensagens());
           <div class="grid gap-2" data-checkin-resultados-nome></div>
         </div>
       </details>
+      </div>
     </div>
   </main>
   <SiteFooter />
 
-  <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, eventoId: event.id }}>
+  <script
+    is:inline
+    define:vars={{
+      directusUrl: DIRECTUS_URL,
+      eventoId: event.id,
+      eventDate: event.event_date,
+      eventTime: event.time,
+      minutosAntes: event.checkin_libera_minutos_antes,
+      liberadoManualmente: event.checkin_liberado_manualmente,
+    }}
+  >
     (() => {
+      const fechadoEl = document.querySelector("[data-checkin-fechado]");
+      const fechadoTextoEl = document.querySelector("[data-checkin-fechado-texto]");
+      const abertoEl = document.querySelector("[data-checkin-aberto]");
+
+      function checkinAberto() {
+        if (liberadoManualmente) return true;
+        if (!eventDate) return true;
+
+        const timeMatch = eventTime ? /^(\d{1,2})h(\d{2})?$/i.exec(eventTime.trim()) : null;
+        const horaEvento = timeMatch ? `T${timeMatch[1].padStart(2, "0")}:${timeMatch[2] ?? "00"}:00` : "T00:00:00";
+        const abre = new Date(`${eventDate}${horaEvento}`);
+        abre.setMinutes(abre.getMinutes() - (minutosAntes ?? 60));
+        return new Date() >= abre;
+      }
+
+      if (!checkinAberto()) {
+        if (fechadoEl) fechadoEl.hidden = false;
+        if (fechadoTextoEl) {
+          fechadoTextoEl.textContent = eventTime
+            ? `O check-in ainda não abriu — libera ${minutosAntes ?? 60} minutos antes do horário do evento (${eventTime}).`
+            : "O check-in ainda não abriu.";
+        }
+        return;
+      }
+      if (abertoEl) abertoEl.hidden = false;
+
       const form = document.querySelector("[data-checkin-form]");
       const resultado = document.querySelector("[data-checkin-resultado]");
       const buscaInput = document.querySelector("[data-checkin-busca-nome]");

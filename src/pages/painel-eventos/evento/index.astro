@@ -195,6 +195,25 @@ const tipoPerguntaOpcoes = [
           </p>
         </div>
 
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-checkin-minutos">Libera o check-in quantos minutos antes do horário?</label>
+          <input id="f-checkin-minutos" type="number" min="0" class="field" placeholder="60" />
+          <p class="text-xs text-muted-foreground">
+            A página pública de check-in fica fechada até essa contagem começar — evita gente
+            confirmando presença horas (ou dias) antes do evento de verdade.
+          </p>
+        </div>
+
+        <div class="grid gap-3">
+          <label class="flex items-center gap-2 text-sm">
+            <input id="f-checkin-manual" type="checkbox" /> Liberar check-in agora (ignora o horário)
+          </label>
+          <p class="text-xs text-muted-foreground">
+            Pra abrir mais cedo do que o automático, se precisar (imprevisto, mudança de horário
+            de última hora etc.).
+          </p>
+        </div>
+
         <div class="grid gap-3">
           <label class="flex items-center gap-2 text-sm">
             <input id="f-inscricoes-encerradas" type="checkbox" /> Encerrar inscrições manualmente agora
@@ -414,6 +433,8 @@ const tipoPerguntaOpcoes = [
       permite_inscricao_grupo: boolean;
       evento_anterior: number | null;
       estatisticas_finais: EstatisticasFinais | null;
+      checkin_libera_minutos_antes: number | null;
+      checkin_liberado_manualmente: boolean;
     }
 
     interface EstatisticasFinais {
@@ -512,6 +533,8 @@ const tipoPerguntaOpcoes = [
     const fInscricoesEncerradas = el<HTMLInputElement>("f-inscricoes-encerradas");
     const fInscricaoGrupo = el<HTMLInputElement>("f-inscricao-grupo");
     const fEventoAnterior = el<HTMLSelectElement>("f-evento-anterior");
+    const fCheckinMinutos = el<HTMLInputElement>("f-checkin-minutos");
+    const fCheckinManual = el<HTMLInputElement>("f-checkin-manual");
 
     function slugify(texto: string): string {
       return texto
@@ -544,6 +567,8 @@ const tipoPerguntaOpcoes = [
       fInscricoesEncerradas.checked = Boolean(evento.inscricoes_encerradas);
       fInscricaoGrupo.checked = Boolean(evento.permite_inscricao_grupo);
       fEventoAnterior.value = evento.evento_anterior ? String(evento.evento_anterior) : "";
+      fCheckinMinutos.value = evento.checkin_libera_minutos_antes != null ? String(evento.checkin_libera_minutos_antes) : "60";
+      fCheckinManual.checked = Boolean(evento.checkin_liberado_manualmente);
       renderizarFaixas(evento.faixas_valor ?? []);
     }
 
@@ -566,6 +591,8 @@ const tipoPerguntaOpcoes = [
         inscricoes_encerradas: fInscricoesEncerradas.checked,
         permite_inscricao_grupo: fInscricaoGrupo.checked,
         evento_anterior: fEventoAnterior.value ? Number(fEventoAnterior.value) : null,
+        checkin_libera_minutos_antes: fCheckinMinutos.value ? Number(fCheckinMinutos.value) : 60,
+        checkin_liberado_manualmente: fCheckinManual.checked,
         faixas_valor: lerFaixas(),
         aceita_inscricao: true,
       };

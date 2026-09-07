@@ -772,12 +772,32 @@ foi "o que muda quando o evento é grande?", não só "quais botões faltam":
       **múltiplos pontos de cadastro no dia** — o "+ Adicionar inscrito" funciona do mesmo jeito
       pra qualquer pessoa autenticada, então várias mesas de credenciamento podem cadastrar gente
       ao mesmo tempo sem conflito.
+- [x] **Check-in libera por horário** — a página pública de check-in (`/checkin/<slug>/`) ficava
+      aberta o tempo todo, sem trava nenhuma; agora só libera sozinha a partir de X minutos antes
+      do horário do evento (`checkin_libera_minutos_antes`, padrão 60, configurável por evento na
+      aba "Dados do evento"), evitando gente confirmando presença horas ou dias antes de verdade.
+      Tem também um botão "Liberar check-in agora" (`checkin_liberado_manualmente`) pra equipe
+      abrir mais cedo num imprevisto. Sem horário calculado só no build (a janela muda a cada
+      minuto do dia do evento) — o cálculo roda no navegador de quem abre a página, comparando a
+      hora real contra `event_date` + `time` do evento.
+      - Discutido e decidido junto com o usuário: nem QR Code nem código resolvem o medo de
+        alguém "emprestar a senha" — a segurança real do check-in está na pessoa da portaria
+        reconhecendo quem está na fila, não no sigilo do código. QR Code (item abaixo) é só uma
+        melhoria de **velocidade**, não fecha essa brecha.
+      Testado de ponta a ponta contra o Directus real: evento no futuro fica fechado com a
+      mensagem certa, evento já no horário fica aberto, e o botão de liberação manual força aberto
+      mesmo com o evento ainda no futuro.
 - [ ] **Check-in por QR Code** — hoje a pessoa digita o código de 6 caracteres; poderia mostrar
       também um QR Code (gerado na hora da confirmação, sem servidor extra) pra escanear com a
-      câmera do celular na entrada — mais rápido que digitar quando a fila é grande, e ganha mais
-      sentido junto dos outros itens de credenciamento em massa desta seção.
+      câmera do celular na entrada — mais rápido que digitar quando a fila é grande. Desenhado em
+      conversa com o usuário: cada pessoa teria seu próprio QR (mesmo código de 6 caracteres,
+      só codificado em imagem), e a portaria leria com a câmera do aparelho (biblioteca de leitura
+      de QR no navegador) — reaproveitando a mesma função de confirmar presença que já existe.
 - [ ] **Registrar o portão/local do check-in** — pra eventos com mais de uma entrada, guardar em
-      qual ponto cada pessoa confirmou presença (útil pra saber qual portão está mais cheio).
+      qual ponto cada pessoa confirmou presença. Desenho discutido: sem geolocalização — a equipe
+      escolhe uma vez qual portão aquele aparelho representa (guardado no navegador daquele
+      aparelho, mesmo padrão já usado na preferência de notificação), e todo check-in feito dali
+      em diante já leva essa marcação sozinho.
 - [ ] **Lotação em tempo real visível pra quem está na porta** — um contador ao vivo de "quantos
       já confirmaram presença" (derivado do que já existe), pra saber quando parar de deixar
       entrar mais gente num espaço com capacidade limitada — questão de segurança, não só
