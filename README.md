@@ -202,10 +202,25 @@ achado está nas seções de pesquisa logo abaixo ("Mais personalizações pesqu
 SEO, pesquisa de melhorias página por página) — isto aqui é só o resumo organizado em ordem de
 execução. **Nada deste plano foi construído ainda.**
 
-- **Fase 0 — bug real encontrado durante a pesquisa (fazer antes de qualquer coisa)**: o contador
-  "orando por você" do Mural de oração pode ser manipulado (incrementa um número calculado no
-  próprio navegador de quem clica, sem trava nenhuma do lado do servidor, e nada impede clique
-  repetido na mesma visita). Correção simples e isolada, sem depender do resto do plano.
+- **Fase 0 — bugs reais encontrados durante as pesquisas (fazer antes de qualquer coisa)**, os
+  três sem depender do resto do plano:
+  - O contador "orando por você" do Mural de oração pode ser manipulado (incrementa um número
+    calculado no próprio navegador de quem clica, sem trava nenhuma do lado do servidor, e nada
+    impede clique repetido na mesma visita).
+  - ⚠️ **O mais grave dos três, achado pela pesquisa de LGPD**: a página pública de check-in
+    (`/checkin/<slug>/`) busca a lista de inscritos direto no Directus sem autenticação nenhuma
+    (`items/inscricoes_eventos?...&fields=id,nome,codigo,pago,presente`) — qualquer pessoa pode
+    chamar essa mesma URL manualmente e baixar nome completo, status de pagamento e o `codigo` de
+    check-in de todos os inscritos de um evento, sem precisar da página. Esse `codigo` é o mesmo
+    usado depois para emitir crachá/certificado, então vazá-lo publicamente derruba a única
+    barreira desses dois fluxos. Precisa verificar direto no Directus (Configurações → Papéis e
+    permissões → Public) se a permissão está restrita a esses 5 campos ou se a coleção inteira
+    (incluindo `telefone`) está exposta, e mover essa consulta para trás de autenticação ou de uma
+    rota server-side.
+  - Achado pela pesquisa de acessibilidade: os campos do formulário de pesquisa de satisfação
+    (`pesquisa/[slug].astro`, função `campoHtml`) são criados sem `id`, e o `<label>` correspondente
+    não tem `for` — a associação entre rótulo e campo está quebrada, uma regressão real em relação
+    ao formulário de inscrição de evento, que já faz isso certo.
 
 - **Fase 1 — mudança de modelo de dado que o resto depende**: hoje só existe campo pra **um**
   líder por órgão (`leader_name`/`leader_role`/`leader_photo`), mais um caso especial fixo só pra
@@ -263,8 +278,64 @@ execução. **Nada deste plano foi construído ainda.**
   `/visitante/`), batismo (precisa de processo definido antes), servir/seja voluntário (precisa de
   vagas reais primeiro), podcast/vagas de trabalho (perfil de igreja grande, ficaria vazio agora).
 
-O detalhe completo de cada achado (com a lógica/pesquisa por trás de cada item) está registrado
-em "Mais personalizações pesquisadas" mais abaixo, junto com as fontes consultadas.
+Depois destas 6 primeiras (0 a 5, todas página-por-página), o usuário pediu uma segunda rodada,
+bem mais ampla, cobrindo o que um "site de verdade" precisa além do conteúdo de cada página —
+temas transversais que atingem o site inteiro de uma vez. São 5 fases novas, cada uma com achados
+concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mais abaixo:
+
+- **Fase 6 — segurança e resiliência técnica** (custo zero, maior parte é configuração, não
+  código — vale adiantar antes das fases de conteúdo, apesar do número): criar
+  `staticwebapp.config.json` com headers de segurança (hoje o site não define nenhum: sem CSP, sem
+  `X-Content-Type-Options`, sem `X-Frame-Options`, sem `Permissions-Policy`); criar
+  `.github/dependabot.yml` (hoje nenhuma dependência é auditada automaticamente); confirmar/
+  aumentar a retenção de backup do PostgreSQL Flexible Server (padrão é só 7 dias, grátis até 35) e
+  fazer um teste real de restauração pelo menos uma vez; ativar soft delete e versionamento no
+  container do Blob Storage (protege contra exclusão acidental de fotos/relatórios, sem custo
+  relevante); confirmar `SECRET` forte e rate limiter ativado no Directus.
+
+- **Fase 7 — LGPD e privacidade** (a política de privacidade hoje é literalmente um rascunho —
+  `privacidade.astro` ainda tem o comentário "Substitua pelo texto definitivo... antes de publicar
+  oficialmente"): reescrever a política cobrindo de fato cada coleção que trata dado pessoal
+  (mural de oração, contato, inscrições de evento — incluindo o campo de resposta livre, que pode
+  captar dado sensível dependendo da pergunta do evento), a base legal de cada uma, prazo de
+  retenção (hoje indefinido por design — o código deixa dado de evento "para sempre") e um canal
+  claro pro titular pedir acesso/exclusão; adicionar checkbox de consentimento específico nos
+  formulários que coletam dado sensível (mural de oração e pedido de oração no contato — hoje
+  nenhum formulário do site tem isso); documentar como processo manual uma rotina periódica de
+  arquivamento/exclusão de dado de evento encerrado.
+
+- **Fase 8 — acessibilidade (WCAG)**: no PDF de certificado/crachá (`jsPDF`), nenhuma biblioteca
+  gratuita gera tagging completo — o realista é definir idioma do documento e aceitar que o
+  check-in físico já cobre a necessidade prática; o ponto que dá pra corrigir de verdade é o QR
+  code do check-in, que não tem `alt` nem alternativa textual pensada para quem não consegue
+  escanear sozinho; atualizações dinâmicas sem `aria-live` (vagas restantes, status de cupom,
+  contador do mural de oração — inconsistente com o resto do site, que já faz isso certo em vários
+  outros lugares); `role="tab"` nos filtros de busca sem o padrão de teclado que essa role promete
+  (pior que não ter role nenhuma); calendário mensal marcando "hoje"/"tem evento" só por cor, sem
+  texto acessível.
+
+- **Fase 9 — performance e Core Web Vitals**: `fetchpriority="high"` nas imagens de capa de
+  evento/mensagem/notícia (já usam `loading="eager"` certo, só falta esse atributo — maior retorno
+  pelo menor esforço disponível hoje); gerar 2-3 larguras (`srcset`) para essas mesmas capas, hoje
+  servidas numa única largura de 1600px pra qualquer dispositivo; `staticwebapp.config.json` (mesmo
+  arquivo da Fase 6) também define `Cache-Control` de longo prazo pros assets versionados do build;
+  `<link rel="preconnect">` pro domínio do Directus, evitando gastar uma rodada de DNS+TLS antes da
+  primeira imagem carregar.
+
+- **Fase 10 — analytics e promoção de conteúdo**: o gap real não é "falta newsletter", é que o RSS
+  já existe (`/rss.xml`, mensagens + notícias) mas é tecnicamente descoberto e invisível pra quem
+  não sabe o que é RSS — nenhuma página tem uma frase explicando isso; a correção de maior valor e
+  menor esforço é só esse texto explicativo perto do link, sem nenhuma mudança técnica; considerar
+  depois um serviço gratuito que transforma esse RSS em e-mail automático pra quem preferir (sem
+  a igreja precisar curar uma newsletter manualmente, que historicamente para de sair em poucos
+  meses em organizações pequenas); analytics sem cookies só se alguém for de fato revisar, medindo
+  2-3 perguntas reais (de onde vêm as pessoas, quais páginas usam) — não pageview bruto, que é
+  métrica de vaidade sem decisão nenhuma do outro lado.
+
+**Nada deste plano foi construído ainda** (fases 0 a 10). O detalhe completo de cada achado (com a
+lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
+"Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
+fontes consultadas.
 
 - [x] **Atalho de busca rápida (Ctrl+K)** — melhorado: agora cobre eventos, temas, pregadores e
       páginas institucionais (10 tipos de conteúdo), com filtros por categoria e busca sem
@@ -1096,6 +1167,134 @@ no texto acima): [Nonprofit Website Best Practices 2026](https://www.elevationwe
 [Mural de oração digital (Sermon Shots)](https://sermonshots.com/blog/how-to-create-a-digital-prayer-wall-for-your-congregation/),
 [Padrão de galeria de imagens (UX Patterns for Developers)](https://uxpatterns.dev/patterns/media/image-gallery),
 [Boas práticas de busca no site (Nielsen Norman Group)](https://www.nngroup.com/articles/site-search-suggestions/).
+
+#### Pesquisa detalhada — temas transversais (suporte às fases 6-10 lá em cima)
+
+Segunda rodada de pesquisa, pedida pelo usuário depois da primeira leva (página por página) por
+ser "muito pouco pra um site de verdade" — 5 áreas que atingem o site inteiro de uma vez, não uma
+página específica. Cada uma partiu de leitura real do código antes de pesquisar, não de suposição.
+**Nada disto foi construído ainda.**
+
+**Segurança e resiliência técnica**: confirmado no código que não existe `staticwebapp.config.json`
+(sem CSP, sem `X-Content-Type-Options`, sem `X-Frame-Options`, sem `Permissions-Policy` — o site
+roda sem nenhum header de segurança HTTP) nem `.github/dependabot.yml` (nenhuma dependência é
+auditada automaticamente). O banco (PostgreSQL Flexible Server) já tem backup automático nativo do
+Azure sem custo adicional — isso não é um gap de infraestrutura — mas a retenção padrão é só 7
+dias (grátis até 35), nunca foi confirmada nem testada uma restauração de verdade, e não existe uma
+segunda cópia fora da própria conta Azure. O container de mídia no Blob Storage tem leitura pública
+(necessário pro site funcionar) mas sem soft delete/versionamento confirmado, ou seja, uma exclusão
+acidental de foto/relatório não tem rede de segurança. O token de administrador do Directus foi
+confirmado como nunca vazando pro navegador (só usado em build/CI, `.env.local` corretamente
+ignorado pelo Git) — isso já está certo. Não dá pra confirmar pelo código se o Directus tem rate
+limiter e um `SECRET` forte configurados no App Service (isso vive na infraestrutura, fora do
+repositório) — fica como item de verificação, não achado confirmado.
+
+**LGPD e privacidade**: `privacidade.astro` é hoje um rascunho não terminado (o próprio comentário
+no código diz "Substitua pelo texto definitivo da igreja antes de publicar oficialmente"), sem
+listar as coleções que realmente tratam dado pessoal, sem base legal, sem prazo de retenção e sem
+canal claro pro titular pedir acesso/exclusão. O mural de oração publica dado potencialmente
+sensível (convicção religiosa, e o que a pessoa escrever pode revelar mais) sem nenhum consentimento
+específico e destacado — só um aviso de moderação sobre dado de terceiros, não sobre o próprio
+remetente; nenhum formulário do site (contato, mural, inscrição em evento) tem checkbox de
+consentimento. Achado mais grave (promovido à Fase 0 acima): a página pública de check-in busca a
+lista de inscritos direto no Directus sem autenticação, potencialmente expondo nome, status de
+pagamento e o código de check-in de todo mundo inscrito num evento. Dados de evento também ficam
+"para sempre" por decisão de design (comentário no próprio código confirma), sem prazo de retenção
+documentado. Ponto a favor: hospedagem em `brazilsouth` (dado em território nacional) e a
+Resolução CD/ANPD nº 2/2022 provavelmente dispensa a igreja de nomear um encarregado/DPO formal,
+desde que exista um canal de comunicação com o titular — hoje só existe um e-mail genérico, sem
+descrever esse propósito.
+
+**Acessibilidade (WCAG)**: já bem cuidado em vários pontos (skip link, landmarks, contraste de cor
+auditado manualmente nos dois temas, `prefers-reduced-motion` global, modo de leitura fácil, menu
+mobile com focus trap real) — o que segue são gaps reais, não uma lista genérica. Certificados e
+crachás em PDF (`jsPDF`) não têm nenhuma tag estrutural (PDF/UA); nenhuma biblioteca gratuita de
+geração de PDF resolve isso sozinha, então o realista é definir o idioma do documento e aceitar que
+o check-in físico já cobre a necessidade prática — o ponto que dá pra corrigir de verdade é o QR
+code do check-in, sem `alt` nem alternativa pensada pra quem não consegue escanear sozinho (só uma
+fração de usuários com deficiência visual consegue). Campos do formulário de pesquisa de
+satisfação sem `label`/`for` associado (promovido à Fase 0 acima, é regressão real comparado ao
+formulário de inscrição de evento, que faz isso certo). Várias atualizações dinâmicas sem
+`aria-live` (vagas restantes, status de cupom, contador do mural de oração), inconsistente com
+outros pontos do mesmo site que já fazem isso certo (status do formulário de contato, botão de
+copiar código). Os filtros de busca usam `role="tab"` sem o padrão de teclado que essa role
+promete ao leitor de tela — pior que não usar role nenhuma. Calendário mensal marca "hoje"/"tem
+evento" só por cor, sem texto acessível equivalente.
+
+**Performance e Core Web Vitals**: as imagens de capa de evento/mensagem/notícia já usam
+`loading="eager"` corretamente (evitando o erro que causou o LCP de 11s já documentado em commits
+anteriores), mas nenhuma define `fetchpriority="high"` — ganho de 50-200ms medido em testes
+públicos, maior retorno pelo menor esforço disponível hoje, já que esse cover costuma ser o próprio
+elemento de LCP da página. Essas mesmas capas são geradas numa única largura fixa de 1600px
+(`directusAssetUrl(..., { width: 1600 })`), sem `srcset` — um celular baixa a mesma imagem que um
+desktop; é um problema distinto do já registrado na Galeria (que é sobre thumbnails de grade), este
+é o hero de artigo individual, que pesa mais no LCP mobile. Não existe `staticwebapp.config.json`
+(mesmo arquivo da Fase 6) definindo `Cache-Control` de longo prazo pros assets versionados do build
+(`_astro/*`, fontes). Falta `<link rel="preconnect">` pro domínio do Directus (terceiro, Azure) no
+`<head>` — a conexão TCP/TLS só começa quando a primeira imagem é descoberta. Confirmado que
+scripts de terceiro (leitor de QR code, gerador de QR code, Leaflet) já carregam só nas páginas que
+os usam, não na home/mensagens/notícias — não é um problema real. `width`/`height` HTML ausente nos
+`<img>` também não é problema real, já mitigado por `aspect-ratio` fixo no CSS em todas as páginas
+de artigo/galeria.
+
+**Analytics e promoção de conteúdo**: confirmado que não existe nenhuma ferramenta de analytics no
+código hoje (nenhum script de terceiro no `<head>`), nem newsletter por e-mail. O feed RSS
+(`/rss.xml`, já junta mensagens e notícias) é tecnicamente descoberto (`<link rel="alternate">` no
+head, ícone no rodapé) mas invisível na prática — nenhuma página explica o que é RSS ou por que
+alguém clicaria ali; essa é a correção de maior valor e menor esforço, sem nenhuma mudança técnica.
+Depois disso, dá pra considerar um serviço gratuito que transforma esse mesmo RSS em e-mail
+automático pra quem preferir, sem a igreja precisar curar uma newsletter manualmente (que
+historicamente para de sair em poucos meses em organizações pequenas sem equipe dedicada) — resolve
+RSS e newsletter ao mesmo tempo com zero esforço editorial contínuo. Analytics sem cookies só vale a
+pena se alguém for de fato revisar os números, medindo 2-3 perguntas reais (de onde vêm as pessoas,
+quais páginas usam) — pageview bruto e contagem de seguidores são métrica de vaidade, sem nenhuma
+decisão da liderança do outro lado.
+
+Fontes consultadas (as 5 rodadas, título e domínio — sem nome de produto/plataforma específico no
+texto acima): [Resolução CD/ANPD nº 2/2022 (gov.br)](https://www.gov.br/anpd/pt-br/acesso-a-informacao/institucional/atos-normativos/regulamentacoes_anpd/resolucao-cd-anpd-no-2-de-27-de-janeiro-de-2022),
+[Resolução CD/ANPD Nº 2 (LegisWeb)](https://www.legisweb.com.br/legislacao/?id=426801),
+[Dispensa do encarregado para pequenas empresas (bCompliance)](https://blog.bcompliance.com.br/2025/07/11/lgpd-pequenas-empresas-dispensa-dpo-canal-comunicacao/),
+[LGPD para igrejas (Sistema Prover)](https://sistemaprover.com.br/blog/lgpd-para-igrejas-o-que-diz-a-nova-lei-e-como-ela-pode-impactar-sua-igreja),
+[Proteção de dados na igreja e concílios (IPB)](https://www.ipb.org.br/content/Downloads/LGPD_VF.pdf),
+[LGPD e as igrejas (Jus.com.br)](https://jus.com.br/artigos/92783/lei-de-protecao-de-dados-lgpd-as-igrejas),
+[Tratamento de dado religioso (Privacy Tools)](https://www.privacytools.com.br/dadosreligiosos/),
+[Adequação de igrejas à LGPD (Conjur)](https://www.conjur.com.br/2021-mar-15/opiniao-adequacao-igrejas-instituicoes-religiosas-lgpd/),
+[Fichas de membros e pedidos de oração (Proesecont)](https://www.proesecont.com.br/fichas-de-membros-e-pedidos-de-oracao-como-aplicar-a-lgpd-para-igrejas-e-evitar-processos/),
+[Política de privacidade 2026 (Confidata)](https://confidata.com.br/blog/politica-privacidade-2026-anpd-modelos),
+[LGPD se aplica a nonprofit? (Contabeis.com.br)](https://www.contabeis.com.br/artigos/7905/a-lgpd-se-aplica-as-empresas-sem-fins-lucrativos/),
+[Canal do titular LGPD (Simplifica Compliance)](https://blog.simplificacompliance.com.br/canal-do-titular-lgpd/),
+[Direito dos titulares (MCTI)](https://www.gov.br/mcti/pt-br/acesso-a-informacao/lei-geral-de-protecao-de-dados-pessoais-lgpd/direito-dos-titulares),
+[Acessibilidade de PDF pra devs (Enrise)](https://enrise.com/2019/06/pdf-accessibility-for-web-developers/),
+[Checklist de acessibilidade nonprofit (Elevation)](https://www.elevationweb.org/blog/nonprofit-accessibility-best-practices/),
+[Checklist WCAG 2.1/2.2 AA (Accessible.org)](https://accessible.org/wcag/),
+[Google Maps/YouTube embutido são acessíveis? (Vision Australia)](https://www.visionaustralia.org/business-consulting/digital-access/blog/embedded-youtube-and-google-maps),
+[QR code é barreira de acessibilidade (Medium)](https://medium.com/@roberto_40218/the-invisible-barrier-qr-codes-and-accessibility-f1e4dba6653f),
+[QR code acessível (Section508.gov)](https://www.section508.gov/blog/accessibility-bytes/qr-codes/),
+[Regiões `aria-live` (UXPin)](https://www.uxpin.com/studio/blog/aria-live-regions-for-dynamic-content/),
+[Mensagens de status WCAG 4.1.3 (AAArdvark)](https://aaardvarkaccessibility.com/wcag-plain-english/4-1-3-status-messages/),
+[`prefers-reduced-motion` (MDN)](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion),
+[Ferramentas gratuitas de auditoria de acessibilidade (BarrierBreak)](https://www.barrierbreak.com/5-free-must-have-web-accessibility-testing-tools/),
+[`fetchpriority=high` na imagem de LCP (Addy Osmani)](https://addyosmani.com/blog/fetch-priority/),
+[Fetch Priority API (web.dev)](https://web.dev/articles/fetch-priority),
+[Não faça lazy-load da imagem de LCP (Unlighthouse)](https://unlighthouse.dev/learn-lighthouse/lcp/lcp-lazy-loaded),
+[Descoberta da requisição de LCP (Chrome for Developers)](https://developer.chrome.com/docs/performance/insights/lcp-discovery),
+[Carregar script de terceiro com eficiência (web.dev)](https://web.dev/articles/efficiently-load-third-party-javascript),
+[Boas práticas de cache de CDN (Fastly)](https://www.fastly.com/documentation/guides/full-site-delivery/caching/caching-best-practices/),
+[Estratégias de cache de CDN (OneUptime)](https://oneuptime.com/blog/post/2026-01-30-cdn-caching-strategies/view),
+[Backup do PostgreSQL Flexible Server (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/postgresql/backup-restore/concepts-backup-restore),
+[Azure Backup pro PostgreSQL Flexible Server (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/backup/backup-azure-database-postgresql-flex-overview),
+[Soft delete de blob (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/storage/blobs/soft-delete-blob-overview?tabs=azure-portal),
+[Versionamento de blob (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview?tabs=powershell),
+[Configurar Azure Static Web Apps (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/static-web-apps/configuration),
+[Headers de segurança em Azure Static Web Apps (Rebin)](https://rebin.dev/post/configure-http-security-response-headers-for-azure-static-web-apps/),
+[Segurança e limites do Directus (Directus Docs)](https://directus.io/docs/guides/security/best-practices),
+[Configurar atualizações do Dependabot (GitHub Docs)](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuring-dependabot-version-updates),
+[Analytics sem cookies pra nonprofit (Swetrix)](https://swetrix.com/blog/web-analytics/for-nonprofits),
+[Ferramentas de analytics self-hosted (PostHog)](https://posthog.com/blog/best-open-source-analytics-tools),
+[Como promover um feed RSS (ZenBusiness)](https://www.zenbusiness.com/blog/rss-feed/),
+[Transformar RSS em newsletter por e-mail (beehiiv)](https://blog.beehiiv.com/p/rss-to-email-newsletter),
+[E-mail marketing gratuito pra nonprofit (Zeffy)](https://www.zeffy.com/blog/mailchimp-alternatives-for-nonprofits),
+[Métricas de vaidade — o que medir de verdade (NN/g)](https://www.nngroup.com/articles/vanity-metrics/).
 
 ### Ideias rejeitadas
 
