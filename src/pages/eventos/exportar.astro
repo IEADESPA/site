@@ -190,28 +190,81 @@ const categorias = [
       "": "Sem categoria",
     };
 
-    function gerarPdf() {
+    // Cores da identidade visual do site (ver --accent/--accent-strong/
+    // --muted-foreground/--border em src/styles/global.css), em RGB pra
+    // uso direto no jsPDF.
+    const COR_ACCENT: [number, number, number] = [143, 111, 31];
+    const COR_ACCENT_ESCURO: [number, number, number] = [107, 84, 23];
+    const COR_TEXTO_MUTED: [number, number, number] = [91, 101, 119];
+    const COR_BORDA: [number, number, number] = [232, 227, 212];
+    const COR_TEXTO: [number, number, number] = [26, 26, 26];
+
+    let logoDataUrl: string | null = null;
+    async function carregarLogo(): Promise<string | null> {
+      if (logoDataUrl) return logoDataUrl;
+      try {
+        const res = await fetch("/logo-icon.png");
+        const blob = await res.blob();
+        logoDataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        return logoDataUrl;
+      } catch {
+        return null;
+      }
+    }
+
+    function desenharRodape(doc: InstanceType<typeof jsPDF>, margem: number) {
+      const totalPaginas = doc.getNumberOfPages();
+      const largura = doc.internal.pageSize.getWidth();
+      const altura = doc.internal.pageSize.getHeight();
+      for (let i = 1; i <= totalPaginas; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(...COR_BORDA);
+        doc.line(margem, altura - margem + 10, largura - margem, altura - margem + 10);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...COR_TEXTO_MUTED);
+        doc.text("IEADESPA", margem, altura - margem + 24);
+        doc.text(`Página ${i} de ${totalPaginas}`, largura - margem, altura - margem + 24, { align: "right" });
+      }
+    }
+
+    async function gerarPdf() {
       const filtrados = eventosFiltrados();
       if (filtrados.length === 0) return;
 
+      const logo = await carregarLogo();
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const margem = 48;
       const larguraUtil = doc.internal.pageSize.getWidth() - margem * 2;
       const alturaPagina = doc.internal.pageSize.getHeight();
       let y = margem;
 
+      if (logo) doc.addImage(logo, "PNG", margem, y - 22, 26, 26);
+      const inicioTitulo = logo ? margem + 34 : margem;
+
       const tituloPersonalizado = tituloInput?.value.trim();
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
-      doc.text(tituloPersonalizado || "Programação de eventos — IEADESPA", margem, y);
-      y += 22;
+      doc.setTextColor(...COR_ACCENT_ESCURO);
+      doc.text(tituloPersonalizado || "Programação de eventos", inicioTitulo, y);
+      y += 20;
+
+      doc.setDrawColor(...COR_ACCENT);
+      doc.setLineWidth(1.5);
+      doc.line(margem, y, doc.internal.pageSize.getWidth() - margem, y);
+      y += 18;
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.setTextColor(110);
+      doc.setTextColor(...COR_TEXTO_MUTED);
       doc.text(`${deInput.value} a ${ateInput.value} · gerado em ${new Date().toLocaleDateString("pt-BR")}`, margem, y);
       y += 24;
-      doc.setTextColor(20);
+      doc.setTextColor(...COR_TEXTO);
 
       let mesAtualLabel = "";
       filtrados.forEach((evento) => {
@@ -223,9 +276,13 @@ const categorias = [
             y = margem;
           }
           y += 8;
+          doc.setFillColor(...COR_ACCENT);
+          doc.rect(margem, y - 10, 3, 13, "F");
           doc.setFont("helvetica", "bold");
           doc.setFontSize(12);
-          doc.text(mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), margem, y);
+          doc.setTextColor(...COR_ACCENT_ESCURO);
+          doc.text(mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), margem + 10, y);
+          doc.setTextColor(...COR_TEXTO);
           y += 16;
         }
 
@@ -246,16 +303,18 @@ const categorias = [
           y = margem;
         }
 
+        doc.setTextColor(...COR_TEXTO);
         doc.text(linhas1, margem, y);
         y += linhas1.length * 13;
         if (linhas2.length) {
-          doc.setTextColor(110);
+          doc.setTextColor(...COR_TEXTO_MUTED);
           doc.text(linhas2, margem, y);
-          doc.setTextColor(20);
           y += linhas2.length * 13;
         }
         y += 8;
       });
+
+      desenharRodape(doc, margem);
 
       const nomeArquivo = `eventos-${deInput.value}-a-${ateInput.value}.pdf`;
       doc.save(nomeArquivo);
