@@ -653,9 +653,32 @@ de igreja em geral):
       - Testado de ponta a ponta contra o Directus real (sem token): liberação por data nos dois
         sentidos (evento passado libera, futuro não libera), busca por código exigindo presença,
         e o POST da resposta.
-- [ ] **Inscrição em grupo (família)** — uma pessoa preenche o formulário uma vez só e adiciona
-      mais nomes (ex.: cônjuge, filhos) na mesma submissão, em vez de cada um preencher
-      separadamente.
+- [x] **Inscrição em grupo** — generalizada de propósito: não é só "família", é qualquer grupo
+      (casal, família, grupo de amigos, delegação de uma congregação) e qualquer tamanho. Novo
+      campo do evento **"Permitir inscrição em grupo"** (`permite_inscricao_grupo`, aba "Dados do
+      evento" no editor) liga/desliga por evento. Quando ligado, a pessoa marca "Inscrever outras
+      pessoas junto" no formulário público e adiciona quantos nomes quiser — cada nome vira uma
+      inscrição própria (código de check-in, certificado e crachá individuais), com telefone e
+      respostas às perguntas do evento compartilhados pelo grupo (respondidas uma vez só).
+      - **Desconto por quantidade, sem sistema novo**: reaproveita as "Faixas de valor" que já
+        existiam (antes só informativas). Se o evento tem mais de uma faixa cadastrada, a pessoa
+        escolhe uma ao se inscrever (ex.: "Individual" R$50, "Casal" R$80, "Grupo (5 ou mais, por
+        pessoa)" R$30), e esse valor é aplicado a cada pessoa do grupo — não existe regra fixa de
+        "família" ou "5 pessoas": quem administra o evento define as faixas e os preços que
+        fizerem sentido pra aquele evento específico.
+      - **Lista de espera funciona igual, pessoa por pessoa**: se o grupo for maior que as vagas
+        restantes, os primeiros nomes confirmam e os últimos entram na lista de espera
+        automaticamente (mesma trava de vagas já existente, sem regra especial de "tudo ou nada"
+        pro grupo).
+      - Lembrete automático (push) só é oferecido pra quem preencheu o formulário (a pessoa que
+        está com a tela aberta), não pra cada nome do grupo — os demais recebem o código, mas
+        ativam lembrete próprio se abrirem a página do evento depois.
+      - Corrigido um bug real de permissão descoberto ao testar: a permissão pública de criar
+        inscrição nunca incluía o campo `valor` (só existia preenchimento manual pelo painel) —
+        sem o ajuste, qualquer inscrição pública com faixa de valor selecionada teria dado 403.
+        Testado de ponta a ponta contra o Directus real (sem token): grupo de 3 pessoas com limite
+        de 2 vagas confirma as duas primeiras e coloca a terceira na lista de espera, todas com o
+        valor da faixa escolhida e o mesmo telefone.
 - [ ] **Agenda interna do evento (multi-sessão)** — pra congressos com várias palestras/horários
       dentro do mesmo evento (palestrante, tema, horário), mostrado na página pública.
 

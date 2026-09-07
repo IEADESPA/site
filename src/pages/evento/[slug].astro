@@ -53,6 +53,7 @@ interface Evento {
   inscricoes_ate: string | null;
   inscricoes_encerradas: boolean;
   faixas_valor: { descricao: string; valor: number }[] | null;
+  permite_inscricao_grupo: boolean;
 }
 
 export async function getStaticPaths() {
@@ -241,6 +242,39 @@ const structuredData = startDate
                 </div>
 
                 {
+                  event.faixas_valor && event.faixas_valor.length > 0 && (
+                    <div class="grid gap-2">
+                      <label class="text-sm font-semibold" for="inscricao-faixa">Faixa de valor</label>
+                      <select id="inscricao-faixa" class="field">
+                        <option value="">Selecione…</option>
+                        {event.faixas_valor.map((faixa) => (
+                          <option value={faixa.valor}>
+                            {faixa.descricao} — R$ {Number(faixa.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )
+                }
+
+                {
+                  event.permite_inscricao_grupo && (
+                    <div class="grid gap-2" data-grupo-bloco>
+                      <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" data-grupo-toggle /> Inscrever outras pessoas junto (família, casal, grupo de amigos…)
+                      </label>
+                      <p class="text-xs text-muted-foreground">
+                        Cada pessoa vira uma inscrição própria, com seu próprio código de check-in e certificado.
+                      </p>
+                      <div class="grid gap-2 mt-1" data-grupo-nomes hidden>
+                        <div class="grid gap-2" data-grupo-lista></div>
+                        <button type="button" class="btn btn-outline" data-grupo-adicionar>+ Adicionar pessoa</button>
+                      </div>
+                    </div>
+                  )
+                }
+
+                {
                   perguntas.map((pergunta) => (
                     <div class="grid gap-2" data-pergunta-field data-pergunta-id={pergunta.id} data-pergunta-tipo={pergunta.tipo}>
                       <label class="text-sm font-semibold" for={`pergunta-${pergunta.id}`}>{pergunta.label}</label>
@@ -377,6 +411,36 @@ const structuredData = startDate
           }
         }
 
+        // Inscrição em grupo: cada linha vira uma pessoa própria, com seu
+        // próprio código de check-in — só o nome muda, telefone e respostas
+        // às perguntas do evento são compartilhados pelo grupo todo.
+        document.querySelectorAll("[data-grupo-bloco]").forEach((bloco) => {
+          const toggle = bloco.querySelector("[data-grupo-toggle]");
+          const nomesWrap = bloco.querySelector("[data-grupo-nomes]");
+          const lista = bloco.querySelector("[data-grupo-lista]");
+          const adicionarBtn = bloco.querySelector("[data-grupo-adicionar]");
+
+          toggle?.addEventListener("change", () => {
+            if (nomesWrap) nomesWrap.hidden = !toggle.checked;
+            if (toggle.checked && lista && !lista.children.length) adicionarLinhaGrupo();
+          });
+
+          function adicionarLinhaGrupo() {
+            const linha = document.createElement("div");
+            linha.className = "grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center grupo-linha";
+            linha.innerHTML = `
+              <input type="text" class="field" placeholder="Nome da pessoa" data-grupo-nome-input />
+              <button type="button" class="btn btn-outline" data-grupo-remover>Remover</button>
+            `;
+            lista?.appendChild(linha);
+          }
+
+          adicionarBtn?.addEventListener("click", adicionarLinhaGrupo);
+          lista?.addEventListener("click", (event) => {
+            if (event.target.matches("[data-grupo-remover]")) event.target.closest(".grupo-linha")?.remove();
+          });
+        });
+
         document.querySelectorAll("[data-inscricao-form]").forEach((form) => {
           form.addEventListener("submit", async (event) => {
             event.preventDefault();
@@ -384,36 +448,26 @@ const structuredData = startDate
             const button = form.querySelector("button[type=submit]");
             const data = new FormData(form);
             const eventoId = Number(form.dataset.eventoId);
-            const codigo = gerarCodigo();
+            const faixaEl = form.querySelector("#inscricao-faixa");
+            const valorFaixa = faixaEl?.value ? Number(faixaEl.value) : null;
+
+            // Nome principal + nomes extras do grupo (se a pessoa marcou a
+            // opção e preencheu alguma linha) — cada um vira uma pessoa
+            // própria, com seu próprio código de check-in.
+            const nomesExtras = Array.from(form.querySelectorAll("[data-grupo-nome-input]"))
+              .map((input) => input.value.trim())
+              .filter(Boolean);
+            const nomes = [String(data.get("nome")).trim(), ...nomesExtras];
 
             if (button) button.disabled = true;
-            if (status) status.textContent = "Enviando…";
+            if (status) status.textContent = nomes.length > 1 ? "Enviando inscrições…" : "Enviando…";
 
             try {
-              let aguardandoVaga = false;
-              if (vagasLimite) {
-                const confirmados = await contarConfirmados(eventoId);
-                aguardandoVaga = confirmados >= vagasLimite;
-              }
+              let confirmados = vagasLimite ? await contarConfirmados(eventoId) : 0;
 
-              const inscricaoRes = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  evento: eventoId,
-                  nome: data.get("nome"),
-                  telefone: data.get("telefone"),
-                  codigo,
-                  aguardando_vaga: aguardandoVaga,
-                }),
-              });
-              if (!inscricaoRes.ok) throw new Error("falha ao criar inscrição");
-              const inscricaoJson = await inscricaoRes.json();
-              const inscricaoId = inscricaoJson.data.id;
-
-              // Cada pergunta personalizada vira uma resposta vinculada à
-              // inscrição recém-criada.
-              const respostas = [];
+              // Respostas às perguntas do evento são as mesmas pra todo o
+              // grupo — lidas uma vez, copiadas pra cada pessoa depois.
+              const respostasBase = [];
               form.querySelectorAll("[data-pergunta-field]").forEach((field) => {
                 const perguntaId = Number(field.dataset.perguntaId);
                 const tipo = field.dataset.perguntaTipo;
@@ -427,37 +481,79 @@ const structuredData = startDate
                   valor = input ? input.value : "";
                 }
 
-                if (valor) respostas.push({ inscricao: inscricaoId, pergunta: perguntaId, valor });
+                if (valor) respostasBase.push({ pergunta: perguntaId, valor });
               });
 
-              await Promise.all(
-                respostas.map((resposta) =>
-                  fetch(`${directusUrl}/items/respostas_inscricao`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(resposta),
-                  }),
-                ),
-              );
+              const resultados = [];
+              for (const nome of nomes) {
+                const codigo = gerarCodigo();
+                let aguardandoVaga = false;
+                if (vagasLimite) {
+                  aguardandoVaga = confirmados >= vagasLimite;
+                  if (!aguardandoVaga) confirmados += 1;
+                }
 
-              if (status) {
-                status.innerHTML = aguardandoVaga
-                  ? `Vagas esgotadas no momento — você está na <strong>lista de espera</strong>. Seu código é <strong>${codigo}</strong>; guarde-o, porque se abrir vaga sua inscrição é confirmada automaticamente com esse mesmo código.`
-                  : `Inscrição confirmada! Seu código de check-in é <strong>${codigo}</strong> — anote ou tire um print, você vai usar na entrada do evento.`;
+                const inscricaoRes = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    evento: eventoId,
+                    nome,
+                    telefone: data.get("telefone"),
+                    codigo,
+                    valor: valorFaixa,
+                    aguardando_vaga: aguardandoVaga,
+                  }),
+                });
+                if (!inscricaoRes.ok) throw new Error("falha ao criar inscrição");
+                const inscricaoJson = await inscricaoRes.json();
+                const inscricaoId = inscricaoJson.data.id;
+
+                await Promise.all(
+                  respostasBase.map((resposta) =>
+                    fetch(`${directusUrl}/items/respostas_inscricao`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ...resposta, inscricao: inscricaoId }),
+                    }),
+                  ),
+                );
+
+                resultados.push({ nome, codigo, aguardandoVaga, inscricaoId });
               }
 
-              // Lembrete automático só faz sentido pra quem está confirmado —
-              // quem está na lista de espera ainda não sabe se vai participar.
-              if (!aguardandoVaga) {
+              if (status) {
+                if (resultados.length === 1) {
+                  const { codigo, aguardandoVaga } = resultados[0];
+                  status.innerHTML = aguardandoVaga
+                    ? `Vagas esgotadas no momento — você está na <strong>lista de espera</strong>. Seu código é <strong>${codigo}</strong>; guarde-o, porque se abrir vaga sua inscrição é confirmada automaticamente com esse mesmo código.`
+                    : `Inscrição confirmada! Seu código de check-in é <strong>${codigo}</strong> — anote ou tire um print, você vai usar na entrada do evento.`;
+                } else {
+                  const linhas = resultados
+                    .map((r) => `${r.nome}: <strong>${r.codigo}</strong>${r.aguardandoVaga ? " (lista de espera)" : ""}`)
+                    .join("<br />");
+                  status.innerHTML = `${resultados.length} pessoas inscritas! Anote o código de cada uma — vai usar na entrada do evento:<br />${linhas}`;
+                }
+              }
+
+              // Lembrete automático só pra quem se inscreveu primeiro (a
+              // pessoa que está na tela) e só se ela ficou confirmada — quem
+              // está na lista de espera ainda não sabe se vai participar.
+              const principal = resultados[0];
+              if (principal && !principal.aguardandoVaga) {
                 const lembreteBloco = document.querySelector("[data-lembrete-bloco]");
                 const lembreteBotao = document.querySelector("[data-lembrete-toggle]");
                 if (lembreteBloco && lembreteBotao) {
                   lembreteBloco.hidden = false;
-                  lembreteBotao.addEventListener("click", () => ativarLembrete(inscricaoId, lembreteBotao));
+                  lembreteBotao.addEventListener("click", () => ativarLembrete(principal.inscricaoId, lembreteBotao));
                 }
               }
 
               form.reset();
+              const grupoNomesWrap = form.querySelector("[data-grupo-nomes]");
+              const grupoLista = form.querySelector("[data-grupo-lista]");
+              if (grupoNomesWrap) grupoNomesWrap.hidden = true;
+              if (grupoLista) grupoLista.innerHTML = "";
             } catch {
               if (status) {
                 status.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";

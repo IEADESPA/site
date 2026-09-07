@@ -146,12 +146,26 @@ const tipoPerguntaOpcoes = [
         <fieldset class="grid gap-2">
           <legend class="text-sm font-semibold">Faixas de valor (opcional)</legend>
           <p class="text-xs text-muted-foreground">
-            Só informativo, aparece na página pública do evento — não processa pagamento nenhum.
-            Ex.: "Individual" R$50, "Casal" R$80, "Grupo (3 ou mais, por pessoa)" R$40.
+            Aparece na página pública do evento. Se o formulário de inscrição tiver mais de uma
+            faixa cadastrada, a pessoa escolhe uma delas ao se inscrever, e o valor já fica
+            preenchido pra cada pessoa daquela inscrição — não processa pagamento nenhum, só
+            registra o valor combinado. Ex.: "Individual" R$50, "Casal" R$80 (R$40 cada), "Grupo
+            (5 ou mais, por pessoa)" R$30 — use isso pra dar desconto por grupo/quantidade.
           </p>
           <div class="grid gap-2" data-faixas-lista></div>
           <button type="button" class="btn btn-outline mt-1" data-faixa-adicionar>+ Adicionar faixa</button>
         </fieldset>
+
+        <div class="grid gap-3">
+          <label class="flex items-center gap-2 text-sm">
+            <input id="f-inscricao-grupo" type="checkbox" /> Permitir inscrição em grupo (família, casal, grupos de amigos etc.)
+          </label>
+          <p class="text-xs text-muted-foreground">
+            Com isso ativado, quem se inscrever pode adicionar o nome de outras pessoas na mesma
+            inscrição (cada uma vira uma inscrição própria, com seu próprio código de check-in e
+            certificado) — combine com faixas de valor acima pra dar desconto por grupo.
+          </p>
+        </div>
 
         <div class="grid gap-3">
           <label class="flex items-center gap-2 text-sm">
@@ -287,6 +301,7 @@ const tipoPerguntaOpcoes = [
       inscricoes_ate: string | null;
       inscricoes_encerradas: boolean;
       faixas_valor: { descricao: string; valor: number }[] | null;
+      permite_inscricao_grupo: boolean;
     }
 
     interface Pergunta {
@@ -344,6 +359,7 @@ const tipoPerguntaOpcoes = [
     const fVagas = el<HTMLInputElement>("f-vagas");
     const fInscricoesAte = el<HTMLInputElement>("f-inscricoes-ate");
     const fInscricoesEncerradas = el<HTMLInputElement>("f-inscricoes-encerradas");
+    const fInscricaoGrupo = el<HTMLInputElement>("f-inscricao-grupo");
 
     function slugify(texto: string): string {
       return texto
@@ -374,6 +390,7 @@ const tipoPerguntaOpcoes = [
       fVagas.value = evento.vagas_limite ? String(evento.vagas_limite) : "";
       fInscricoesAte.value = evento.inscricoes_ate ?? "";
       fInscricoesEncerradas.checked = Boolean(evento.inscricoes_encerradas);
+      fInscricaoGrupo.checked = Boolean(evento.permite_inscricao_grupo);
       renderizarFaixas(evento.faixas_valor ?? []);
     }
 
@@ -394,6 +411,7 @@ const tipoPerguntaOpcoes = [
         vagas_limite: fVagas.value ? Number(fVagas.value) : null,
         inscricoes_ate: fInscricoesAte.value || null,
         inscricoes_encerradas: fInscricoesEncerradas.checked,
+        permite_inscricao_grupo: fInscricaoGrupo.checked,
         faixas_valor: lerFaixas(),
         aceita_inscricao: true,
       };
