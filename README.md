@@ -394,7 +394,39 @@ pesquisa transversal mais abaixo:
   por congregação/ponto de pregação, não célula doméstica) — sem essa confirmação, não construir,
   pelo mesmo motivo que já levou a não inventar dado na Fase 4 (história).
 
-**Nada deste plano foi construído ainda** (fases 0 a 15, exceto o app instalável da Fase 13, que já
+Última leva pedida pelo usuário, focada em painéis/sistemas de **gestão interna** (não página
+pública) — mais 2 fases com recomendação real de construir, e mais 3 assuntos pesquisados a fundo
+que resultaram em "não construir" (achados incorporados às entradas correspondentes de "Ideias
+rejeitadas" acima: diretório de membros, módulo de EBD e reserva de espaço/salão — nenhuma delas
+virou fase nova por decisão explícita, com o motivo já registrado ali):
+
+- **Fase 16 — painel financeiro interno (tesouraria)**: distinto de `/transparencia/` (que já
+  existe e é pública) — o achado central da pesquisa é **não construir uma página nova no site**
+  pra isso. A recomendação é fazer tudo dentro do próprio Directus: duas coleções novas
+  (`lancamentos_financeiros` e `orcamento_categorias`) com permissão restrita a um papel novo
+  "Tesouraria" (nunca "Public", diferente de toda coleção de conteúdo do site), e montar o
+  dashboard em **Directus Insights** — recurso nativo já testado e aprovado no plano gratuito atual
+  para o módulo de eventos, cobrindo total por período, despesa por categoria e orçado vs.
+  realizado sem nenhum código novo. O único código que valeria a pena construir é um gerador de PDF
+  de prestação de contas (reaproveitando o mesmo `jsPDF` já usado no fechamento de evento), restrito
+  por login como `painel-eventos/`, que só lê os totais agregados e monta o relatório pra publicar
+  em `/transparencia/` — sem nome de doador, mesmo princípio de dado agregado já usado nos eventos.
+  Um dashboard customizado completo direto no navegador foi avaliado e **não recomendado**: dado
+  financeiro é sensível demais pra repetir o padrão de token em `sessionStorage` usado em dado
+  operacional de evento.
+
+- **Fase 17 — agendamento (visita pastoral)**: hoje "Visita pastoral" é só mais uma opção do
+  `&lt;select&gt;` de assunto em `/contato/`, sem nenhum campo de preferência de horário — a pesquisa
+  mostra que sites de referência não usam calendário de disponibilidade em tempo real pra isso
+  (sessão pastoral sempre passa por triagem humana antes de confirmar), então o valor real está em
+  melhorar o formulário existente, não em construir um sistema de agenda: acrescentar um campo de
+  "melhores dias/turnos pra contato" e "prefere presencial ou por telefone/vídeo", no mesmo molde
+  já construído pro "Pedido de oração", reaproveitando a mesma coleção `contato_mensagens` (sem
+  coleção nova). Aproveitar pra adicionar também o consentimento específico de dado sensível
+  planejado na Fase 7 (LGPD), já que o motivo de uma visita pastoral pode revelar informação
+  sensível sem a pessoa perceber que está compartilhando algo delicado num campo de texto livre.
+
+**Nada deste plano foi construído ainda** (fases 0 a 17, exceto o app instalável da Fase 13, que já
 existia). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
@@ -1489,9 +1521,35 @@ novo sem necessidade.
 - **Aniversariantes do mês** — envolveria coletar e expor data de nascimento de membros de várias
   congregações — dado sensível demais pra pouco benefício.
 - **Escala de trabalho/voluntários** — já existe um sistema de gestão de membros usado pela
-  igreja com essa função, mais completo do que valeria a pena reconstruir aqui do zero.
+  igreja com essa função, mais completo do que valeria a pena reconstruir aqui do zero. Pesquisa
+  posterior confirmou o mesmo achado por outro ângulo: o padrão de mercado pra escala de louvor/
+  mídia/recepção é reaproveitar o próprio sistema de gestão de membros da organização, e a causa
+  mais comum de abandono desse tipo de ferramenta não é falta de recurso técnico, é falta de dono
+  do processo — um sistema novo no site sofreria do mesmo problema, só que sem o suporte pronto que
+  o sistema já usado tem. Só reconsiderar se ficar confirmado que esse sistema não cobre escala de
+  serviço de verdade (não só cadastro de membro).
 - **Área "Batismo/Casamento/Dedicação de crianças"** — mesma razão: já existe no sistema interno
   de gestão de membros usado pela igreja, não faz sentido duplicar aqui.
+- **Diretório/cadastro privado de membros no site** — pesquisado e descartado pelo mesmo motivo das
+  duas ideias acima (já existe um sistema de gestão de membros em uso, mais completo). Manter um
+  segundo cadastro de pessoa no site institucional criaria dado sensível duplicado (afiliação
+  religiosa é dado sensível pela LGPD mesmo entre membros da própria comunidade) sob duas
+  superfícies diferentes de vazamento, sem nenhum ganho de funcionalidade sobre o que já existe.
+- **Módulo completo de Escola Bíblica Dominical (turma, professor, currículo, matrícula)** —
+  pesquisado e descartado: é uma estrutura de dado recorrente (toda semana, não um cadastro
+  estático) que precisa de manutenção contínua por professores voluntários — maior risco de
+  abandono que qualquer outra ideia já rejeitada neste documento, porque o problema se repete
+  semanalmente em vez de uma vez só. Se um dia a dor real e específica for só controlar presença
+  (não currículo nem matrícula), o check-in de eventos já testado (`checkin/[slug].astro`) dá a
+  base técnica pra um experimento pequeno — mas só depois de confirmar que essa dor existe de
+  verdade, não preventivamente.
+- **Sistema de reserva de espaço/salão com calendário de disponibilidade em tempo real** —
+  avaliado e adiado: verificar conflito de horário automaticamente exige lógica que o Directus
+  gratuito não resolve nativamente (mesma limitação de "sem filtro condicional" já documentada
+  noutra parte deste README), e o volume de pedidos numa igreja deste porte provavelmente não
+  justifica o esforço. Só reconsiderar se houver reclamação real de sobreposição de horário — nesse
+  caso, a opção de menor esforço é embutir (via iframe, como já é feito com o mapa em `/contato/`)
+  uma agenda compartilhada gratuita, em vez de construir algo customizado.
 - **Multilíngue (PT/EN/ES)** — a igreja não recebe público de outros idiomas com frequência que
   justifique manter traduções; o tradutor automático do navegador já cobre o caso raro.
 - **Exportar lista de inscritos (CSV/Excel)** — decidido não construir: gerar um arquivo solto de
