@@ -121,6 +121,7 @@ export function churchStructuredData(
   sedeSchedule: ProgramacaoItem[],
   siteUrl: string,
   siteName: string,
+  socialUrls: string[] = [],
 ) {
   const openingHoursSpecification = sedeSchedule
     .map((item) => {
@@ -153,5 +154,8 @@ export function churchStructuredData(
     },
     ...(config.phone && { telephone: config.phone }),
     ...(openingHoursSpecification.length > 0 && { openingHoursSpecification }),
+    // Ajuda o Google a ligar essa entidade aos perfis de rede social —
+    // um dos sinais usados pra montar o "card" de identidade na busca.
+    ...(socialUrls.length > 0 && { sameAs: socialUrls }),
   };
 }
