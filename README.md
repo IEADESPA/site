@@ -499,6 +499,16 @@ uma plataforma de eventos especializada de terceiros**, apontando o já existent
          inline, sem sair da página. Testado de ponta a ponta (Playwright, mockando as respostas
          do Directus): criar evento, carregar e editar campos, gerar slug, salvar, adicionar
          pergunta, editá-la, excluí-la.
+         - **Reorganizado em abas** conforme o editor foi ganhando módulos (perguntas de
+           inscrição, pesquisa pós-evento, encerrar, excluir) e a página ficou comprida demais
+           pra rolar: "Dados do evento" / "Perguntas de inscrição" / "Pesquisa pós-evento" /
+           "Encerrar / Excluir", com botões no topo — cada módulo isolado, só um visível por vez.
+           Puramente visual (troca de aba não recarrega nada, cada aba já tinha seus próprios
+           dados carregados); perguntas de inscrição e da pesquisa ganharam listas e formulários
+           de "+ Nova pergunta" **separados**, cada um já fixando o momento certo (não precisa
+           mais escolher "quando perguntar" ao criar — só ao mover uma pergunta existente de um
+           módulo pro outro). Testado de ponta a ponta: troca de aba mostra o painel certo e
+           esconde os outros, pergunta nova cai na lista do módulo certo sem afetar o outro.
       3. [x] **Inscritos, pagamento e check-in reunidos numa única tela** —
          `/painel-eventos/evento/inscritos/?id=<id>`, linkado por um botão "Ver inscritos" no
          editor. Pesquisado como plataformas de eventos profissionais organizam essa tela antes de desenhar
