@@ -189,7 +189,14 @@ const structuredData = startDate
             <h2 id="inscricao-heading" class="section-title">Inscrição</h2>
 
             <ul class="mt-3 grid gap-1 text-sm text-muted-foreground">
-              {event.vagas_limite && <li><strong class="text-foreground">Vagas limitadas:</strong> {event.vagas_limite}</li>}
+              {
+                event.vagas_limite && (
+                  <li>
+                    <strong class="text-foreground">Vagas limitadas:</strong> {event.vagas_limite}{" "}
+                    <span data-vagas-restantes></span>
+                  </li>
+                )
+              }
               {event.inscricoes_ate && (
                 <li><strong class="text-foreground">Inscrições até:</strong> {dateFormatter.format(new Date(event.inscricoes_ate))}</li>
               )}
@@ -278,7 +285,7 @@ const structuredData = startDate
 
   {
     event.aceita_inscricao && inscricaoAberta && (
-      <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
+      <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, vagasLimite: event.vagas_limite }}>
         // Sem caracteres ambíguos (0/O, 1/I/L) — pra ser fácil de digitar de
         // volta na portaria no dia do evento.
         const ALFABETO_CODIGO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -286,6 +293,25 @@ const structuredData = startDate
           const bytes = new Uint8Array(tamanho);
           crypto.getRandomValues(bytes);
           return Array.from(bytes, (b) => ALFABETO_CODIGO[b % ALFABETO_CODIGO.length]).join("");
+        }
+
+        async function contarConfirmados(eventoId) {
+          const res = await fetch(
+            `${directusUrl}/items/inscricoes_eventos?aggregate[count]=id&filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][aguardando_vaga][_eq]=false`,
+          );
+          const json = await res.json();
+          return Number(json.data?.[0]?.count?.id ?? 0);
+        }
+
+        const vagasRestantesEl = document.querySelector("[data-vagas-restantes]");
+        if (vagasRestantesEl && vagasLimite) {
+          const eventoIdVagas = Number(document.querySelector("[data-inscricao-form]")?.dataset.eventoId);
+          if (eventoIdVagas) {
+            contarConfirmados(eventoIdVagas).then((confirmados) => {
+              const restantes = Math.max(vagasLimite - confirmados, 0);
+              vagasRestantesEl.textContent = restantes > 0 ? `(${restantes} restantes)` : "(esgotadas — lista de espera)";
+            });
+          }
         }
 
         document.querySelectorAll("[data-inscricao-form]").forEach((form) => {
@@ -301,6 +327,12 @@ const structuredData = startDate
             if (status) status.textContent = "Enviando…";
 
             try {
+              let aguardandoVaga = false;
+              if (vagasLimite) {
+                const confirmados = await contarConfirmados(eventoId);
+                aguardandoVaga = confirmados >= vagasLimite;
+              }
+
               const inscricaoRes = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -309,6 +341,7 @@ const structuredData = startDate
                   nome: data.get("nome"),
                   telefone: data.get("telefone"),
                   codigo,
+                  aguardando_vaga: aguardandoVaga,
                 }),
               });
               if (!inscricaoRes.ok) throw new Error("falha ao criar inscrição");
@@ -345,7 +378,9 @@ const structuredData = startDate
               );
 
               if (status) {
-                status.innerHTML = `Inscrição confirmada! Seu código de check-in é <strong>${codigo}</strong> — anote ou tire um print, você vai usar na entrada do evento.`;
+                status.innerHTML = aguardandoVaga
+                  ? `Vagas esgotadas no momento — você está na <strong>lista de espera</strong>. Seu código é <strong>${codigo}</strong>; guarde-o, porque se abrir vaga sua inscrição é confirmada automaticamente com esse mesmo código.`
+                  : `Inscrição confirmada! Seu código de check-in é <strong>${codigo}</strong> — anote ou tire um print, você vai usar na entrada do evento.`;
               }
               form.reset();
             } catch {

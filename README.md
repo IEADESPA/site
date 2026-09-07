@@ -544,11 +544,23 @@ decidir o que vale a pena:
       arquivamento voltam zerados** (é uma nova edição do evento, com data própria a definir).
       Testado de ponta a ponta: configuração completa e perguntas replicadas corretamente na
       nova cópia.
-- [ ] **Limite de vagas com trava automática** — hoje `vagas_limite` é só informativo (mostra o
-      número, mas não impede inscrição além dele); poderia fechar o formulário sozinho ao
-      atingir o limite, do mesmo jeito que `inscricoes_ate` já fecha por data.
-- [ ] **Lista de espera** — quando as vagas esgotarem, em vez de simplesmente recusar, oferecer
-      entrar numa lista de espera (mesmo formulário, marcado como "aguardando vaga").
+- [x] **Limite de vagas com trava automática + lista de espera** — construídos juntos, por serem
+      o mesmo mecanismo. `vagas_limite` deixou de ser só informativo: em branco = ilimitado (como
+      sempre foi); preenchido = trava de verdade. O formulário público conta quantas inscrições
+      **confirmadas** já existem antes de criar uma nova — dentro do limite, confirma normal;
+      no limite ou além, a pessoa ainda se inscreve, mas marcada como **lista de espera** (novo
+      campo `aguardando_vaga`), com aviso claro na hora e o mesmo código de check-in de sempre.
+      A página do evento mostra "(N restantes)" ao lado do limite. No painel, aumentar o limite
+      (ou apagá-lo) e salvar **promove sozinho** quem está na lista de espera, do mais antigo pro
+      mais novo, até preencher as vagas novas — sem precisar reabrir inscrição pra cada um.
+      Tela de inscritos ganhou cartão, filtro e selo próprios pra "Lista de espera", com opção de
+      promover manualmente clicando no selo.
+      **Bug real encontrado e corrigido nesse processo**: o campo `codigo` nunca esteve liberado
+      na permissão pública de **criação** de `inscricoes_eventos` — ou seja, **toda inscrição
+      pública real vinha falhando** com erro 403 (só não foi percebido porque, até aqui, todo
+      teste de ponta a ponta usou o token de administrador, que ignora permissões). Corrigido
+      junto com esta entrega; testado com dados reais direto na API (não só mockado) pra garantir
+      que o fluxo completo — confirmar, esperar, promover — funciona de verdade em produção.
 - [ ] **Exportar lista de inscritos (CSV/Excel)** — pra quem prefere abrir numa planilha em vez
       de só ver na tela do painel; diferente do PDF resumido já existente pra eventos simples.
 - [ ] **Crachá/etiqueta de identificação em lote** — gerar um PDF com uma etiqueta por inscrito

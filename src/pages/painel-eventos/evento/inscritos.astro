@@ -30,7 +30,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       </div>
 
       <div hidden data-painel-conteudo>
-        <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-cartoes-stats>
+        <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-cartoes-stats>
           <div class="stat-card">
             <p class="stat-valor" data-stat="total">0</p>
             <p class="stat-label">Inscritos</p>
@@ -42,6 +42,10 @@ const allPosts = visiblePosts(await getAllMensagens());
           <div class="stat-card">
             <p class="stat-valor" data-stat="presentes">0</p>
             <p class="stat-label">Presentes</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-valor" data-stat="espera">0</p>
+            <p class="stat-label">Lista de espera</p>
           </div>
           <div class="stat-card">
             <p class="stat-valor" data-stat="arrecadado">R$ 0</p>
@@ -57,6 +61,7 @@ const allPosts = visiblePosts(await getAllMensagens());
             <button type="button" class="filtro-chip" data-filtro="nao-pagos">Não pagos</button>
             <button type="button" class="filtro-chip" data-filtro="presentes">Presentes</button>
             <button type="button" class="filtro-chip" data-filtro="ausentes">Ausentes</button>
+            <button type="button" class="filtro-chip" data-filtro="espera">Lista de espera</button>
           </div>
         </div>
 
@@ -85,11 +90,12 @@ const allPosts = visiblePosts(await getAllMensagens());
                 <th>Valor (R$)</th>
                 <th>Pago</th>
                 <th>Presente</th>
+                <th>Espera</th>
                 <th></th>
               </tr>
             </thead>
             <tbody data-inscritos-corpo>
-              <tr><td colspan="7" class="text-sm text-muted-foreground">Carregando inscritos…</td></tr>
+              <tr><td colspan="8" class="text-sm text-muted-foreground">Carregando inscritos…</td></tr>
             </tbody>
           </table>
         </div>
@@ -114,6 +120,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       pago: boolean;
       valor: number | null;
       presente: boolean;
+      aguardando_vaga: boolean;
     }
 
     interface Pergunta {
@@ -217,11 +224,13 @@ const allPosts = visiblePosts(await getAllMensagens());
       const total = inscricoes.length;
       const pagos = inscricoes.filter((i) => i.pago);
       const presentes = inscricoes.filter((i) => i.presente).length;
+      const espera = inscricoes.filter((i) => i.aguardando_vaga).length;
       const arrecadado = pagos.reduce((soma, i) => soma + (Number(i.valor) || 0), 0);
 
       document.querySelector('[data-stat="total"]')!.textContent = String(total);
       document.querySelector('[data-stat="pagos"]')!.textContent = String(pagos.length);
       document.querySelector('[data-stat="presentes"]')!.textContent = String(presentes);
+      document.querySelector('[data-stat="espera"]')!.textContent = String(espera);
       document.querySelector('[data-stat="arrecadado"]')!.textContent = `R$ ${arrecadado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
     }
 
@@ -231,6 +240,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         if (termo && !i.nome.toLowerCase().includes(termo) && !(i.telefone ?? "").includes(termo)) return false;
         if (filtroAtivo === "pagos") return i.pago;
         if (filtroAtivo === "nao-pagos") return !i.pago;
+        if (filtroAtivo === "espera") return i.aguardando_vaga;
         if (filtroAtivo === "presentes") return i.presente;
         if (filtroAtivo === "ausentes") return !i.presente;
         return true;
@@ -269,7 +279,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       const visiveis = filtrar(inscricoes);
 
       if (!visiveis.length) {
-        corpoTabela.innerHTML = `<tr><td colspan="7" class="text-sm text-muted-foreground">Nenhum inscrito encontrado.</td></tr>`;
+        corpoTabela.innerHTML = `<tr><td colspan="8" class="text-sm text-muted-foreground">Nenhum inscrito encontrado.</td></tr>`;
         return;
       }
 
@@ -283,6 +293,11 @@ const allPosts = visiblePosts(await getAllMensagens());
               <td><input type="number" step="0.01" class="field campo-inline valor-input" value="${i.valor ?? ""}" data-campo="valor" /></td>
               <td><button type="button" class="badge-toggle ${i.pago ? "is-on" : ""}" data-acao="pago">${i.pago ? "Pago" : "Pendente"}</button></td>
               <td><button type="button" class="badge-toggle ${i.presente ? "is-on" : ""}" data-acao="presente">${i.presente ? "Presente" : "Ausente"}</button></td>
+              <td>${
+                i.aguardando_vaga
+                  ? `<button type="button" class="badge-toggle badge-espera" data-acao="espera">Na espera</button>`
+                  : `<span class="text-xs text-muted-foreground">—</span>`
+              }</td>
               <td class="whitespace-nowrap acoes-cel">
                 <button type="button" class="link-sweep text-accent text-sm font-semibold" data-acao="salvar">Salvar</button>
                 <button type="button" class="link-sweep text-accent text-sm font-semibold" data-acao="respostas">Respostas</button>
@@ -290,7 +305,7 @@ const allPosts = visiblePosts(await getAllMensagens());
               </td>
             </tr>
             <tr class="linha-respostas" data-linha-respostas="${i.id}" hidden>
-              <td colspan="7">${respostasHtml(i.id)}</td>
+              <td colspan="8">${respostasHtml(i.id)}</td>
             </tr>
           `,
         )
@@ -390,8 +405,8 @@ const allPosts = visiblePosts(await getAllMensagens());
       const inscricao = inscricoes.find((i) => i.id === id);
       if (!inscricao) return;
 
-      if (target.matches('[data-acao="pago"]') || target.matches('[data-acao="presente"]')) {
-        const campo = target.dataset.acao === "pago" ? "pago" : "presente";
+      if (target.matches('[data-acao="pago"]') || target.matches('[data-acao="presente"]') || target.matches('[data-acao="espera"]')) {
+        const campo = target.dataset.acao === "pago" ? "pago" : target.dataset.acao === "presente" ? "presente" : "aguardando_vaga";
         const novoValor = !inscricao[campo];
         await fetch(`${directusUrl}/items/inscricoes_eventos/${id}`, {
           method: "PATCH",
@@ -683,6 +698,12 @@ const allPosts = visiblePosts(await getAllMensagens());
       border-color: color-mix(in srgb, #2ecc71 70%, var(--border));
       background: color-mix(in srgb, #2ecc71 22%, var(--background));
       color: #1a7a3d;
+    }
+
+    .badge-espera {
+      border-color: color-mix(in srgb, #e0a52b 70%, var(--border));
+      background: color-mix(in srgb, #e0a52b 22%, var(--background));
+      color: #8a6416;
     }
 
     .acoes-cel {

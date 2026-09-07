@@ -120,14 +120,20 @@ const tipoPerguntaOpcoes = [
 
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="grid gap-2">
-            <label class="text-sm font-semibold" for="f-vagas">Vagas (informativo, opcional)</label>
-            <input id="f-vagas" type="number" min="0" class="field" />
+            <label class="text-sm font-semibold" for="f-vagas">Limite de vagas (opcional)</label>
+            <input id="f-vagas" type="number" min="0" class="field" placeholder="Deixe em branco = ilimitado" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-semibold" for="f-inscricoes-ate">Inscrições até</label>
             <input id="f-inscricoes-ate" type="date" class="field" />
           </div>
         </div>
+        <p class="text-xs text-muted-foreground">
+          Com limite preenchido, o formulário público trava de verdade — quem se inscrever depois
+          das vagas esgotarem entra na lista de espera automaticamente. Se você aumentar o limite
+          (ou apagá-lo, deixando ilimitado) e salvar, quem estiver na lista de espera é confirmado
+          sozinho, do mais antigo pro mais novo, até preencher as vagas novas.
+        </p>
 
         <fieldset class="grid gap-2">
           <legend class="text-sm font-semibold">Faixas de valor (opcional)</legend>
@@ -642,13 +648,52 @@ const tipoPerguntaOpcoes = [
         if (!statusEl) return;
         statusEl.textContent = "Salvando…";
         try {
+          const dadosForm = lerFormulario();
+          const vagasAntes = evento.vagas_limite;
           const res = await fetch(`${directusUrl}/items/eventos/${eventoId}`, {
             method: "PATCH",
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify(lerFormulario()),
+            body: JSON.stringify(dadosForm),
           });
           if (!res.ok) throw new Error("falha ao salvar");
-          statusEl.textContent = "✅ Evento salvo!";
+          evento.vagas_limite = dadosForm.vagas_limite;
+
+          // Se o limite de vagas aumentou (ou virou ilimitado), promove quem
+          // está na lista de espera — mais antigo primeiro — até preencher
+          // as vagas novas.
+          let promovidos = 0;
+          const limiteNovo = dadosForm.vagas_limite;
+          const abriuMaisVagas = limiteNovo === null || (vagasAntes !== null && limiteNovo > vagasAntes);
+          if (abriuMaisVagas) {
+            const resConfirmados = await fetch(
+              `${directusUrl}/items/inscricoes_eventos?aggregate[count]=id&filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][aguardando_vaga][_eq]=false`,
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+            const confirmados = Number((await resConfirmados.json()).data?.[0]?.count?.id ?? 0);
+            const vagasNovas = limiteNovo === null ? Infinity : limiteNovo - confirmados;
+
+            if (vagasNovas > 0) {
+              const resEspera = await fetch(
+                `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][aguardando_vaga][_eq]=true&sort=date_created&fields=id&limit=${
+                  vagasNovas === Infinity ? -1 : vagasNovas
+                }`,
+                { headers: { Authorization: `Bearer ${token}` } },
+              );
+              const emEspera: { id: number }[] = (await resEspera.json()).data ?? [];
+              if (emEspera.length) {
+                await fetch(`${directusUrl}/items/inscricoes_eventos`, {
+                  method: "PATCH",
+                  headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                  body: JSON.stringify({ keys: emEspera.map((i) => i.id), data: { aguardando_vaga: false } }),
+                });
+                promovidos = emEspera.length;
+              }
+            }
+          }
+
+          statusEl.textContent = promovidos
+            ? `✅ Evento salvo! ${promovidos} pessoa${promovidos === 1 ? "" : "s"} da lista de espera foi${promovidos === 1 ? "" : "ram"} confirmada${promovidos === 1 ? "" : "s"}.`
+            : "✅ Evento salvo!";
         } catch {
           statusEl.textContent = "Não foi possível salvar agora.";
         }
