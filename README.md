@@ -513,6 +513,37 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
          (quantas pessoas participaram, quem ministrou, fotos) para a aba de notícias/relatórios
          do site — sem valor em dinheiro, que nunca é publicado.
 
+#### Mais personalizações pesquisadas (aguardando revisão)
+
+Pesquisado o que plataformas de eventos (incluindo a e-inscricao.com, feita especificamente pra
+eventos cristãos no Brasil) oferecem além do que já construímos — nada disso foi construído
+ainda, é só a lista pra decidir o que vale a pena:
+
+- [ ] **Duplicar evento** — clonar um evento existente (título, campos, perguntas) como ponto de
+      partida pra um evento parecido no futuro, em vez de recriar tudo do zero.
+- [ ] **Limite de vagas com trava automática** — hoje `vagas_limite` é só informativo (mostra o
+      número, mas não impede inscrição além dele); poderia fechar o formulário sozinho ao
+      atingir o limite, do mesmo jeito que `inscricoes_ate` já fecha por data.
+- [ ] **Lista de espera** — quando as vagas esgotarem, em vez de simplesmente recusar, oferecer
+      entrar numa lista de espera (mesmo formulário, marcado como "aguardando vaga").
+- [ ] **Exportar lista de inscritos (CSV/Excel)** — pra quem prefere abrir numa planilha em vez
+      de só ver na tela do painel; diferente do PDF resumido já existente pra eventos simples.
+- [ ] **Crachá/etiqueta de identificação em lote** — gerar um PDF com uma etiqueta por inscrito
+      (nome grande, congregação, código), pra imprimir e cortar no dia do evento — reaproveitaria
+      a mesma técnica já usada no certificado e no PDF de eventos (`jsPDF`).
+- [ ] **Link rápido de WhatsApp por inscrito** — ao lado do telefone, na tela de inscritos, um
+      link `wa.me/55...` pra equipe chamar a pessoa direto, sem copiar/colar o número.
+- [ ] **Gráfico visual de uma pergunta de seleção** — ex.: quantas pessoas escolheram cada opção
+      de "Qual sua congregação?", em barra/pizza — hoje só dá pra ver resposta por resposta,
+      pessoa por pessoa.
+- [ ] **Lembrete automático só pra quem se inscreveu** — hoje a notificação push (já existe) é
+      genérica, pra quem ativou avisos de qualquer evento; poderia avisar especificamente quem
+      está inscrito naquele evento, mais perto da data.
+
+**Fora do escopo, por decisão já tomada antes** (não incluído acima de propósito): cupom de
+desconto com código de verdade, e qualquer coisa que exija processamento real de pagamento —
+ambos exigiriam uma plataforma de pagamento de verdade, o que já foi avaliado e descartado.
+
 ### Ideias rejeitadas
 
 Avaliadas e descartadas por decisão explícita — registradas aqui só para não serem propostas de
