@@ -146,6 +146,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       valor: number | null;
       presente: boolean;
       aguardando_vaga: boolean;
+      cupom_usado: string | null;
     }
 
     interface Pergunta {
@@ -409,7 +410,10 @@ const allPosts = visiblePosts(await getAllMensagens());
               <td><input type="text" class="field campo-inline" value="${escapeHtml(i.nome)}" data-campo="nome" /></td>
               <td><input type="text" class="field campo-inline" value="${escapeHtml(i.telefone ?? "")}" data-campo="telefone" /></td>
               <td class="codigo-cel">${escapeHtml(i.codigo ?? "—")}</td>
-              <td><input type="number" step="0.01" class="field campo-inline valor-input" value="${i.valor ?? ""}" data-campo="valor" /></td>
+              <td>
+                <input type="number" step="0.01" class="field campo-inline valor-input" value="${i.valor ?? ""}" data-campo="valor" />
+                ${i.cupom_usado ? `<p class="cupom-nota" title="Cupom de desconto usado">🎟️ ${escapeHtml(i.cupom_usado)}</p>` : ""}
+              </td>
               <td><button type="button" class="badge-toggle ${i.pago ? "is-on" : ""}" data-acao="pago">${i.pago ? "Pago" : "Pendente"}</button></td>
               <td><button type="button" class="badge-toggle ${i.presente ? "is-on" : ""}" data-acao="presente">${i.presente ? "Presente" : "Ausente"}</button></td>
               <td>${
@@ -836,6 +840,13 @@ const allPosts = visiblePosts(await getAllMensagens());
 
     .valor-input {
       min-width: 5.5rem;
+    }
+
+    .cupom-nota {
+      margin: 0.25rem 0 0;
+      font-size: 0.75rem;
+      color: var(--accent-strong);
+      white-space: nowrap;
     }
 
     .codigo-cel {

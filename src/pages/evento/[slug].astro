@@ -327,6 +327,16 @@ const structuredData = startDate
                   )
                 }
 
+                <div data-cupom-bloco>
+                  <button type="button" class="link-sweep text-sm font-semibold text-accent" data-cupom-toggle>
+                    Tem um cupom de desconto?
+                  </button>
+                  <div class="grid gap-2 mt-2" data-cupom-campo hidden>
+                    <input type="text" class="field" placeholder="Código do cupom" data-cupom-input autocapitalize="characters" />
+                    <p class="text-xs text-muted-foreground" data-cupom-status></p>
+                  </div>
+                </div>
+
                 {
                   event.permite_inscricao_grupo && (
                     <div class="grid gap-2" data-grupo-bloco>
@@ -484,6 +494,34 @@ const structuredData = startDate
         // Inscrição em grupo: cada linha vira uma pessoa própria, com seu
         // próprio código de check-in — só o nome muda, telefone e respostas
         // às perguntas do evento são compartilhados pelo grupo todo.
+        document.querySelectorAll("[data-cupom-bloco]").forEach((bloco) => {
+          const toggle = bloco.querySelector("[data-cupom-toggle]");
+          const campo = bloco.querySelector("[data-cupom-campo]");
+          toggle?.addEventListener("click", () => {
+            if (campo) campo.hidden = !campo.hidden;
+          });
+        });
+
+        // Desconta uma faixa/valor base (ou 0, se o evento não tem faixa de
+        // valor) segundo um cupom já validado — nunca deixa o valor negativo.
+        function aplicarDesconto(valorBase, cupom) {
+          const base = valorBase ?? 0;
+          if (cupom.tipo === "fixo") return Math.max(0, base - Number(cupom.valor));
+          return Math.max(0, base - (base * Number(cupom.valor)) / 100);
+        }
+
+        async function buscarCupomValido(directusUrl, eventoId, codigo) {
+          const res = await fetch(
+            `${directusUrl}/items/cupons_desconto?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][codigo][_eq]=${encodeURIComponent(codigo)}`,
+          );
+          const cupom = (await res.json()).data?.[0];
+          if (!cupom) return { erro: "Cupom não encontrado." };
+          if (!cupom.ativo) return { erro: "Esse cupom não está mais ativo." };
+          if (cupom.valido_ate && new Date(`${cupom.valido_ate}T23:59:59`) < new Date()) return { erro: "Esse cupom expirou." };
+          if (cupom.limite_usos !== null && cupom.usos >= cupom.limite_usos) return { erro: "Esse cupom já atingiu o limite de usos." };
+          return { cupom };
+        }
+
         document.querySelectorAll("[data-grupo-bloco]").forEach((bloco) => {
           const toggle = bloco.querySelector("[data-grupo-toggle]");
           const nomesWrap = bloco.querySelector("[data-grupo-nomes]");
@@ -520,6 +558,9 @@ const structuredData = startDate
             const eventoId = Number(form.dataset.eventoId);
             const faixaEl = form.querySelector("#inscricao-faixa");
             const valorFaixa = faixaEl?.value ? Number(faixaEl.value) : null;
+            const cupomInput = form.querySelector("[data-cupom-input]");
+            const cupomStatusEl = form.querySelector("[data-cupom-status]");
+            const codigoCupom = cupomInput?.value.trim().toUpperCase();
 
             // Nome principal + nomes extras do grupo (se a pessoa marcou a
             // opção e preencheu alguma linha) — cada um vira uma pessoa
@@ -531,6 +572,22 @@ const structuredData = startDate
 
             if (button) button.disabled = true;
             if (status) status.textContent = nomes.length > 1 ? "Enviando inscrições…" : "Enviando…";
+            if (cupomStatusEl) cupomStatusEl.textContent = "";
+
+            // Cupom é opcional e discreto — se o código não bater com nada
+            // válido, a inscrição segue sem desconto, sem travar ninguém.
+            let cupom = null;
+            let usosRestantesCupom = Infinity;
+            if (codigoCupom) {
+              const resultado = await buscarCupomValido(directusUrl, eventoId, codigoCupom);
+              if (resultado.cupom) {
+                cupom = resultado.cupom;
+                usosRestantesCupom = cupom.limite_usos === null ? Infinity : cupom.limite_usos - cupom.usos;
+                if (cupomStatusEl) cupomStatusEl.textContent = "✅ Cupom aplicado.";
+              } else if (cupomStatusEl) {
+                cupomStatusEl.textContent = resultado.erro;
+              }
+            }
 
             try {
               let confirmados = vagasLimite ? await contarConfirmados(eventoId) : 0;
@@ -555,12 +612,26 @@ const structuredData = startDate
               });
 
               const resultados = [];
+              let usosConsumidosCupom = 0;
               for (const nome of nomes) {
                 const codigo = gerarCodigo();
                 let aguardandoVaga = false;
                 if (vagasLimite) {
                   aguardandoVaga = confirmados >= vagasLimite;
                   if (!aguardandoVaga) confirmados += 1;
+                }
+
+                // Desconto aplicado pessoa por pessoa — se o cupom tiver
+                // limite de usos, os primeiros da fila levam o desconto, o
+                // resto paga o valor cheio (mesmo espírito da lista de
+                // espera: não trava a inscrição, só o que ainda cabe).
+                let valorFinal = valorFaixa;
+                let cupomAplicado = null;
+                if (cupom && usosRestantesCupom > 0) {
+                  valorFinal = aplicarDesconto(valorFaixa, cupom);
+                  cupomAplicado = cupom.codigo;
+                  usosRestantesCupom -= 1;
+                  usosConsumidosCupom += 1;
                 }
 
                 const inscricaoRes = await fetch(`${directusUrl}/items/inscricoes_eventos`, {
@@ -571,7 +642,8 @@ const structuredData = startDate
                     nome,
                     telefone: data.get("telefone"),
                     codigo,
-                    valor: valorFaixa,
+                    valor: valorFinal,
+                    cupom_usado: cupomAplicado,
                     aguardando_vaga: aguardandoVaga,
                   }),
                 });
@@ -590,6 +662,14 @@ const structuredData = startDate
                 );
 
                 resultados.push({ nome, codigo, aguardandoVaga, inscricaoId });
+              }
+
+              if (cupom && usosConsumidosCupom > 0) {
+                await fetch(`${directusUrl}/items/cupons_desconto/${cupom.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ usos: cupom.usos + usosConsumidosCupom }),
+                });
               }
 
               if (status) {

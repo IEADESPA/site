@@ -679,6 +679,26 @@ de igreja em geral):
         Testado de ponta a ponta contra o Directus real (sem token): grupo de 3 pessoas com limite
         de 2 vagas confirma as duas primeiras e coloca a terceira na lista de espera, todas com o
         valor da faixa escolhida e o mesmo telefone.
+- [x] **Cupons de desconto** — sem processador de pagamento nenhum (Mercado Pago etc.), continua
+      tudo manual: o cupom só ajusta o `valor` que fica gravado na inscrição, pra equipe saber
+      quanto cobrar de verdade na hora de confirmar o pagamento (o mesmo fluxo manual que já
+      existia). Nova coleção `cupons_desconto`, uma aba própria no editor do evento ("Cupons de
+      desconto"): código, tipo (percentual ou valor fixo em R$), limite de usos (opcional, sem
+      limite se em branco), validade (opcional, sem prazo se em branco) e ativo/inativo.
+      - **De propósito, sem nenhuma vitrine**: não aparece lista de cupons em lugar nenhum público
+        — só um link discreto "Tem um cupom de desconto?" no formulário de inscrição, que revela
+        um campo de texto. Só quem já sabe o código (recebeu da diretoria) consegue usar.
+      - **Desconto aplicado sobre a faixa de valor escolhida** (ou sobre R$0, se o evento não tem
+        faixa de valor — nesse caso não tem o que descontar). Em inscrição de grupo, funciona
+        pessoa por pessoa: se o cupom tiver limite de usos e o grupo for maior que o restante,
+        os primeiros da lista levam o desconto e o resto paga o valor cheio — mesmo espírito já
+        usado na lista de espera de vagas.
+      - Fica registrado qual cupom cada inscrito usou (aparece como uma notinha na tela de
+        inscritos, ao lado do valor) — assim a equipe vê exatamente quem ganhou desconto e de
+        qual cupom, na hora de conferir o pagamento manual.
+      Testado de ponta a ponta contra o Directus real (sem token): leitura do cupom por código,
+      atualização do contador de usos (e confirmado que só esse campo é editável publicamente,
+      nada mais), e o cenário de grupo com limite de uso batendo no meio da lista.
 - [x] **Agenda interna do evento (multi-sessão)** — nova coleção `sessoes_evento` (título,
       palestrante, dia, horário início/fim, local, descrição, ordem), gerenciada numa aba própria
       do editor ("Agenda (sessões)"), mesmo padrão de cartões de perguntas/faixas de valor.

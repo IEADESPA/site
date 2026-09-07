@@ -61,6 +61,7 @@ const tipoPerguntaOpcoes = [
         <button type="button" class="tab-btn" data-tab="pesquisa">Pesquisa pós-evento</button>
         <button type="button" class="tab-btn" data-tab="agenda">Agenda (sessões)</button>
         <button type="button" class="tab-btn" data-tab="historico">Histórico</button>
+        <button type="button" class="tab-btn" data-tab="cupons">Cupons de desconto</button>
         <button type="button" class="tab-btn" data-tab="avancado">Encerrar / Excluir</button>
       </div>
 
@@ -321,6 +322,44 @@ const tipoPerguntaOpcoes = [
       </section>
       </div>
 
+      <div data-tab-panel="cupons" hidden>
+      <section hidden class="mt-8" data-cupons-secao aria-labelledby="cupons-heading">
+        <h2 id="cupons-heading" class="section-title">Cupons de desconto</h2>
+        <p class="mt-2 text-sm text-muted-foreground">
+          Não existe processador de pagamento nenhum — isso aqui só registra que a pessoa ganhou
+          um desconto, pra a equipe saber quanto cobrar de verdade (manualmente) na hora de
+          confirmar o pagamento. Quem se inscrever digita o código no formulário público; não
+          aparece em nenhum lugar em destaque — só quem souber o código consegue usar.
+        </p>
+
+        <div class="mt-5 grid gap-3" data-cupons-lista></div>
+
+        <div class="mt-6 pergunta-card" data-cupom-novo>
+          <p class="text-sm font-semibold">+ Novo cupom</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <input type="text" class="field" placeholder="Código (ex.: DIRETORIA10)" data-novo-cupom-codigo />
+            <select class="field" data-novo-cupom-tipo>
+              <option value="percentual">Percentual (%)</option>
+              <option value="fixo">Valor fixo (R$)</option>
+            </select>
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <input type="number" step="0.01" min="0" class="field" placeholder="Valor do desconto" data-novo-cupom-valor />
+            <input type="number" min="1" class="field" placeholder="Limite de usos (opcional)" data-novo-cupom-limite />
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <input type="date" class="field" data-novo-cupom-validade title="Válido até (opcional)" />
+            <label class="flex items-center gap-2 text-sm whitespace-nowrap">
+              <input type="checkbox" data-novo-cupom-ativo checked /> Ativo
+            </label>
+          </div>
+          <div class="mt-3 flex items-center justify-end gap-3">
+            <button type="button" class="btn btn-outline" data-adicionar-cupom>Adicionar cupom</button>
+          </div>
+        </div>
+      </section>
+      </div>
+
       <div data-tab-panel="avancado" hidden>
       <div hidden class="mt-8 zona-encerrar" data-zona-encerrar>
         <p class="text-sm font-semibold">Encerrar evento</p>
@@ -397,6 +436,17 @@ const tipoPerguntaOpcoes = [
       momento: string;
     }
 
+    interface Cupom {
+      id: number;
+      codigo: string;
+      tipo: string;
+      valor: number;
+      limite_usos: number | null;
+      usos: number;
+      valido_ate: string | null;
+      ativo: boolean;
+    }
+
     interface Sessao {
       id: number;
       titulo: string;
@@ -427,6 +477,8 @@ const tipoPerguntaOpcoes = [
     const sessoesLista = document.querySelector<HTMLElement>("[data-sessoes-lista]");
     const historicoSecao = document.querySelector<HTMLElement>("[data-historico-secao]");
     const historicoConteudo = document.querySelector<HTMLElement>("[data-historico-conteudo]");
+    const cuponsSecao = document.querySelector<HTMLElement>("[data-cupons-secao]");
+    const cuponsLista = document.querySelector<HTMLElement>("[data-cupons-lista]");
     const perguntasListaInscricao = document.querySelector<HTMLElement>("[data-perguntas-lista-inscricao]");
     const perguntasListaPesquisa = document.querySelector<HTMLElement>("[data-perguntas-lista-pesquisa]");
 
@@ -676,6 +728,60 @@ const tipoPerguntaOpcoes = [
       };
     }
 
+    function cupomCardHtml(c: Cupom) {
+      const usoLabel = c.limite_usos ? `${c.usos} / ${c.limite_usos} usos` : `${c.usos} usos (sem limite)`;
+      return `
+        <div class="pergunta-card" data-cupom-id="${c.id}">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <input type="text" class="field" value="${escapeHtml(c.codigo)}" data-campo="codigo" placeholder="Código" />
+            <select class="field" data-campo="tipo">
+              <option value="percentual" ${c.tipo === "percentual" ? "selected" : ""}>Percentual (%)</option>
+              <option value="fixo" ${c.tipo === "fixo" ? "selected" : ""}>Valor fixo (R$)</option>
+            </select>
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <input type="number" step="0.01" min="0" class="field" value="${c.valor}" data-campo="valor" placeholder="Valor do desconto" />
+            <input type="number" min="1" class="field" value="${c.limite_usos ?? ""}" data-campo="limite_usos" placeholder="Limite de usos" />
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <input type="date" class="field" value="${c.valido_ate ?? ""}" data-campo="valido_ate" title="Válido até" />
+            <label class="flex items-center gap-2 text-sm whitespace-nowrap">
+              <input type="checkbox" data-campo="ativo" ${c.ativo ? "checked" : ""} /> Ativo
+            </label>
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <span class="text-xs text-muted-foreground">${usoLabel}</span>
+            <div class="flex gap-3">
+              <button type="button" class="btn btn-outline" data-salvar-cupom>Salvar</button>
+              <button type="button" class="btn btn-outline" data-excluir-cupom>Excluir</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function carregarCupons(token: string, id: number) {
+      if (!cuponsLista) return;
+      const res = await fetch(`${directusUrl}/items/cupons_desconto?filter[evento][_eq]=${id}&sort=-date_created&limit=-1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      const cupons: Cupom[] = json.data ?? [];
+      cuponsLista.innerHTML = cupons.map(cupomCardHtml).join("");
+    }
+
+    function lerCamposCupom(container: ParentNode) {
+      const campo = <T extends HTMLElement>(nome: string) => container.querySelector<T>(`[data-campo="${nome}"]`);
+      return {
+        codigo: campo<HTMLInputElement>("codigo")?.value.trim().toUpperCase() ?? "",
+        tipo: campo<HTMLSelectElement>("tipo")?.value || "percentual",
+        valor: Number(campo<HTMLInputElement>("valor")?.value || 0),
+        limite_usos: campo<HTMLInputElement>("limite_usos")?.value ? Number(campo<HTMLInputElement>("limite_usos")?.value) : null,
+        valido_ate: campo<HTMLInputElement>("valido_ate")?.value || null,
+        ativo: Boolean(campo<HTMLInputElement>("ativo")?.checked),
+      };
+    }
+
     // Anda pela cadeia de "evento_anterior" (que pode pular anos — não
     // presume periodicidade nenhuma) até achar o começo ou repetir um id.
     async function carregarHistorico(token: string, eventoAtual: Evento) {
@@ -792,6 +898,7 @@ const tipoPerguntaOpcoes = [
       if (perguntasSecaoPesquisa) perguntasSecaoPesquisa.hidden = false;
       if (agendaSecao) agendaSecao.hidden = false;
       if (historicoSecao) historicoSecao.hidden = false;
+      if (cuponsSecao) cuponsSecao.hidden = false;
       if (tabsBar) tabsBar.hidden = false;
 
       const zonaPerigo = document.querySelector<HTMLElement>("[data-zona-perigo]");
@@ -802,6 +909,7 @@ const tipoPerguntaOpcoes = [
       await carregarPerguntas(token, eventoIdNumero);
       await carregarSessoes(token, eventoIdNumero);
       await carregarHistorico(token, evento);
+      await carregarCupons(token, eventoIdNumero);
 
       document.querySelector("[data-encerrar-evento]")?.addEventListener("click", async () => {
         const encerrarStatus = document.querySelector<HTMLElement>("[data-encerrar-status]");
@@ -1159,6 +1267,61 @@ const tipoPerguntaOpcoes = [
 
       configurarFormNovaPergunta("inscricao", "inscricao");
       configurarFormNovaPergunta("pesquisa", "pos_evento");
+
+      document.querySelector("[data-adicionar-cupom]")?.addEventListener("click", async () => {
+        const bloco = document.querySelector<HTMLElement>("[data-cupom-novo]");
+        const codigoEl = document.querySelector<HTMLInputElement>("[data-novo-cupom-codigo]");
+        if (!bloco || !codigoEl?.value.trim()) return;
+
+        await fetch(`${directusUrl}/items/cupons_desconto`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            evento: eventoIdNumero,
+            codigo: codigoEl.value.trim().toUpperCase(),
+            tipo: document.querySelector<HTMLSelectElement>("[data-novo-cupom-tipo]")?.value || "percentual",
+            valor: Number(document.querySelector<HTMLInputElement>("[data-novo-cupom-valor]")?.value || 0),
+            limite_usos: document.querySelector<HTMLInputElement>("[data-novo-cupom-limite]")?.value
+              ? Number(document.querySelector<HTMLInputElement>("[data-novo-cupom-limite]")?.value)
+              : null,
+            valido_ate: document.querySelector<HTMLInputElement>("[data-novo-cupom-validade]")?.value || null,
+            ativo: Boolean(document.querySelector<HTMLInputElement>("[data-novo-cupom-ativo]")?.checked),
+          }),
+        });
+
+        bloco.querySelectorAll("input[type=text], input[type=number], input[type=date]").forEach((campoEl) => {
+          (campoEl as HTMLInputElement).value = "";
+        });
+        const ativoEl = document.querySelector<HTMLInputElement>("[data-novo-cupom-ativo]");
+        if (ativoEl) ativoEl.checked = true;
+        await carregarCupons(token, eventoIdNumero);
+      });
+
+      cuponsLista?.addEventListener("click", async (event) => {
+        const target = event.target as HTMLElement;
+        const card = target.closest<HTMLElement>("[data-cupom-id]");
+        if (!card) return;
+        const cupomId = card.dataset.cupomId;
+
+        if (target.matches("[data-excluir-cupom]")) {
+          if (!confirm("Excluir esse cupom?")) return;
+          await fetch(`${directusUrl}/items/cupons_desconto/${cupomId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          await carregarCupons(token, eventoIdNumero);
+          return;
+        }
+
+        if (target.matches("[data-salvar-cupom]")) {
+          await fetch(`${directusUrl}/items/cupons_desconto/${cupomId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(lerCamposCupom(card)),
+          });
+          await carregarCupons(token, eventoIdNumero);
+        }
+      });
 
       document.querySelector("[data-adicionar-sessao]")?.addEventListener("click", async () => {
         const bloco = document.querySelector<HTMLElement>("[data-sessao-nova]");
