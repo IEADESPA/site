@@ -35,7 +35,12 @@ const tipoPerguntaOpcoes = [
     <div class="canvas evento-canvas" data-directus-url={DIRECTUS_URL}>
       <header class="pagehead">
         <p class="eyebrow"><a href="/painel-eventos/" class="text-accent">← Gestão de eventos</a></p>
-        <h1 class="pagehead-title" data-painel-titulo>Evento</h1>
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 class="pagehead-title" data-painel-titulo>Evento</h1>
+          <a href="/painel-eventos/evento/inscritos/" class="btn btn-outline" data-link-inscritos hidden>
+            Ver inscritos
+          </a>
+        </div>
         <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
       </header>
 
@@ -354,6 +359,13 @@ const tipoPerguntaOpcoes = [
 
       if (tituloEl) tituloEl.textContent = evento.title;
       preencherFormulario(evento);
+
+      const linkInscritos = document.querySelector<HTMLAnchorElement>("[data-link-inscritos]");
+      if (linkInscritos) {
+        linkInscritos.href = `/painel-eventos/evento/inscritos/?id=${eventoId}`;
+        linkInscritos.hidden = false;
+      }
+
       if (carregando) carregando.hidden = true;
       if (form) form.hidden = false;
       if (perguntasSecao) perguntasSecao.hidden = false;
@@ -470,7 +482,7 @@ const tipoPerguntaOpcoes = [
     iniciar();
   </script>
 
-  <style>
+  <style is:global>
     .evento-canvas {
       max-width: 48rem;
     }

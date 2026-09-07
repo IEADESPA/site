@@ -473,7 +473,21 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
          inline, sem sair da página. Testado de ponta a ponta (Playwright, mockando as respostas
          do Directus): criar evento, carregar e editar campos, gerar slug, salvar, adicionar
          pergunta, editá-la, excluí-la.
-      3. [ ] Inscritos, pagamento e check-in reunidos numa única tela.
+      3. [x] **Inscritos, pagamento e check-in reunidos numa única tela** —
+         `/painel-eventos/evento/inscritos/?id=<id>`, linkado por um botão "Ver inscritos" no
+         editor. Pesquisado como Even3/Sympla/Eventbrite organizam essa tela antes de desenhar
+         (cartões de estatística no topo, filtros rápidos por status, badges de pago/presente,
+         busca ao vivo — um padrão real do setor, não inventado). Ficou:
+         - 4 cartões de estatística: inscritos, pagos, presentes, valor arrecadado (soma de quem
+           pagou).
+         - Busca por nome/telefone e filtros rápidos (Todos/Pagos/Não pagos/Presentes/Ausentes).
+         - Cada linha: nome e telefone editáveis, valor (R$) editável, e dois selos clicáveis —
+           **Pago** e **Presente** — que já salvam na hora do clique (o check-in também pode ser
+           feito por aqui, não só pela página pública de check-in por código).
+         - "Respostas": expande e mostra as respostas daquela pessoa às perguntas do evento.
+         - "Excluir": remove a inscrição (e as respostas ligadas a ela) com confirmação.
+         Testado de ponta a ponta (Playwright): estatísticas corretas, filtros, busca, alternar
+         pago/presente, editar e salvar, ver respostas, excluir.
       4. [x] **Certificado** — construído de forma independente desta aba, em
          `/certificado/<slug-do-evento>/` (ver acima), usando o mesmo código do check-in, sem
          conta nem senha, sem exportação.
