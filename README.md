@@ -520,9 +520,15 @@ uma plataforma de eventos especializada de terceiros**, apontando o já existent
          funcione. Não é uma exclusão: o evento em si já é arquivado automaticamente (campo
          `arquivado`, ver acima) assim que a data passa, independente dessa ação. Testado: só o
          campo telefone é alterado, todo o resto permanece intacto.
-      6. [ ] **Relatório automático** — ao encerrar, gera um rascunho de notícia/relatório público
-         (quantas pessoas participaram, quem ministrou, fotos) para a aba de notícias/relatórios
-         do site — sem valor em dinheiro, que nunca é publicado.
+      6. [x] **Relatório automático** — unificado com duas ideias que já estavam na lista de
+         pesquisa (fechamento de caixa e relatório-resumo), tudo disparado junto ao clicar em
+         "Encerrar evento": (1) baixa na hora um **PDF de encerramento** com resumo (total de
+         inscritos, presentes, % de comparecimento) e fechamento de caixa (pagos, não pagos,
+         valor total arrecadado, com linha de assinatura pra presidente/secretário(a)/
+         tesoureiro(a) — o mesmo formato do "Movimento do Caixa" manual que inspirou este módulo);
+         (2) cria um **rascunho de notícia** (`draft: true`, nunca publicado sozinho — sem valor
+         em dinheiro, que fica só no PDF interno) pra revisar, adicionar fotos e publicar quando
+         quiser. Testado de ponta a ponta: números batendo, rascunho criado com os dados certos.
 
 #### Mais personalizações pesquisadas (aguardando revisão)
 
@@ -564,10 +570,6 @@ de igreja em geral):
       separadamente.
 - [ ] **Agenda interna do evento (multi-sessão)** — pra congressos com várias palestras/horários
       dentro do mesmo evento (palestrante, tema, horário), mostrado na página pública.
-- [ ] **Fechamento de caixa em PDF** — gerar automaticamente o mesmo tipo de relatório que a
-      tesouraria já preenche à mão hoje (total arrecadado, forma de conferência, espaço pra
-      assinatura de presidente/secretário/tesoureiro), a partir dos dados de `pago`/`valor` já
-      existentes — era exatamente o processo manual mostrado no PDF real que inspirou este módulo.
 
 Terceira leva de pesquisa (comparativos de ferramentas de gestão de eventos em geral):
 
@@ -576,8 +578,6 @@ Terceira leva de pesquisa (comparativos de ferramentas de gestão de eventos em 
       fica salvo no "Encerrar evento" (passo 5, ainda não construído) como base de comparação.
 - [ ] **Múltiplos responsáveis por evento** — marcar quem administra cada evento especificamente,
       útil quando existir mais de uma conta usando o painel (hoje só uma conta usa).
-- [ ] **Relatório-resumo do evento em PDF** — uma visão geral (não só o fechamento de caixa) pra
-      prestação de contas à diretoria: nº de inscritos, presentes, congregações representadas.
 
 Quarta leva de pesquisa — dessa vez focada em **operação de eventos grandes de verdade**
 (credenciamento em massa, congressos com milhares de pessoas), não só telas bonitas. A pergunta

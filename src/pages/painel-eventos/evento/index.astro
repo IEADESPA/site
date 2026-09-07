@@ -154,9 +154,10 @@ const tipoPerguntaOpcoes = [
       <div hidden class="mt-10 zona-encerrar" data-zona-encerrar>
         <p class="text-sm font-semibold">Encerrar evento</p>
         <p class="mt-1 text-sm text-muted-foreground">
-          Remove só o telefone de cada inscrito (o único dado sem nenhuma utilidade depois do
-          evento). Nome, código, presença, respostas e valores <strong>continuam guardados pra
-          sempre</strong> — é o que garante que a pessoa consiga baixar o certificado dela a
+          Baixa um relatório de encerramento em PDF (resumo + fechamento de caixa) e cria um
+          rascunho de notícia (não publicado, pra revisar antes) — depois remove só o telefone de
+          cada inscrito. Nome, código, presença, respostas e valores <strong>continuam guardados
+          pra sempre</strong> — é o que garante que a pessoa consiga baixar o certificado dela a
           qualquer momento, mesmo anos depois. Não é uma exclusão.
         </p>
         <button type="button" class="btn btn-outline mt-3" data-encerrar-evento>Encerrar evento</button>
@@ -204,6 +205,7 @@ const tipoPerguntaOpcoes = [
   <SiteFooter />
 
   <script>
+    import { jsPDF } from "jspdf";
     import { exigirAutenticacao } from "@/lib/painelAuth";
 
     interface Evento {
@@ -454,18 +456,128 @@ const tipoPerguntaOpcoes = [
         const encerrarStatus = document.querySelector<HTMLElement>("[data-encerrar-status]");
         if (
           !confirm(
-            `Encerrar "${evento.title}"? O telefone de cada inscrito será apagado — nome, código, presença e respostas continuam guardados.`,
+            `Encerrar "${evento.title}"? Isso baixa o relatório de encerramento, cria um rascunho de notícia, e apaga o telefone de cada inscrito (nome, código, presença e respostas continuam guardados).`,
           )
         )
           return;
-        if (encerrarStatus) encerrarStatus.textContent = "Encerrando…";
+        if (encerrarStatus) encerrarStatus.textContent = "Gerando relatório…";
+
         try {
+          const resInscritos = await fetch(
+            `${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=nome,pago,valor,presente&limit=-1`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const inscritos: { nome: string; pago: boolean; valor: number | null; presente: boolean }[] = (await resInscritos.json()).data ?? [];
+
+          const totalInscritos = inscritos.length;
+          const presentes = inscritos.filter((i) => i.presente).length;
+          const pagos = inscritos.filter((i) => i.pago);
+          const naoPagos = totalInscritos - pagos.length;
+          const valorArrecadado = pagos.reduce((soma, i) => soma + (Number(i.valor) || 0), 0);
+          const taxaComparecimento = totalInscritos ? Math.round((presentes / totalInscritos) * 100) : 0;
+
+          const periodoEvento = evento.event_date
+            ? evento.end_date && evento.end_date !== evento.event_date
+              ? `${evento.event_date} a ${evento.end_date}`
+              : evento.event_date
+            : "";
+
+          // --- PDF: resumo + fechamento de caixa ---
+          const doc = new jsPDF({ unit: "pt", format: "a4" });
+          const margem = 56;
+          let y = margem;
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(18);
+          doc.text("Relatório de encerramento", margem, y);
+          y += 22;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(12);
+          doc.setTextColor(90);
+          doc.text(`${evento.title}${periodoEvento ? ` — ${periodoEvento}` : ""}`, margem, y);
+          y += 36;
+          doc.setTextColor(20);
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(13);
+          doc.text("Resumo", margem, y);
+          y += 20;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          [
+            `Total de inscritos: ${totalInscritos}`,
+            `Presentes: ${presentes} (${taxaComparecimento}% de comparecimento)`,
+          ].forEach((linha) => {
+            doc.text(linha, margem, y);
+            y += 18;
+          });
+
+          y += 20;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(13);
+          doc.text("Fechamento de caixa", margem, y);
+          y += 20;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          [
+            `Pagos: ${pagos.length}`,
+            `Não pagos: ${naoPagos}`,
+            `Valor total arrecadado: R$ ${valorArrecadado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+          ].forEach((linha) => {
+            doc.text(linha, margem, y);
+            y += 18;
+          });
+
+          y += 50;
+          const largura = doc.internal.pageSize.getWidth();
+          const larguraAssinatura = (largura - margem * 2 - 40) / 3;
+          ["Presidente", "Secretário(a)", "Tesoureiro(a)"].forEach((cargo, index) => {
+            const x = margem + index * (larguraAssinatura + 20);
+            doc.line(x, y, x + larguraAssinatura, y);
+            doc.setFontSize(10);
+            doc.text(cargo, x, y + 14);
+          });
+
+          doc.save(`encerramento-${evento.slug ?? eventoId}.pdf`);
+
+          // --- Rascunho de notícia (não publicado) ---
+          if (encerrarStatus) encerrarStatus.textContent = "Criando rascunho de notícia…";
+          const tituloNoticia = `Realizado: ${evento.title}`;
+          await fetch(`${directusUrl}/items/noticias`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: tituloNoticia,
+              slug: slugify(tituloNoticia),
+              excerpt: `${presentes} pessoa${presentes === 1 ? "" : "s"} participaram do evento "${evento.title}".`,
+              category: "eventos",
+              date: evento.event_date ?? new Date().toISOString().slice(0, 10),
+              draft: true,
+              featured: false,
+              body: [
+                `# ${evento.title}`,
+                "",
+                `Realizado ${periodoEvento ? `em ${periodoEvento}` : "recentemente"}${evento.responsavel ? `, promovido por ${evento.responsavel}` : ""}.`,
+                "",
+                `${presentes} pessoa${presentes === 1 ? "" : "s"} confirmaram presença, de um total de ${totalInscritos} inscrito${totalInscritos === 1 ? "" : "s"}.`,
+                "",
+                "_Rascunho gerado automaticamente ao encerrar o evento — revise o texto, adicione fotos e publique quando estiver pronto._",
+              ].join("\n"),
+            }),
+          });
+
+          // --- Remove só o telefone, mantém o resto pra sempre ---
+          if (encerrarStatus) encerrarStatus.textContent = "Removendo telefones…";
           await fetch(`${directusUrl}/items/inscricoes_eventos`, {
             method: "PATCH",
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ query: { filter: { evento: { _eq: Number(eventoId) } } }, data: { telefone: null } }),
           });
-          if (encerrarStatus) encerrarStatus.textContent = "✅ Evento encerrado — telefones removidos.";
+
+          if (encerrarStatus) {
+            encerrarStatus.textContent =
+              "✅ Evento encerrado — relatório baixado, rascunho de notícia criado (revise antes de publicar), telefones removidos.";
+          }
         } catch {
           if (encerrarStatus) encerrarStatus.textContent = "Não foi possível encerrar agora. Tente novamente.";
         }
