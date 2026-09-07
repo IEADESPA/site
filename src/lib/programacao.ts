@@ -63,6 +63,12 @@ export const sedeProgramacao = (items: ProgramacaoItem[]) =>
     .filter((item) => item.scope !== "congregacoes")
     .sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
 
+/** Só o que acontece nas congregações (exclui itens exclusivos da sede). Mesma programação vale para todas — não há agenda própria por congregação. */
+export const congregacaoProgramacao = (items: ProgramacaoItem[]) =>
+  items
+    .filter((item) => item.scope !== "sede")
+    .sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
+
 export const groupByDay = (items: ProgramacaoItem[]) =>
   DAY_ORDER.map((day) => ({
     day,

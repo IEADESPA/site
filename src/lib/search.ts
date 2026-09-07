@@ -115,6 +115,16 @@ const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
     excerpt: "Escolha o período e o responsável, e baixe um PDF resumido da programação de eventos.",
     href: "/eventos/exportar/",
   },
+  {
+    title: "Painel da Sede",
+    excerpt: "Tela pensada para telão/TV na recepção: culto de hoje, versículo e avisos.",
+    href: "/painel/sede/",
+  },
+  {
+    title: "Painel das Congregações",
+    excerpt: "Tela pensada para telão/TV na recepção: culto de hoje, versículo e avisos.",
+    href: "/painel/congregacoes/",
+  },
   { title: "Mensagens", excerpt: "Arquivo completo de mensagens.", href: "/mensagens/" },
   { title: "Notícias", excerpt: "Comunicados e novidades da igreja.", href: "/noticias/" },
   { title: "Doações", excerpt: "Dízimos, ofertas e chave Pix da igreja.", href: "/doacoes/" },

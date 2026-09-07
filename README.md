@@ -403,8 +403,19 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       fallback, e o tamanho do cache medido bate com o esperado.
 - [ ] **Busca por proximidade nas congregações** — usar a localização do navegador (com permissão
       do visitante) para ordenar as congregações da mais próxima para a mais distante.
-- [ ] **Painel "hoje na igreja"** — tela pensada para ficar num telão/TV na recepção, mostrando
-      automaticamente o culto do dia, versículo e avisos, atualizando sozinha.
+- [x] **Painel "hoje na igreja"** — `/painel/sede/` e `/painel/congregacoes/` (duas telas, não uma
+      por congregação: a programação semanal já é a mesma pra todas as congregações, só a sede
+      tem itens próprios — reaproveita a mesma coleção `programacao` já usada em todo o site). Não
+      é nada instalado — é a própria página aberta em tela cheia num navegador comum, num aparelho
+      qualquer ligado no telão/TV (Smart TV, Chromecast, tablet, PC antigo), sem precisar de
+      ninguém tocar nela depois de aberta. Conteúdo, tudo se atualizando sozinho sem recarregar a
+      página: relógio e data, o culto de hoje (calculado no navegador a partir do dia da semana e,
+      no caso de domingo à noite, de qual ocorrência do mês se aplica — 1º/2º/3º/4º-se-5º/último
+      domingo, validado contra os 12 meses de 2026), o versículo do dia (mesmo mecanismo da home,
+      troca a cada 6h) e a notícia mais recente como aviso, se publicada nos últimos 14 dias.
+      Paleta própria (não usa o tema claro/escuro do resto do site): fundo azul-marinho, dourado
+      como cor de destaque, texto branco — pensada pra ser lida de longe numa TV. Linkado em
+      `/eventos/`, na seção de programação semanal.
 - [ ] **Certificado/declaração automática** — para batismo, conclusão de curso ou participação em
       evento, gerado em PDF a partir de um formulário simples (reaproveita `sharp`, já usado no
       gerador de imagem compartilhável).
