@@ -1,0 +1,115 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DIRECTUS_URL } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getAllMensagens());
+---
+
+<BaseLayout title="Gestão de eventos" description="Área restrita da equipe." noindex>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas" data-directus-url={DIRECTUS_URL}>
+      <header class="pagehead">
+        <p class="eyebrow">Área restrita</p>
+        <h1 class="pagehead-title">Gestão de eventos</h1>
+        <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
+      </header>
+
+      <div hidden data-painel-conteudo>
+        <p class="mt-4 text-sm text-muted-foreground">
+          Autenticado como <strong data-painel-usuario></strong>.
+          <button type="button" class="link-sweep text-accent font-semibold" data-painel-sair>Sair</button>
+        </p>
+
+        <div class="mt-10 gallery-empty">
+          <p class="text-sm leading-relaxed text-muted-foreground">
+            O restante da gestão de eventos (criar evento, perguntas, inscritos, encerrar evento)
+            ainda vai ser construído aqui, passo a passo. Por enquanto, isso confirma que o login
+            está funcionando.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+
+  <script>
+    const container = document.querySelector<HTMLElement>("[data-directus-url]");
+    if (!container) throw new Error("contêiner do painel ausente");
+
+    const directusUrl = container.dataset.directusUrl ?? "";
+    const carregando = document.querySelector<HTMLElement>("[data-painel-carregando]");
+    const conteudo = document.querySelector<HTMLElement>("[data-painel-conteudo]");
+    const usuarioEl = document.querySelector<HTMLElement>("[data-painel-usuario]");
+    const sairBtn = document.querySelector<HTMLButtonElement>("[data-painel-sair]");
+
+    const TOKEN_KEY = "painel_eventos_token";
+
+    function irParaLogin() {
+      window.location.href = "/painel-eventos/entrar/";
+    }
+
+    async function obterTokenValido(): Promise<string | null> {
+      const tokenAtual = sessionStorage.getItem(TOKEN_KEY);
+      if (tokenAtual) return tokenAtual;
+
+      // Sem token em memória (aba nova, ou expirou): tenta renovar usando o
+      // cookie httpOnly do refresh token, sem pedir login de novo.
+      try {
+        const res = await fetch(`${directusUrl}/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "cookie" }),
+        });
+        if (!res.ok) return null;
+        const json = await res.json();
+        sessionStorage.setItem(TOKEN_KEY, json.data.access_token);
+        return json.data.access_token;
+      } catch {
+        return null;
+      }
+    }
+
+    async function iniciar() {
+      const token = await obterTokenValido();
+      if (!token) {
+        irParaLogin();
+        return;
+      }
+
+      const res = await fetch(`${directusUrl}/users/me?fields=email`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        sessionStorage.removeItem(TOKEN_KEY);
+        irParaLogin();
+        return;
+      }
+
+      const json = await res.json();
+      if (carregando) carregando.hidden = true;
+      if (conteudo) conteudo.hidden = false;
+      if (usuarioEl) usuarioEl.textContent = json.data.email;
+    }
+
+    sairBtn?.addEventListener("click", async () => {
+      try {
+        await fetch(`${directusUrl}/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "cookie" }),
+        });
+      } catch {}
+      sessionStorage.removeItem(TOKEN_KEY);
+      irParaLogin();
+    });
+
+    iniciar();
+  </script>
+</BaseLayout>
