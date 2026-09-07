@@ -718,8 +718,28 @@ Terceira leva de pesquisa (comparativos de ferramentas de gestão de eventos em 
       Testado de ponta a ponta: cadeia com um hiato de 5 anos entre duas edições anda certinho e
       monta a tabela na ordem cronológica certa (verificado contra o Directus real: vincular,
       pular gerações, e o "Encerrar evento" gravando o retrato de números automaticamente).
-- [ ] **Múltiplos responsáveis por evento** — marcar quem administra cada evento especificamente,
-      útil quando existir mais de uma conta usando o painel (hoje só uma conta usa).
+- [x] **Múltiplos responsáveis, resolvido como perfis de acesso (não só por evento)** — repensado
+      com o usuário: em vez de marcar "quem administra este evento" campo por campo, resolvido na
+      raiz com perfis de acesso de verdade no Directus (o mesmo mecanismo de políticas/permissões
+      usado a sessão inteira pra moldar o que o público consegue ler/escrever). Cada perfil é uma
+      combinação de **role + policy** do Directus — ao criar uma conta nova (Directus →
+      Configurações → Usuários → Criar usuário), escolhe-se um destes:
+      - **Administrator** (já existia) — acesso total, inclusive Configurações, Fluxos,
+        Webhooks, outras contas e tokens de API. Só pra quem administra o sistema de verdade.
+      - **Semi-administrador** (novo) — lê/escreve em todo o conteúdo do site (eventos, notícias,
+        congregações, galeria, histórico, mural de oração, contatos, tudo) mas **não vê
+        Configurações, Fluxos, Webhooks, Usuários/Perfis nem tokens de API** — o Directus já
+        esconde esses menus sozinho pra quem não tem `admin_access`, sem precisar de nenhuma
+        regra extra. É o perfil pra quem toca o conteúdo do site no dia a dia sem poder quebrar a
+        automação de deploy ou vazar credenciais sem querer.
+      - **Editor de eventos** (novo) — só `eventos`, perguntas, agenda, inscritos e respostas.
+        Não enxerga notícias nem mensagens de contato.
+      - **Editor de notícias** (novo) — só a coleção `noticias`.
+      - **Editor de contatos** (novo) — só `contato_mensagens` (as mensagens que chegam pelo
+        formulário de contato do site).
+      Testado de ponta a ponta com uma conta real: login como "Editor de eventos" consegue ler e
+      criar em `eventos`, mas toma 403 em `noticias`, `contato_mensagens`, `/policies` e `/flows`
+      — confirmando que o isolamento entre perfis funciona de verdade, não só na aparência.
 
 Quarta leva de pesquisa — dessa vez focada em **operação de eventos grandes de verdade**
 (credenciamento em massa, congressos com milhares de pessoas), não só telas bonitas. A pergunta
