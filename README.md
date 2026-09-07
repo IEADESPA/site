@@ -575,9 +575,23 @@ decidir o que vale a pena:
         evento, antes do check-in acontecer).
       Testado de ponta a ponta: PDF em lote com o número certo de páginas/posições, excluindo
       quem está na lista de espera.
-- [ ] **Gráfico visual de uma pergunta de seleção** — ex.: quantas pessoas escolheram cada opção
-      de "Qual sua congregação?", em barra/pizza — hoje só dá pra ver resposta por resposta,
-      pessoa por pessoa.
+- [x] **Gráfico visual de uma pergunta de seleção** — quantas pessoas escolheram cada opção de
+      uma pergunta de seleção única/múltipla, em barras (`src/lib/graficos.ts`, desenho próprio,
+      sem biblioteca de gráficos), em vez de ver resposta por resposta. Só mostra a proporção
+      agregada — nunca lista quem respondeu o quê, seguindo a mesma linha da decisão de não
+      exportar lista de inscritos.
+      - **No painel (tela de inscritos)**: um gráfico por pergunta de seleção, que recalcula
+        junto com a busca/filtros já existentes (pago, presente, lista de espera).
+      - **Filtro cruzado entre perguntas ("slicer")**: escolhe uma pergunta e um valor (ex.:
+        "Cidade" = "Eldorado") e a tabela e os outros gráficos recalculam só com quem respondeu
+        aquele valor — dá pra comparar "função na cozinha" entre as pessoas de uma cidade e de
+        outra, trocando o valor escolhido.
+      - **No relatório de encerramento (PDF)**: os mesmos gráficos de barra, desenhados direto
+        no PDF (vetor, sem lista de respostas individuais), numa seção "Gráficos das perguntas"
+        depois do fechamento de caixa, com quebra de página automática se não couber.
+      Testado de ponta a ponta: gráficos batem com a contagem esperada, o slicer recalcula a
+      tabela e os gráficos ao trocar/limpar o filtro, e o PDF de encerramento inclui a seção de
+      gráficos sem erros.
 - [ ] **Lembrete automático só pra quem se inscreveu** — hoje a notificação push (já existe) é
       genérica, pra quem ativou avisos de qualquer evento; poderia avisar especificamente quem
       está inscrito naquele evento, mais perto da data.

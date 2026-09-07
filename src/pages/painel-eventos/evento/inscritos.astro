@@ -70,6 +70,23 @@ const allPosts = visiblePosts(await getAllMensagens());
           </div>
         </div>
 
+        <div class="mt-4 flex flex-wrap items-center gap-3" data-filtro-pergunta-bloco hidden>
+          <span class="text-sm font-semibold text-muted-foreground">Filtrar por pergunta:</span>
+          <select class="field" data-filtro-pergunta-select></select>
+          <select class="field" data-filtro-pergunta-valor hidden></select>
+          <button type="button" class="link-sweep text-accent text-sm font-semibold" data-filtro-pergunta-limpar hidden>
+            Limpar filtro
+          </button>
+        </div>
+
+        <div class="mt-6" data-graficos-bloco hidden>
+          <h2 class="text-lg font-serif font-bold">Gráficos</h2>
+          <p class="text-sm text-muted-foreground">
+            Proporção agregada das respostas — nunca lista respostas de pessoas individualmente.
+          </p>
+          <div class="mt-4 grid gap-4 sm:grid-cols-2" data-graficos></div>
+        </div>
+
         <div class="mt-6">
           <button type="button" class="btn btn-outline" data-abrir-novo>+ Adicionar inscrito</button>
           <div class="mt-4 pergunta-card" data-form-novo hidden>
@@ -113,6 +130,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     import { jsPDF } from "jspdf";
     import { carregarLogoCertificado, desenharCertificado } from "@/lib/certificado";
     import { desenharCracha } from "@/lib/cracha";
+    import { contarRespostas, graficoBarrasSvg } from "@/lib/graficos";
     import { exigirAutenticacao } from "@/lib/painelAuth";
 
     let eventoTitulo = "";
@@ -167,6 +185,8 @@ const allPosts = visiblePosts(await getAllMensagens());
     let filtroAtivo = "todos";
     let termoBusca = "";
     let token = "";
+    let filtroPerguntaId: number | null = null;
+    let filtroPerguntaValor: string | null = null;
 
     function escapeHtml(value: string) {
       return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
@@ -245,6 +265,15 @@ const allPosts = visiblePosts(await getAllMensagens());
       const termo = termoBusca.trim().toLowerCase();
       return lista.filter((i) => {
         if (termo && !i.nome.toLowerCase().includes(termo) && !(i.telefone ?? "").includes(termo)) return false;
+        if (filtroPerguntaId !== null) {
+          const respostas = respostasPorInscricao.get(i.id) ?? [];
+          const resposta = respostas.find((r) => r.pergunta === filtroPerguntaId);
+          const valores = (resposta?.valor ?? "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+          if (!valores.includes(filtroPerguntaValor ?? "")) return false;
+        }
         if (filtroAtivo === "pagos") return i.pago;
         if (filtroAtivo === "nao-pagos") return !i.pago;
         if (filtroAtivo === "espera") return i.aguardando_vaga;
@@ -252,6 +281,83 @@ const allPosts = visiblePosts(await getAllMensagens());
         if (filtroAtivo === "ausentes") return !i.presente;
         return true;
       });
+    }
+
+    /** Perguntas de seleção (única/múltipla) — as únicas com gráfico e slicer. */
+    function perguntasGraficaveis(): Pergunta[] {
+      return perguntasOrdenadas().filter((p) => p.tipo === "selecao_unica" || p.tipo === "selecao_multipla");
+    }
+
+    function renderizarFiltroPergunta() {
+      const bloco = document.querySelector<HTMLElement>("[data-filtro-pergunta-bloco]");
+      const selectPergunta = document.querySelector<HTMLSelectElement>("[data-filtro-pergunta-select]");
+      const selectValor = document.querySelector<HTMLSelectElement>("[data-filtro-pergunta-valor]");
+      const limparBtn = document.querySelector<HTMLButtonElement>("[data-filtro-pergunta-limpar]");
+      if (!bloco || !selectPergunta || !selectValor || !limparBtn) return;
+
+      const perguntas = perguntasGraficaveis();
+      bloco.hidden = perguntas.length === 0;
+      if (!perguntas.length) return;
+
+      if (!selectPergunta.dataset.montado) {
+        selectPergunta.dataset.montado = "1";
+        selectPergunta.innerHTML =
+          `<option value="">Nenhuma</option>` + perguntas.map((p) => `<option value="${p.id}">${escapeHtml(p.label)}</option>`).join("");
+
+        selectPergunta.addEventListener("change", () => {
+          const perguntaId = selectPergunta.value ? Number(selectPergunta.value) : null;
+          filtroPerguntaId = perguntaId;
+          filtroPerguntaValor = null;
+          const pergunta = perguntaId ? perguntasPorId.get(perguntaId) : null;
+          if (pergunta) {
+            selectValor.innerHTML = (pergunta.opcoes ?? []).map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
+            selectValor.hidden = false;
+            filtroPerguntaValor = pergunta.opcoes?.[0] ?? null;
+            limparBtn.hidden = false;
+          } else {
+            selectValor.hidden = true;
+            limparBtn.hidden = true;
+          }
+          renderizar();
+        });
+
+        selectValor.addEventListener("change", () => {
+          filtroPerguntaValor = selectValor.value;
+          renderizar();
+        });
+
+        limparBtn.addEventListener("click", () => {
+          filtroPerguntaId = null;
+          filtroPerguntaValor = null;
+          selectPergunta.value = "";
+          selectValor.hidden = true;
+          limparBtn.hidden = true;
+          renderizar();
+        });
+      }
+    }
+
+    function renderizarGraficos(lista: Inscricao[]) {
+      const bloco = document.querySelector<HTMLElement>("[data-graficos-bloco]");
+      const container = document.querySelector<HTMLElement>("[data-graficos]");
+      if (!bloco || !container) return;
+
+      const perguntas = perguntasGraficaveis();
+      bloco.hidden = perguntas.length === 0;
+      if (!perguntas.length) return;
+
+      container.innerHTML = perguntas
+        .map((p) => {
+          const valores = lista.map((i) => (respostasPorInscricao.get(i.id) ?? []).find((r) => r.pergunta === p.id)?.valor);
+          const contagens = contarRespostas(p, valores);
+          return `
+            <div class="grafico-card">
+              <p class="grafico-titulo">${escapeHtml(p.label)}</p>
+              ${graficoBarrasSvg(contagens)}
+            </div>
+          `;
+        })
+        .join("");
     }
 
     function respostasHtml(inscricaoId: number) {
@@ -286,9 +392,12 @@ const allPosts = visiblePosts(await getAllMensagens());
       const visiveis = filtrar(inscricoes);
 
       if (!visiveis.length) {
+        renderizarGraficos(visiveis);
         corpoTabela.innerHTML = `<tr><td colspan="8" class="text-sm text-muted-foreground">Nenhum inscrito encontrado.</td></tr>`;
         return;
       }
+
+      renderizarGraficos(visiveis);
 
       corpoTabela.innerHTML = visiveis
         .map(
@@ -346,6 +455,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         respostasPorInscricao.set(r.inscricao, lista);
       });
 
+      renderizarFiltroPergunta();
       renderizar();
     }
 
@@ -767,6 +877,21 @@ const allPosts = visiblePosts(await getAllMensagens());
 
     .acao-excluir {
       color: #b3261e;
+    }
+
+    .grafico-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      background: var(--background);
+      color: var(--foreground);
+    }
+
+    .grafico-titulo {
+      margin: 0 0 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--accent-strong);
     }
 
     .linha-respostas td {

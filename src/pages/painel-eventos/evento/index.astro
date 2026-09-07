@@ -212,6 +212,7 @@ const tipoPerguntaOpcoes = [
 
   <script>
     import { jsPDF } from "jspdf";
+    import { contarRespostas, desenharGraficoBarrasPDF } from "@/lib/graficos";
     import { exigirAutenticacao } from "@/lib/painelAuth";
 
     interface Evento {
@@ -470,10 +471,11 @@ const tipoPerguntaOpcoes = [
 
         try {
           const resInscritos = await fetch(
-            `${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=nome,pago,valor,presente&limit=-1`,
+            `${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=id,nome,pago,valor,presente&limit=-1`,
             { headers: { Authorization: `Bearer ${token}` } },
           );
-          const inscritos: { nome: string; pago: boolean; valor: number | null; presente: boolean }[] = (await resInscritos.json()).data ?? [];
+          const inscritos: { id: number; nome: string; pago: boolean; valor: number | null; presente: boolean }[] =
+            (await resInscritos.json()).data ?? [];
 
           const totalInscritos = inscritos.length;
           const presentes = inscritos.filter((i) => i.presente).length;
@@ -481,6 +483,33 @@ const tipoPerguntaOpcoes = [
           const naoPagos = totalInscritos - pagos.length;
           const valorArrecadado = pagos.reduce((soma, i) => soma + (Number(i.valor) || 0), 0);
           const taxaComparecimento = totalInscritos ? Math.round((presentes / totalInscritos) * 100) : 0;
+
+          // --- Gráficos das perguntas de seleção (só proporção agregada, nunca lista de respostas) ---
+          const resPerguntasSelecao = await fetch(
+            `${directusUrl}/items/perguntas_evento?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][tipo][_in]=selecao_unica,selecao_multipla&sort=ordem&limit=-1`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const perguntasSelecao: { id: number; label: string; opcoes: string[] | null }[] = (await resPerguntasSelecao.json()).data ?? [];
+
+          let graficos: { titulo: string; contagens: ReturnType<typeof contarRespostas> }[] = [];
+          if (perguntasSelecao.length) {
+            const resRespostas = await fetch(
+              `${directusUrl}/items/respostas_inscricao?filter[inscricao][evento][_eq]=${eventoId}&fields=inscricao,pergunta,valor&limit=-1`,
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+            const respostas: { inscricao: number; pergunta: number; valor: string }[] = (await resRespostas.json()).data ?? [];
+            const respostasPorInscricao = new Map<number, { pergunta: number; valor: string }[]>();
+            respostas.forEach((r) => {
+              const lista = respostasPorInscricao.get(r.inscricao) ?? [];
+              lista.push(r);
+              respostasPorInscricao.set(r.inscricao, lista);
+            });
+
+            graficos = perguntasSelecao.map((p) => {
+              const valores = inscritos.map((i) => respostasPorInscricao.get(i.id)?.find((r) => r.pergunta === p.id)?.valor);
+              return { titulo: p.label, contagens: contarRespostas(p, valores) };
+            });
+          }
 
           const periodoEvento = evento.event_date
             ? evento.end_date && evento.end_date !== evento.event_date
@@ -534,8 +563,32 @@ const tipoPerguntaOpcoes = [
             y += 18;
           });
 
-          y += 50;
           const largura = doc.internal.pageSize.getWidth();
+          const alturaPagina = doc.internal.pageSize.getHeight();
+
+          if (graficos.length) {
+            y += 20;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(13);
+            doc.setTextColor(20);
+            doc.text("Gráficos das perguntas", margem, y);
+            y += 22;
+
+            graficos.forEach(({ titulo, contagens }) => {
+              const alturaEstimativa = 16 + contagens.length * 20 + 12;
+              if (y + alturaEstimativa > alturaPagina - margem) {
+                doc.addPage();
+                y = margem;
+              }
+              y = desenharGraficoBarrasPDF(doc, margem, y, largura - margem * 2, titulo, contagens);
+            });
+          }
+
+          if (y > alturaPagina - margem - 60) {
+            doc.addPage();
+            y = margem;
+          }
+          y += 30;
           const larguraAssinatura = (largura - margem * 2 - 40) / 3;
           ["Presidente", "Secretário(a)", "Tesoureiro(a)"].forEach((cargo, index) => {
             const x = margem + index * (larguraAssinatura + 20);
