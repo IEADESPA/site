@@ -30,6 +30,7 @@ interface Pergunta {
   tipo: TipoPergunta;
   opcoes: string[] | null;
   obrigatoria: boolean;
+  momento: string;
 }
 
 interface Evento {
@@ -91,7 +92,7 @@ const inscricaoEncerradaMotivo = event.inscricoes_encerradas ? "encerradas" : in
    nem "casal") além de nome/telefone, que todo evento precisa pra
    identificar quem se inscreveu. Ver perguntas_evento no Directus. */
 const perguntas = inscricaoAberta
-  ? await fetchItems<Pergunta>("perguntas_evento", `filter[evento][_eq]=${event.id}&sort=ordem`)
+  ? (await fetchItems<Pergunta>("perguntas_evento", `filter[evento][_eq]=${event.id}&sort=ordem`)).filter((p) => p.momento !== "pos_evento")
   : [];
 
 /* "19h30" -> "19:30", exigido pelo ISO 8601 do schema.org. Se não bater
@@ -182,6 +183,10 @@ const structuredData = startDate
             {" "}· Participou?{" "}
             <a href={`/certificado/${event.slug}/`} class="text-accent underline underline-offset-2">
               baixar certificado
+            </a>
+            {" "}·{" "}
+            <a href={`/pesquisa/${event.slug}/`} class="text-accent underline underline-offset-2">
+              responder pesquisa de satisfação
             </a>
           </p>
         )

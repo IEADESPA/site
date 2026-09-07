@@ -155,6 +155,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       tipo: string;
       opcoes: string[] | null;
       obrigatoria: boolean;
+      momento: string;
     }
 
     interface Resposta {
@@ -373,7 +374,9 @@ const allPosts = visiblePosts(await getAllMensagens());
               const resposta = respostaPorPergunta.get(p.id);
               return `
                 <div class="grid gap-1">
-                  <label class="text-xs font-semibold text-muted-foreground">${escapeHtml(p.label)}</label>
+                  <label class="text-xs font-semibold text-muted-foreground">
+                    ${escapeHtml(p.label)}${p.momento === "pos_evento" ? " · pesquisa pós-evento" : ""}
+                  </label>
                   ${campoHtml(p, resposta?.valor ?? "")}
                 </div>
               `;

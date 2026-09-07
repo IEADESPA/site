@@ -621,11 +621,28 @@ decidir o que vale a pena:
 Segunda leva de pesquisa (conteúdo sobre QR code em eventos de igreja, e plataformas de gestão
 de igreja em geral):
 
-- [ ] **Check-in por QR Code** — hoje a pessoa digita o código de 6 caracteres; poderia mostrar
-      também um QR Code (gerado na hora da confirmação, sem servidor extra) pra escanear com a
-      câmera do celular na entrada — mais rápido que digitar quando a fila é grande.
-- [ ] **Pesquisa de satisfação pós-evento** — reaproveitando a mesma infraestrutura de perguntas
-      dinâmicas já existente, um formulário curto liberado só depois que o evento termina.
+- [x] **Pesquisa de satisfação pós-evento** — reaproveita a mesma infraestrutura de perguntas
+      dinâmicas já existente: cada pergunta ganhou um campo **"Quando perguntar"** (`momento`,
+      `inscricao` ou `pos_evento`). Perguntas `pos_evento` nunca aparecem no formulário de
+      inscrição — só na pesquisa pública (`/pesquisa/<slug do evento>/`), no mesmo formato de
+      código de 6 caracteres do check-in/certificado/crachá, exigindo `presente=true` (só quem
+      participou pode avaliar).
+      - **Quando libera**: automaticamente a partir do dia seguinte ao fim do evento — não existe
+        botão manual pra "abrir a pesquisa". Resolve uma dúvida real que surgiu ao planejar isso:
+        como a pesquisa é liberada por **data do evento**, e não por "Encerrar evento" nem por
+        "arquivado" (`arquivado` é só um rótulo visual no painel — nunca esconde nem apaga nada),
+        ela continua funcionando pra sempre, mesmo muito depois do evento arquivado. E como
+        "Encerrar evento" (passo 5) só apaga telefone — nome, código e presença continuam
+        guardados —, o código de check-in da pessoa continua válido pra responder a pesquisa
+        indefinidamente, e as respostas nunca desaparecem.
+      - **Onde aparece o resultado**: perguntas de seleção da pesquisa entram automaticamente nos
+        mesmos gráficos do painel de inscritos (`src/lib/graficos.ts`, já construído) — não
+        precisa de nada novo pra visualizar; texto livre aparece na aba "Respostas" de cada
+        inscrito, marcado como "· pesquisa pós-evento" pra diferenciar de resposta dada na
+        inscrição.
+      - Testado de ponta a ponta contra o Directus real (sem token): liberação por data nos dois
+        sentidos (evento passado libera, futuro não libera), busca por código exigindo presença,
+        e o POST da resposta.
 - [ ] **Inscrição em grupo (família)** — uma pessoa preenche o formulário uma vez só e adiciona
       mais nomes (ex.: cônjuge, filhos) na mesma submissão, em vez de cada um preencher
       separadamente.
@@ -651,6 +668,10 @@ foi "o que muda quando o evento é grande?", não só "quais botões faltam":
       **múltiplos pontos de cadastro no dia** — o "+ Adicionar inscrito" funciona do mesmo jeito
       pra qualquer pessoa autenticada, então várias mesas de credenciamento podem cadastrar gente
       ao mesmo tempo sem conflito.
+- [ ] **Check-in por QR Code** — hoje a pessoa digita o código de 6 caracteres; poderia mostrar
+      também um QR Code (gerado na hora da confirmação, sem servidor extra) pra escanear com a
+      câmera do celular na entrada — mais rápido que digitar quando a fila é grande, e ganha mais
+      sentido junto dos outros itens de credenciamento em massa desta seção.
 - [ ] **Registrar o portão/local do check-in** — pra eventos com mais de uma entrada, guardar em
       qual ponto cada pessoa confirmou presença (útil pra saber qual portão está mais cheio).
 - [ ] **Lotação em tempo real visível pra quem está na porta** — um contador ao vivo de "quantos
