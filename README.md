@@ -304,10 +304,15 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
         Avaliado como alternativa ao Microsoft Power Apps (que teria custo real de licença e de
         armazenamento — Dataverse —, além de fragmentar o sistema em duas fontes de dados);
         Insights resolve o mesmo problema de graça, dentro do que já existe.
-      - **Certificado**: ainda adiado, mas confirmado como a dor real mais forte do processo
-        manual atual (49 certificados feitos um por um à mão). Quando for construído, a meta é
-        não precisar de nenhuma exportação — nome usado direto do banco pra gerar um link único
-        por inscrição (`/certificado/<código>/`), sem conta nem senha.
+      - **Certificado** — construído em `/certificado/<slug-do-evento>/`: mesmo código do
+        check-in, sem conta nem senha. Só emite pra quem já confirmou presença (`presente:
+        true`) — precisou ampliar a permissão pública de leitura de `inscricoes_eventos` pra
+        incluir esse campo (continua sem expor telefone, pago ou valor). PDF gerado inteiramente
+        no navegador (`jsPDF`, paisagem, moldura dourada, logo, nome em destaque), sem exportação
+        nenhuma — nome e evento vêm direto do banco. Linkado na página do evento, ao lado do
+        check-in. Escopo decidido: só para eventos com inscrição (camada 3) — não para batismo,
+        que exigiria cadastrar "Batismo nas Águas" como evento com inscrição própria, uma decisão
+        separada, não tomada ainda.
       - **Lista de chamada impressa**: não construído ainda — com o check-in por código já
         resolvendo a presença digitalmente, avaliar se ainda faz sentido ter também uma versão
         em papel como reserva.
@@ -416,9 +421,6 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       Paleta própria (não usa o tema claro/escuro do resto do site): fundo azul-marinho, dourado
       como cor de destaque, texto branco — pensada pra ser lida de longe numa TV. Linkado em
       `/eventos/`, na seção de programação semanal.
-- [ ] **Certificado/declaração automática** — para batismo, conclusão de curso ou participação em
-      evento, gerado em PDF a partir de um formulário simples (reaproveita `sharp`, já usado no
-      gerador de imagem compartilhável).
 - [ ] **Trocar pelo Google Maps Platform** — trocar o mapa de congregações (hoje Leaflet +
       OpenStreetMap) e o embed de `/contato/` pelo Google Maps, com rotas reais e Street View da
       sede. Depende de uma chave de API própria (nunca fica salva em nenhum arquivo do
