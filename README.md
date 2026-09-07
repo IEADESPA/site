@@ -228,6 +228,11 @@ execução. **Nada deste plano foi construído ainda.**
   - Busca: fallback de "0 resultados" com sugestões/links úteis; navegação por teclado igual ao
     atalho Ctrl+K.
   - Galeria: lightbox (clique pra ampliar a foto).
+  - Mensagens: marcação `VideoObject` nos itens que já têm `videoUrl` cadastrado (rich result de
+    vídeo na busca — só funciona pros itens que já têm essa informação).
+  - Sobre: linkar explicitamente pra `/orgaos/` (hoje "Liderança" mistura pregador com governança
+    e não linka pra lá), pra `/visitante/` (próximo passo natural) e pra `/transparencia/`
+    (hoje só linka pra `/historia/`) — três links novos, zero conteúdo novo.
 
 - **Fase 3 — melhorias de UX que exigem mais decisão de desenho, ainda sem conteúdo novo**:
   - Órgãos: separar visualmente Governança de Departamentos/Serviços; CTA diferente pra órgão
@@ -240,15 +245,26 @@ execução. **Nada deste plano foi construído ainda.**
     público, prazo de moderação no aviso pós-envio.
   - Visitante: horário/endereço logo no topo (não só nos "próximos passos"); FAQ revisado pra
     cobrir dúvidas específicas de quem nunca foi a um culto pentecostal.
+  - Sobre: quebrar o texto único (`configuracoes.sobre_corpo`) em seções fixas (história curta →
+    missão/valores → liderança → próximos passos), em vez de um bloco corrido.
+  - Mensagens: combinar filtro por tema + pregador na mesma tela de listagem; conceito de "série
+    de mensagens" (esse exige campo novo no Directus, não só front-end).
 
 - **Fase 4 — depende de conteúdo/decisão que só a igreja pode gerar** (a página/funcionalidade já
   poderia ser construída, mas ficaria vazia sem isso primeiro): fotos reais de culto/comunidade
   (hero da home, Sobre, Congregações, Ministérios), bios e mandato dos membros de cada órgão,
-  texto da declaração de fé, descrição de cada ministério, vídeo de boas-vindas.
+  texto da declaração de fé, descrição de cada ministério, vídeo de boas-vindas, prova social
+  (depoimento de membro, tempo de história, nº de congregações — dado já existe em parte em
+  `/historia/`/`/transparencia/`, mas precisa virar destaque também no Sobre).
 
 - **Fase 5 — páginas inteiramente novas** (maior escopo cada uma, avaliar prioridade só depois das
   fases anteriores): Crenças/O que Cremos, Ministérios, página de Kids dedicada, Ao vivo/Assista
-  online.
+  online. Avaliadas e não recomendadas por ora: FAQ separada (melhor virar seção de
+  `/visitante/`), batismo (precisa de processo definido antes), servir/seja voluntário (precisa de
+  vagas reais primeiro), podcast/vagas de trabalho (perfil de igreja grande, ficaria vazio agora).
+
+O detalhe completo de cada achado (com a lógica/pesquisa por trás de cada item) está registrado
+em "Mais personalizações pesquisadas" mais abaixo, junto com as fontes consultadas.
 
 - [x] **Atalho de busca rápida (Ctrl+K)** — melhorado: agora cobre eventos, temas, pregadores e
       páginas institucionais (10 tipos de conteúdo), com filtros por categoria e busca sem
@@ -932,47 +948,109 @@ plataforma de pagamento de verdade, o que já foi avaliado e descartado. Cupom d
 processamento de pagamento real (só ajusta o valor da inscrição, cobrança continua manual) foi
 construído — ver "Cupons de desconto" acima.
 
-Pesquisa sobre a página "Sobre" (grandes e pequenos sites, nonprofits e igrejas em geral —
-comparação de padrões do que costuma funcionar, não cópia de um site específico), a pedido do
-usuário, **sem construir nada ainda**:
+#### Pesquisa detalhada por página (suporte ao plano de fases lá em cima)
 
-- **A seção "Liderança" hoje mistura dois papéis diferentes**: lista quem *prega* (autores de
-  mensagens), não quem *administra/governa* a igreja — que já tem sua própria estrutura
-  construída (`/orgaos/`: assembleia geral, conselho diaconal, diretoria executiva etc., de um
-  projeto anterior). A prática recomendada por quem escreve sobre página "Sobre" de
-  igreja/nonprofit é justamente diferenciar liderança pastoral de liderança administrativa, e
-  fotos + nome + papel de cada uma, não só uma lista de texto — a página atual não faz nenhuma
-  das duas coisas: não tem foto de ninguém, e nem linka pra `/orgaos/`.
-- **Falta uma declaração de fé/crenças** (Statement of Faith) — recorrente como item essencial de
-  página "Sobre" de igreja: um resumo curto e acessível do que a igreja crê, em linguagem simples
-  (não acadêmica), pra quem está decidindo se aquilo combina com a fé da pessoa. Hoje não existe
-  nada assim no site — mais perto disso é a tag "Fé e Doutrina" nas mensagens, que não é a mesma
-  coisa (mensagens específicas, não um resumo doutrinário).
-- **Sem nenhuma foto na página inteira** — nem da fachada/prédio, nem de um culto, nem da
-  liderança. Foto é apontado universalmente (sites grandes e pequenos) como o maior fator de
-  confiança numa página "Sobre" — texto sem nenhuma imagem passa a impressão de página
-  incompleta/sem rosto por trás.
-- **Sem vídeo de boas-vindas** — recorrente especificamente em pesquisa sobre igrejas: um vídeo
-  curto do pastor se apresentando/dando boas-vindas costuma ser um dos itens de maior impacto
-  numa página "Sobre" de igreja, mais pessoal que texto. (Mesma dependência já identificada pro
-  "mini-player" mais acima: só faz sentido quando existir gravação de vídeo/áudio de verdade.)
-- **Sem nenhum "prova social"** — depoimento de membro, número de anos de história, quantidade de
-  congregações/membros. A página de história (`/historia/`) e a de transparência
-  (`/transparencia/`) já têm parte desse conteúdo — a oportunidade é **linkar mais explicitamente**
-  a partir do "Sobre" (hoje só linka pra história, não pra transparência), não recriar o conteúdo.
-- **Texto único, sem seções nem contexto de tamanho** — o corpo vem de um único campo markdown
-  (`configuracoes.sobre_corpo`) sem estrutura fixa; o padrão recomendado (chega igual em site
-  grande e pequeno) é história curta → missão/valores → liderança → próximos passos, cada um com
-  seu próprio subtítulo, em vez de um bloco de texto corrido — mais fácil de escanear, sem baixar
-  a página inteira pra achar a parte que interessa.
-- **Sem link pra `/visitante/`** — a página de "primeira vez aqui" (o que esperar, estrutura pra
-  família, FAQ) já existe e é exatamente o "próximo passo" que pesquisa recomenda ao final de uma
-  página "Sobre" — hoje esse link só aparece nos próprios cards da home, não a partir do "Sobre".
+Nove rodadas de pesquisa (sites grandes e pequenos, nonprofits e igrejas em geral — comparação de
+padrões do que costuma funcionar, nunca cópia de um site específico), pedidas pelo usuário depois
+de concluída a aba de eventos, cobrindo cada página do site (Eventos ficou de fora de propósito —
+já considerada boa). **Nada disto foi construído ainda** — a ordem de execução já está no "Plano
+de fases" no início desta seção; isto aqui é o detalhe/justificativa por trás de cada achado.
 
-Nenhum desses itens foi construído ainda — anotado aqui pra decidir com calma quais valem a pena.
+**Sobre**: seção "Liderança" mistura quem *prega* (autores de mensagens) com quem *administra/
+governa* (que já tem estrutura própria em `/orgaos/`) — sem foto de ninguém e sem link pra lá;
+falta uma declaração de fé/crenças (resumo curto, linguagem simples, não acadêmica); nenhuma foto
+na página inteira; sem vídeo de boas-vindas do pastor; sem prova social (depoimento, tempo de
+história, nº de congregações — parte disso já existe em `/historia/`/`/transparencia/`, só falta
+linkar/destacar a partir daqui); texto único num campo markdown, sem seções fixas (história →
+missão/valores → liderança → próximos passos); sem link pra `/visitante/`.
 
-Fontes consultadas (título e domínio, sem nome de produto/plataforma específico no texto acima):
-[Nonprofit Website Best Practices 2026](https://www.elevationweb.org/blog/nonprofit-website-best-practices/),
+**SEO** — por que o site não aparece nem buscando o nome da igreja: sem tráfego pago em hipótese
+nenhuma (a maioria das igrejas nem usa). Conferido de verdade, não por suposição: `robots.txt`,
+sitemap, `noindex`, canonical, Open Graph, Twitter Card, BreadcrumbList e RSS já estavam corretos;
+o dado estruturado `Church`/`Event` também já existia (só faltava o `sameAs`, corrigido logo em
+seguida). A causa mais provável está fora do código, não é algo que se resolve escrevendo mais
+linhas: reivindicar o Perfil da Empresa no Google (maior impacto disponível pra busca pelo nome da
+igreja), confirmar no Search Console que o sitemap foi enviado / solicitar indexação da home, e
+considerar que domínio novo demora semanas mesmo com tudo tecnicamente certo. Citações/backlinks
+gratuitos (diretórios da convenção, prefeitura, parcerias) também ajudam, mas são feitos um por
+um, manualmente, fora do site.
+
+**Início**: hero só texto, sem foto real de culto/comunidade (a coleção `galeria` já existe, dá
+pra puxar de lá sem upload novo); `siteConfig.youtubeLiveUrl` existe e resolve pra live sozinho,
+mas não aparece em lugar nenhum da home nem do cabeçalho; "Acesso rápido" com 8 itens do mesmo
+peso visual (concorrência sem hierarquia); endereço só aparece depois do feed inteiro em mobile;
+mensagem mais recente só como card de texto, sem player embutido; `/transparencia/` só no rodapé.
+
+**Notícias**: sem filtro por categoria nem paginação na listagem (mensagens já pagina, notícias
+não); "mais notícias" no artigo pega só as 3 mais recentes, não relacionadas por categoria (ao
+contrário de mensagens, que já tem relacionadas de verdade); sem página de arquivo por categoria.
+
+**Mensagens/Temas**: arquivo de mensagens não combina filtro de tema + pregador na mesma tela;
+sem conceito de "série de mensagens" (precisaria de campo novo no Directus, não só front-end);
+vídeos (`videoUrl`) sem `VideoObject` no dado estruturado, perdendo elegibilidade a rich results
+de vídeo — só funciona pros itens que já têm essa informação.
+
+**Órgãos** (prioridade — o usuário já apontou que essa página "não está boa"): a listagem
+(`orgaos.astro`) não mostra nenhuma pessoa, só nome do órgão e descrição — nome/foto do responsável
+só aparece depois de entrar na página individual; só existe campo pra **um** líder por órgão
+(`leader_name`/`leader_role`/`leader_photo`), mais um caso hardcoded só pra "diretoria executiva"
+(sem foto/bio) — órgãos colegiados (assembleia, conselho fiscal) não têm nenhum campo pra listar
+vários membros, é lacuna de modelo de dado, não só de exibição; nenhum órgão tem bio, mandato ou
+"desde quando"; as 4 categorias (Governança, Departamentos, Secretarias, Serviços) têm o mesmo
+tratamento visual apesar de conceitualmente diferentes (governança é deliberativa; departamentos/
+serviços são equipes de voluntariado), sem nenhum link pra `/transparencia/` ou atas de reunião;
+CTA "Quer participar?" idêntico pra todo órgão, mesmo os deliberativos/eleitos.
+
+**Congregações**: página individual sem mapa nenhum, só endereço em texto + link "Ver rota" (a
+mesma técnica de embed grátis, sem chave de API, já usada em `/contato/` ainda não chegou aqui —
+é o lugar mais óbvio faltando); inconsistência de provedor de mapa (a listagem usa Leaflet/
+OpenStreetMap, Contato/Início usam Google Maps embed — dois sistemas diferentes no mesmo site);
+congregação sem `lat`/`lng` simplesmente some do mapa da listagem, só com legenda pequena; sem
+ordenar por distância nem foto da fachada de cada congregação.
+
+**Transparência**: sem quebra visual de receitas/despesas (só lista de PDFs + gráfico de
+crescimento de congregações); sem indicação de "último relatório publicado" nem cadência esperada;
+sem menção de auditoria/parecer independente; CNPJ não aparece nesta página (só em Doações).
+
+**Doações**: sem menção a recibo de doação; sem aviso pra conferir o nome do recebedor no Pix antes
+de confirmar (proteção contra golpe de Pix clonado, puramente informativo, sem processador
+nenhum); sem sugestão de indicar finalidade (dízimo/oferta/campanha) na descrição do Pix; chave
+Pix só em texto, sem QR code estático pra copiar.
+
+**Visitante**: FAQ depende 100% do que for cadastrado no CMS, sem garantia de cobrir dúvidas
+específicas do contexto pentecostal (manifestações, duração do culto, chamada ao altar); página só
+texto, sem foto/vídeo do ambiente; "estrutura para famílias" não fala de check-in infantil nem
+triagem de voluntários; horário/endereço só aparece nos "próximos passos", não no topo.
+
+**Mural de oração**: ⚠️ **achado que é bug de verdade, não só sugestão** (ver Fase 0 do plano) — o
+contador "orando por você" incrementa um número calculado no próprio navegador de quem clica, sem
+trava nenhuma do lado do servidor: dá pra chamar a API manualmente e definir qualquer número, e
+nada impede a mesma pessoa clicar várias vezes na mesma visita (o botão só trava durante o próprio
+clique, depois libera de novo). Além disso: sem proteção nenhuma contra spam/envio automatizado no
+formulário de pedido (nem honeypot, nem limite de envios — só moderação humana depois do envio);
+sem caminho "confidencial, só pra equipe pastoral" separado do mural público; mensagem pós-envio
+não diz quanto tempo a moderação costuma levar.
+
+**Galeria**: fotos numa grade só, sem agrupar por evento/álbum (vai virar uma parede confusa
+conforme o acervo cresce); nenhuma foto abre em tamanho maior ao clicar (sem lightbox); imagem
+sempre no mesmo tamanho fixo, não adaptado ao dispositivo; busca todo o acervo de uma vez, sem
+paginação.
+
+**Busca**: sem resultado nenhum não sugere nada nem linka pra outro lugar do site, só mostra "0
+resultados"; o índice não inclui o corpo dos textos, só título/resumo (uma busca por uma frase ou
+versículo citado dentro de uma mensagem não encontra nada, mesmo a mensagem existindo); sem
+ordenação por relevância; a página `/busca` não tem a mesma navegação por teclado que o atalho
+rápido (Cmd/Ctrl+K) já tem.
+
+**Páginas novas avaliadas** (detalhe completo na Fase 5 do plano): Crenças/O que Cremos,
+Ministérios (distinto de Órgãos — governança vs. áreas de atuação), página de Kids dedicada, e Ao
+vivo/Assista online, nesta ordem de valor. Avaliadas e **não** recomendadas por ora: FAQ separada
+(melhor virar seção de `/visitante/`), batismo (precisa de processo definido antes), servir/seja
+voluntário (precisa de vagas reais primeiro), podcast/vagas de trabalho (perfil de igreja grande,
+ficaria vazio aqui agora).
+
+Fontes consultadas (todas as rodadas, título e domínio — sem nome de produto/plataforma específico
+no texto acima): [Nonprofit Website Best Practices 2026](https://www.elevationweb.org/blog/nonprofit-website-best-practices/),
 [Guia de site de igreja (Tithely)](https://get.tithe.ly/blog/the-ultimate-guide-to-creating-a-successful-church-website),
 [Guia de site de igreja nonprofit (Donorbox)](https://donorbox.org/nonprofit-blog/build-a-church-website),
 [Exemplos de "About Us" de nonprofit (Wired Impact)](https://wiredimpact.com/blog/5-great-nonprofit-about-us-pages-tips-examples/),
@@ -982,54 +1060,8 @@ Fontes consultadas (título e domínio, sem nome de produto/plataforma específi
 [Ideias de conteúdo pra aprofundar comunidade (The Lead Pastor)](https://theleadpastor.com/church-management/church-website-content-ideas/),
 [Página de equipe de igreja (ChurchTechToday)](https://churchtechtoday.com/church-staff-page/),
 [Dicas de "About Us" pra pequenos negócios (Salesforce)](https://www.salesforce.com/blog/small-business-about-us-page/),
-[Erros comuns de página "About" (OptinMonster)](https://optinmonster.com/6-common-about-page-mistakes-that-are-killing-your-conversions/).
-
-#### SEO — por que o site não aparece nem buscando o nome da igreja (aguardando revisão)
-
-Pesquisado a pedido do usuário: **sem tráfego pago em nenhuma hipótese** — só otimização
-orgânica (a maioria das igrejas realmente não usa anúncio pago, então concorrer nesse terreno é
-possível). Antes de sugerir qualquer coisa, verifiquei o estado técnico atual do site de verdade
-(não só por suposição):
-
-**O que já está correto** (bom saber, pra não gastar esforço em cima do que não é o problema):
-`robots.txt` permite tudo e aponta pro sitemap; `sitemap.xml`/`sitemap-index.xml` respondem 200;
-não tem nenhuma tag `noindex` vazando pra página nenhuma pública; título, descrição e
-`<link rel="canonical">` de cada página são únicos e bem formados; Open Graph e Twitter Card
-completos; já existe **BreadcrumbList** (dado estruturado JSON-LD) nas páginas com trilha de
-navegação; já existe RSS. **Correção depois de olhar com mais calma** (a primeira leitura deste
-levantamento errou nisso, registrado aqui pra não confundir quem ler depois): a página inicial e a
-de contato já tinham, sim, um dado estruturado `Church` completo (endereço, telefone, horários de
-culto), e cada página de evento já tinha `Event` — só faltava mesmo o `sameAs` (link pros perfis
-de rede social), que foi adicionado logo em seguida. Ou seja, a base técnica do site em si —
-dado estruturado incluído — não é o motivo de não aparecer.
-
-**A causa mais provável não é o código do site — é o que só existe fora dele:**
-- **Perfil da Empresa no Google (Google Business Profile)** — pra buscas do tipo "nome da igreja",
-  esse cadastro (gratuito, separado do site, feito em business.google.com) costuma pesar mais que
-  qualquer coisa no próprio site — é o que geralmente aparece com mapa/horários/foto na lateral da
-  busca. Se a igreja ainda não reivindicou esse perfil, essa é a ação de maior impacto disponível,
-  e não depende de nada técnico daqui.
-- **Domínio novo demora mesmo** — mesmo com tudo certo, o normal é de 2 a 4 semanas pra primeira
-  indexação e até 2-3 meses pra indexação completa; só estar cadastrado no Search Console não
-  acelera isso sozinho.
-- **No Search Console**, além de verificar a propriedade (já feito, segundo o usuário), confirmar
-  que o sitemap foi **enviado** na aba própria (não é automático só por verificar o domínio), e
-  usar a ferramenta "Inspeção de URL" → "Solicitar indexação" na home e nas páginas mais
-  importantes — isso não garante nada, mas empurra a fila de rastreamento.
-- **Citações e links de fora pra dentro (backlinks)** — cadastro em diretórios da própria
-  convenção/ministério da Assembleia de Deus, sites da prefeitura/associações locais de
-  Parauapebas, e qualquer parceria com outra organização que possa linkar de volta — tudo isso é
-  gratuito e ajuda a busca a confiar que a igreja "existe de verdade" no lugar que diz — mas
-  precisa ser feito manualmente, item por item, fora do código do site.
-
-**No próprio código, já está feito**: o `sameAs` foi adicionado ao dado estruturado `Church` da
-home e do contato (commit logo após esta pesquisa) — não sobrou pendência técnica de dado
-estruturado. O que resta de verdade pra melhorar a chance de aparecer **não é código, é cadastro
-fora do site**: reivindicar o Perfil da Empresa no Google, e confirmar no Search Console que o
-sitemap foi enviado / solicitar indexação da home — **isso não se resolve escrevendo código**, só
-quem administra as contas do Google consegue fazer.
-
-Fontes consultadas: [Local SEO pra nonprofits (Elevation)](https://www.elevationweb.org/blog/nonprofit-local-seo/),
+[Erros comuns de página "About" (OptinMonster)](https://optinmonster.com/6-common-about-page-mistakes-that-are-killing-your-conversions/),
+[Local SEO pra nonprofits (Elevation)](https://www.elevationweb.org/blog/nonprofit-local-seo/),
 [Guia de Perfil da Empresa no Google pra igrejas (ReachRight)](https://reachrightstudios.com/blog/the-ultimate-google-business-profile-guide/),
 [Checklist de SEO local 2026 (LocalHero)](https://localhero.live/blog/local-seo-checklist-small-businesses-ultimate-edition/),
 [Quanto tempo o Google demora pra indexar um site novo (Grange)](https://www.grangewebdesign.com/blog/how-long-does-it-take-for-a-new-website-to-index/),
@@ -1039,83 +1071,7 @@ Fontes consultadas: [Local SEO pra nonprofits (Elevation)](https://www.elevation
 [Schema markup pra igrejas (Church Design Resource)](https://churchdesignresource.com/search-engines/schema-for-churches/),
 [Diretórios online pra igrejas (ReachRight)](https://reachrightstudios.com/blog/online-directories-for-churches/),
 [12 táticas de SEO pra igrejas (The Lead Pastor)](https://theleadpastor.com/church-management/seo-for-churches/),
-[Backlinks e autoridade de site de igreja (Missional Marketing)](https://missionalmarketing.com/church-website-authority-backlinks/).
-
-#### Melhorias página por página, depois de concluída a aba de eventos (aguardando revisão)
-
-Pesquisa ampla pedida pelo usuário: "o site já está bom, agora é hora de melhorar página por
-página" — cobrindo se faltam páginas inteiras novas, e depois cada página existente (Início,
-Notícias, Mensagens/Temas, Órgãos, Congregações — Eventos ficou de fora de propósito, o usuário já
-considera essa parte boa). Nada disto foi construído ainda.
-
-**Páginas novas que podem valer a pena** (nenhuma construída, ordenadas por valor):
-1. **Crenças / O que Cremos** — página própria, separada do "Sobre", com um resumo curto (2-3
-   frases) linkando pra versão completa. Já tinha sido apontada como falta na pesquisa da página
-   "Sobre" — o bloqueio real é ter o texto doutrinário escrito e aprovado, não a página em si.
-2. **Ministérios** (diferente de Órgãos) — Órgãos é governança (assembleia, conselho, diretoria);
-   Ministérios seria as áreas de atuação (jovens, mulheres, música, ação social), cada uma com
-   descrição, horário de reunião e "como participar". Bloqueio: fotos/descrição de cada ministério
-   e alguém responsável por manter atualizado.
-3. **Página de crianças/kids dedicada** — proposta pedagógica, política de segurança (protocolo de
-   entrega de criança), fotos do espaço. Só faz sentido se já existir um ministério infantil
-   estruturado e uma política de segurança escrita.
-4. **Ao vivo / Assista online** — só uma página de "onde assistir" (links/embed), sem
-   infraestrutura de streaming própria; baixo custo, só vale se a transmissão já for regular.
-5. Menor prioridade / avaliadas e não recomendadas por ora: FAQ separada (melhor como seção dentro
-   de `/visitante/`, que já cobre boa parte disso), batismo (precisa de processo definido antes),
-   servir/seja voluntário (precisa de vagas reais primeiro), podcast/vagas de trabalho (perfil de
-   igreja grande, ficaria vazio aqui agora).
-
-**Início (home)**:
-- Hero é só texto (título, descrição, botões) — sem nenhuma foto real de culto/comunidade; a
-  coleção `galeria` já existe no Directus e poderia alimentar isso sem upload novo.
-- `siteConfig.youtubeLiveUrl` existe e resolve pra live automaticamente, mas não aparece em
-  nenhum lugar da home nem do cabeçalho — falta só um botão "Assista ao vivo".
-- Seção "Acesso rápido" tem 8 itens com o mesmo peso visual (Primeira vez, Notícias, Órgãos,
-  Congregações, Eventos, Doações, Galeria, Mural de oração) — concorrência visual sem hierarquia;
-  poderia cair pra 3-4 essenciais, o resto já está acessível pela navegação normal.
-  Endereço/mapa some pra depois do feed inteiro em mobile — informação nº1 buscada deveria estar
-  mais perto do topo (já tem `mapsHref()` pronto pra isso).
-- Mensagem mais recente aparece só como card de texto, sem player embutido, se já existir áudio/
-  vídeo associado a ela.
-- `/transparencia/` só aparece no rodapé — nenhum sinal de prestação de contas visível na home.
-
-**Notícias**: sem filtro por categoria nem paginação na listagem (mensagens já pagina, notícias
-não); "Mais notícias" no artigo pega só as 3 mais recentes, não relacionadas por categoria (ao
-contrário de mensagens, que já tem `getRelated`); sem página de arquivo por categoria de notícia.
-
-**Mensagens/Temas**: arquivo de mensagens não combina filtros (tema + pregador na mesma tela);
-sem conceito de "série de mensagens" (exigiria campo novo no Directus, não só front-end); vídeos
-(`videoUrl`) sem `VideoObject` no dado estruturado, perdendo elegibilidade a rich results — só
-funciona pros itens que já têm essa informação.
-
-**Órgãos** (prioridade — o usuário já indicou que essa página "não está boa"):
-- A listagem (`orgaos.astro`) não mostra nenhuma pessoa — só nome do órgão e descrição; nome/foto
-  do responsável só aparece depois de entrar na página individual.
-- Só existe campo pra **um** líder por órgão (`leader_name`/`leader_role`/`leader_photo`), mais um
-  caso especial hardcoded só pra "diretoria-executiva" (nome+cargo, sem foto/bio) — órgãos
-  colegiados (assembleia, conselho fiscal) não têm nenhum campo pra listar vários membros. É uma
-  lacuna de modelo de dado, não só de exibição.
-- Nenhum órgão tem bio, mandato ou "desde quando" — nem a diretoria executiva.
-- As 4 categorias (Governança, Departamentos, Secretarias, Serviços) têm o mesmo tratamento visual,
-  apesar de serem conceitualmente diferentes (governança é deliberativa; departamentos/serviços são
-  equipes de voluntariado) — daria pra separar visualmente, com Governança linkando pra
-  `/transparencia/` ou atas de reunião, algo que hoje não existe em nenhum órgão.
-- CTA "Quer participar?" é idêntico pra todo órgão, mesmo os deliberativos/eleitos — soa informal
-  demais pra um conselho fiscal, por exemplo.
-
-**Congregações**:
-- Página individual de congregação não tem mapa nenhum — só endereço em texto + link "Ver rota".
-  Já existe a mesma técnica de embed grátis (sem chave de API) usada em `/contato/` — é o lugar
-  mais óbvio ainda sem reaproveitar isso.
-- Inconsistência de provedor de mapa: a listagem usa Leaflet/OpenStreetMap, contato/home usam
-  Google Maps embed — dois sistemas diferentes de mapa no mesmo site.
-- Congregação sem `lat`/`lng` simplesmente some do mapa da listagem, só com uma legenda pequena —
-  poderia aparecer como item "localização em cadastro" em vez de invisível.
-- Sem filtro/ordenar por distância, e sem foto da fachada de cada congregação (mesma falta de foto
-  já identificada no site inteiro).
-
-Fontes consultadas (títulos, sem nome de produto/plataforma específico no texto acima):
+[Backlinks e autoridade de site de igreja (Missional Marketing)](https://missionalmarketing.com/church-website-authority-backlinks/),
 [Declaração de fé em site de igreja](https://goodchurchwebsite.com/statement-of-faith/),
 [O que é uma declaração de fé (Donorbox)](https://donorbox.org/nonprofit-blog/statement-of-faith),
 [12 itens essenciais de site de igreja (The Church Co)](https://thechurchco.com/blog/2024/05/28/12-things-every-church-website-must-have/),
@@ -1132,51 +1088,8 @@ Fontes consultadas (títulos, sem nome de produto/plataforma específico no text
 [Governança e transparência de igreja (GARBC)](https://www.garbc.org/blog/strengthening-church-governance-and-accountability-best-practices-and-essential-resources/),
 [Transparência de governança (Church Transparency Project)](https://churchtransparency.org/governance-transparency/),
 [Boas práticas de página de localização (NN/g)](https://www.nngroup.com/articles/store-finders-and-locators/),
-[Site de igreja multi-campus (Vision Room)](https://www.visionroom.com/multisite-church-website-approach-3-campus-select-option/).
-
-**Segunda leva desta pesquisa — as páginas que faltavam** (Transparência, Doações, Visitante,
-Mural de oração, Galeria, Busca):
-
-**Transparência**: sem quebra visual de receitas/despesas (só lista de PDFs + gráfico de
-crescimento de congregações); sem indicação de "último relatório publicado" nem cadência esperada;
-sem menção de auditoria/parecer independente; CNPJ não aparece nesta página (só em Doações).
-
-**Doações**: sem menção a recibo de doação; sem aviso pra conferir o nome do recebedor no Pix antes
-de confirmar (proteção contra golpe de Pix clonado, puramente informativo); sem campo sugerido
-pra indicar finalidade (dízimo/oferta/campanha) na descrição do Pix; chave Pix só em texto, sem
-QR code estático pra copiar (reduziria erro de digitação, sem processador nenhum envolvido).
-
-**Visitante**: FAQ depende 100% do que for cadastrado no CMS, sem garantia de cobrir dúvidas
-específicas do contexto pentecostal (manifestações, duração do culto, chamada ao altar); página é
-só texto, sem foto/vídeo do ambiente ou do estilo de louvor; "estrutura para famílias" não fala de
-check-in infantil nem triagem de voluntários; horário/endereço só aparece nos "próximos passos",
-não logo no topo.
-
-**Mural de oração**: 
-- ⚠️ **Achado que é bug de verdade, não só sugestão**: o contador "orando por você" incrementa
-  calculando `valor atual + 1` no próprio navegador de quem clica e grava direto — dá pra chamar a
-  API manualmente e definir qualquer número, e nada impede a mesma pessoa clicar várias vezes na
-  mesma visita (o botão só trava durante o próprio clique, depois libera nesse envio de novo).
-  Vale corrigir antes de tudo o mais desta página, com uma trava simples por navegador (não
-  resolve 100% — só limitar via navegador nunca é uma trava perfeita — mas corta o caso comum).
-- Sem proteção nenhuma contra spam/envio automatizado no formulário de pedido (nem honeypot, nem
-  limite de envios) — a única defesa hoje é a moderação humana depois do envio.
-- Não existe caminho "confidencial, só pra equipe pastoral" separado do mural público — todo
-  pedido aprovado vira público, sem opção de pedido sensível não passar por ali.
-- Mensagem pós-envio não diz quanto tempo a moderação costuma levar.
-
-**Galeria**: fotos numa grade só, sem agrupar por evento/álbum — vai virar uma parede confusa
-conforme o acervo cresce; nenhuma foto abre em tamanho maior ao clicar (sem lightbox); imagem
-sempre no mesmo tamanho fixo, não adaptado ao dispositivo; busca todo o acervo de uma vez, sem
-paginação, o que só cresce com o tempo.
-
-**Busca**: busca sem resultado nenhum não sugere nada nem linka pra outro lugar do site, só mostra
-"0 resultados"; o índice de busca não inclui o corpo dos textos, só título/resumo — uma pesquisa
-por uma frase ou versículo citado dentro de uma mensagem não encontra nada mesmo a mensagem
-existindo; sem ordenação por relevância (é tudo por ordem fixa do índice); a página `/busca`
-própria não tem a mesma navegação por teclado que o atalho rápido (Cmd/Ctrl+K) já tem.
-
-Fontes consultadas (mais desta leva): [Transparência financeira de nonprofit (Zeffy)](https://www.zeffy.com/blog/nonprofit-organization-transparency),
+[Site de igreja multi-campus (Vision Room)](https://www.visionroom.com/multisite-church-website-approach-3-campus-select-option/),
+[Transparência financeira de nonprofit (Zeffy)](https://www.zeffy.com/blog/nonprofit-organization-transparency),
 [Doação via Pix pra igreja (Cora)](https://www.cora.com.br/blog/como-registrar-doacoes-pix-na-contabilidade-da-igreja/),
 [Página "planeje sua visita" de igreja (ChurchTrac)](https://www.churchtrac.com/blog/the-perfect-church-plan-your-visit-page),
 [Sistema de pedido de oração (UKChurches)](https://www.ukchurches.co.uk/creating-a-prayer-request-system-for-your-church-website/),
