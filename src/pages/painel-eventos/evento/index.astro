@@ -52,6 +52,7 @@ const tipoPerguntaOpcoes = [
         <button type="button" class="tab-btn is-active" data-tab="dados">Dados do evento</button>
         <button type="button" class="tab-btn" data-tab="inscricao">Perguntas de inscrição</button>
         <button type="button" class="tab-btn" data-tab="pesquisa">Pesquisa pós-evento</button>
+        <button type="button" class="tab-btn" data-tab="agenda">Agenda (sessões)</button>
         <button type="button" class="tab-btn" data-tab="avancado">Encerrar / Excluir</button>
       </div>
 
@@ -250,6 +251,38 @@ const tipoPerguntaOpcoes = [
       </section>
       </div>
 
+      <div data-tab-panel="agenda" hidden>
+      <section hidden class="mt-8" data-agenda-secao aria-labelledby="agenda-heading">
+        <h2 id="agenda-heading" class="section-title">Agenda interna (sessões/palestras)</h2>
+        <p class="mt-2 text-sm text-muted-foreground">
+          Pra eventos com várias palestras/horários (congressos, seminários) — aparece na página
+          pública do evento como uma programação, abaixo da descrição. Se o evento for de vários
+          dias, preencha o campo "Dia" pra agrupar cada sessão no dia certo; se for de um dia só,
+          pode deixar em branco.
+        </p>
+
+        <div class="mt-5 grid gap-3" data-sessoes-lista></div>
+
+        <div class="mt-6 pergunta-card" data-sessao-nova>
+          <p class="text-sm font-semibold">+ Nova sessão</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <input type="text" class="field" placeholder="Título da sessão/palestra" data-novo-sessao-titulo />
+            <input type="text" class="field" placeholder="Palestrante (opcional)" data-novo-sessao-palestrante />
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-[auto_1fr_1fr]">
+            <input type="date" class="field" data-novo-sessao-dia title="Dia (só p/ evento de vários dias)" />
+            <input type="text" class="field" placeholder="Horário início (19h30)" data-novo-sessao-inicio />
+            <input type="text" class="field" placeholder="Horário fim (opcional)" data-novo-sessao-fim />
+          </div>
+          <input type="text" class="field mt-3" placeholder="Local (opcional, só se for diferente do local do evento)" data-novo-sessao-local />
+          <textarea class="field mt-3" rows="2" placeholder="Descrição (opcional)" data-novo-sessao-descricao></textarea>
+          <div class="mt-3 flex items-center justify-end gap-3">
+            <button type="button" class="btn btn-outline" data-adicionar-sessao>Adicionar sessão</button>
+          </div>
+        </div>
+      </section>
+      </div>
+
       <div data-tab-panel="avancado" hidden>
       <div hidden class="mt-8 zona-encerrar" data-zona-encerrar>
         <p class="text-sm font-semibold">Encerrar evento</p>
@@ -314,6 +347,18 @@ const tipoPerguntaOpcoes = [
       momento: string;
     }
 
+    interface Sessao {
+      id: number;
+      titulo: string;
+      palestrante: string | null;
+      descricao: string | null;
+      dia: string | null;
+      horario_inicio: string | null;
+      horario_fim: string | null;
+      local: string | null;
+      ordem: number | null;
+    }
+
     const container = document.querySelector<HTMLElement>("[data-directus-url]");
     if (!container) throw new Error("contêiner do painel ausente");
     const directusUrl = container.dataset.directusUrl ?? "";
@@ -328,6 +373,8 @@ const tipoPerguntaOpcoes = [
     const statusEl = document.querySelector<HTMLElement>("[data-evento-status]");
     const perguntasSecaoInscricao = document.querySelector<HTMLElement>("[data-perguntas-secao-inscricao]");
     const perguntasSecaoPesquisa = document.querySelector<HTMLElement>("[data-perguntas-secao-pesquisa]");
+    const agendaSecao = document.querySelector<HTMLElement>("[data-agenda-secao]");
+    const sessoesLista = document.querySelector<HTMLElement>("[data-sessoes-lista]");
     const perguntasListaInscricao = document.querySelector<HTMLElement>("[data-perguntas-lista-inscricao]");
     const perguntasListaPesquisa = document.querySelector<HTMLElement>("[data-perguntas-lista-pesquisa]");
 
@@ -525,6 +572,56 @@ const tipoPerguntaOpcoes = [
       }
     }
 
+    function sessaoCardHtml(s: Sessao) {
+      return `
+        <div class="pergunta-card" data-sessao-id="${s.id}">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <input type="text" class="field" value="${escapeHtml(s.titulo)}" data-campo="titulo" placeholder="Título" />
+            <input type="text" class="field" value="${escapeHtml(s.palestrante ?? "")}" data-campo="palestrante" placeholder="Palestrante" />
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-[auto_1fr_1fr]">
+            <input type="date" class="field" value="${s.dia ?? ""}" data-campo="dia" title="Dia" />
+            <input type="text" class="field" value="${escapeHtml(s.horario_inicio ?? "")}" data-campo="horario_inicio" placeholder="Início" />
+            <input type="text" class="field" value="${escapeHtml(s.horario_fim ?? "")}" data-campo="horario_fim" placeholder="Fim" />
+          </div>
+          <input type="text" class="field mt-3" value="${escapeHtml(s.local ?? "")}" data-campo="local" placeholder="Local (opcional)" />
+          <textarea class="field mt-3" rows="2" placeholder="Descrição" data-campo="descricao">${escapeHtml(s.descricao ?? "")}</textarea>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <input type="number" class="field ordem-input" value="${s.ordem ?? 0}" data-campo="ordem" title="Ordem" />
+            <div class="flex gap-3">
+              <button type="button" class="btn btn-outline" data-salvar-sessao>Salvar</button>
+              <button type="button" class="btn btn-outline" data-excluir-sessao>Excluir</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function carregarSessoes(token: string, id: number) {
+      if (!sessoesLista) return;
+      const res = await fetch(`${directusUrl}/items/sessoes_evento?filter[evento][_eq]=${id}&sort=dia,ordem&limit=-1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      const sessoes: Sessao[] = json.data ?? [];
+      sessoesLista.innerHTML = sessoes.map(sessaoCardHtml).join("");
+    }
+
+    function lerCamposSessao(container: ParentNode) {
+      const campo = <T extends HTMLElement>(nome: string) => container.querySelector<T>(`[data-campo="${nome}"]`);
+      return {
+        titulo: campo<HTMLInputElement>("titulo")?.value.trim() ?? "",
+        palestrante: campo<HTMLInputElement>("palestrante")?.value.trim() || null,
+        dia: campo<HTMLInputElement>("dia")?.value || null,
+        horario_inicio: campo<HTMLInputElement>("horario_inicio")?.value.trim() || null,
+        horario_fim: campo<HTMLInputElement>("horario_fim")?.value.trim() || null,
+        local: campo<HTMLInputElement>("local")?.value.trim() || null,
+        descricao: campo<HTMLTextAreaElement>("descricao")?.value.trim() || null,
+        ordem: Number(campo<HTMLInputElement>("ordem")?.value || 0),
+      };
+    }
+
+
     async function iniciar() {
       const tokenObtido = await exigirAutenticacao(directusUrl);
       if (!tokenObtido) return;
@@ -559,6 +656,7 @@ const tipoPerguntaOpcoes = [
       if (form) form.hidden = false;
       if (perguntasSecaoInscricao) perguntasSecaoInscricao.hidden = false;
       if (perguntasSecaoPesquisa) perguntasSecaoPesquisa.hidden = false;
+      if (agendaSecao) agendaSecao.hidden = false;
       if (tabsBar) tabsBar.hidden = false;
 
       const zonaPerigo = document.querySelector<HTMLElement>("[data-zona-perigo]");
@@ -567,6 +665,7 @@ const tipoPerguntaOpcoes = [
       if (zonaEncerrar) zonaEncerrar.hidden = false;
 
       await carregarPerguntas(token, eventoIdNumero);
+      await carregarSessoes(token, eventoIdNumero);
 
       document.querySelector("[data-encerrar-evento]")?.addEventListener("click", async () => {
         const encerrarStatus = document.querySelector<HTMLElement>("[data-encerrar-status]");
@@ -905,6 +1004,59 @@ const tipoPerguntaOpcoes = [
 
       configurarFormNovaPergunta("inscricao", "inscricao");
       configurarFormNovaPergunta("pesquisa", "pos_evento");
+
+      document.querySelector("[data-adicionar-sessao]")?.addEventListener("click", async () => {
+        const bloco = document.querySelector<HTMLElement>("[data-sessao-nova]");
+        const titulo = document.querySelector<HTMLInputElement>("[data-novo-sessao-titulo]");
+        if (!bloco || !titulo?.value.trim()) return;
+
+        await fetch(`${directusUrl}/items/sessoes_evento`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            evento: eventoIdNumero,
+            titulo: titulo.value.trim(),
+            palestrante: document.querySelector<HTMLInputElement>("[data-novo-sessao-palestrante]")?.value.trim() || null,
+            dia: document.querySelector<HTMLInputElement>("[data-novo-sessao-dia]")?.value || null,
+            horario_inicio: document.querySelector<HTMLInputElement>("[data-novo-sessao-inicio]")?.value.trim() || null,
+            horario_fim: document.querySelector<HTMLInputElement>("[data-novo-sessao-fim]")?.value.trim() || null,
+            local: document.querySelector<HTMLInputElement>("[data-novo-sessao-local]")?.value.trim() || null,
+            descricao: document.querySelector<HTMLTextAreaElement>("[data-novo-sessao-descricao]")?.value.trim() || null,
+            ordem: 99,
+          }),
+        });
+
+        bloco.querySelectorAll("input, textarea").forEach((campoEl) => {
+          (campoEl as HTMLInputElement | HTMLTextAreaElement).value = "";
+        });
+        await carregarSessoes(token, eventoIdNumero);
+      });
+
+      sessoesLista?.addEventListener("click", async (event) => {
+        const target = event.target as HTMLElement;
+        const card = target.closest<HTMLElement>("[data-sessao-id]");
+        if (!card) return;
+        const sessaoId = card.dataset.sessaoId;
+
+        if (target.matches("[data-excluir-sessao]")) {
+          if (!confirm("Excluir essa sessão da agenda?")) return;
+          await fetch(`${directusUrl}/items/sessoes_evento/${sessaoId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          await carregarSessoes(token, eventoIdNumero);
+          return;
+        }
+
+        if (target.matches("[data-salvar-sessao]")) {
+          await fetch(`${directusUrl}/items/sessoes_evento/${sessaoId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(lerCamposSessao(card)),
+          });
+          await carregarSessoes(token, eventoIdNumero);
+        }
+      });
 
       async function manipularCliquePerguntas(event: Event) {
         const target = event.target as HTMLElement;

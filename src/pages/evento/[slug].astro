@@ -33,6 +33,18 @@ interface Pergunta {
   momento: string;
 }
 
+interface Sessao {
+  id: number;
+  titulo: string;
+  palestrante: string | null;
+  descricao: string | null;
+  dia: string | null;
+  horario_inicio: string | null;
+  horario_fim: string | null;
+  local: string | null;
+  ordem: number | null;
+}
+
 interface Evento {
   id: number;
   slug: string;
@@ -95,6 +107,31 @@ const inscricaoEncerradaMotivo = event.inscricoes_encerradas ? "encerradas" : in
 const perguntas = inscricaoAberta
   ? (await fetchItems<Pergunta>("perguntas_evento", `filter[evento][_eq]=${event.id}&sort=ordem`)).filter((p) => p.momento !== "pos_evento")
   : [];
+
+/* Agenda interna (sessões/palestras) — pra congressos e seminários com
+   várias atrações dentro do mesmo evento. Agrupa por dia só quando fizer
+   sentido (evento de vários dias E pelo menos uma sessão com dia
+   preenchido); senão mostra como uma lista só, na ordem cadastrada. */
+const sessoes = await fetchItems<Sessao>("sessoes_evento", `filter[evento][_eq]=${event.id}&sort=dia,ordem`);
+const eventoTemVariosDias = Boolean(event.event_date && event.end_date && event.end_date !== event.event_date);
+const agrupaPorDia = eventoTemVariosDias && sessoes.some((s) => s.dia);
+
+const gruposAgenda = agrupaPorDia
+  ? Object.values(
+      sessoes.reduce<Record<string, { dia: string | null; itens: Sessao[] }>>((grupos, sessao) => {
+        const chave = sessao.dia ?? "sem-dia";
+        if (!grupos[chave]) grupos[chave] = { dia: sessao.dia, itens: [] };
+        grupos[chave].itens.push(sessao);
+        return grupos;
+      }, {}),
+    )
+  : sessoes.length
+    ? [{ dia: null, itens: sessoes }]
+    : [];
+
+function horarioSessao(s: Sessao) {
+  return [s.horario_inicio, s.horario_fim].filter(Boolean).join(" – ");
+}
 
 /* "19h30" -> "19:30", exigido pelo ISO 8601 do schema.org. Se não bater
    com o padrão esperado, a hora fica de fora em vez de gerar dado inválido. */
@@ -169,6 +206,39 @@ const structuredData = startDate
       )}
 
       <div class="prose mt-10" set:html={bodyHtml} />
+
+      {
+        gruposAgenda.length > 0 && (
+          <section class="mt-10" aria-labelledby="agenda-heading">
+            <h2 id="agenda-heading" class="section-title">Programação</h2>
+            <div class="mt-4 grid gap-6">
+              {gruposAgenda.map((grupo) => (
+                <div>
+                  {grupo.dia && <p class="eyebrow">{dateFormatter.format(new Date(grupo.dia))}</p>}
+                  <ul class="mt-2 grid gap-3">
+                    {grupo.itens.map((sessao) => (
+                      <li class="agenda-item">
+                        <div class="flex flex-wrap items-baseline justify-between gap-2">
+                          <p class="font-semibold">{sessao.titulo}</p>
+                          {horarioSessao(sessao) && <span class="pill shrink-0">{horarioSessao(sessao)}</span>}
+                        </div>
+                        {(sessao.palestrante || sessao.local) && (
+                          <p class="mt-1 text-sm text-muted-foreground">
+                            {sessao.palestrante}
+                            {sessao.palestrante && sessao.local && " · "}
+                            {sessao.local}
+                          </p>
+                        )}
+                        {sessao.descricao && <p class="mt-1 text-sm leading-relaxed text-muted-foreground">{sessao.descricao}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+      }
 
       {
         event.aceita_inscricao && (
@@ -568,6 +638,12 @@ const structuredData = startDate
   }
 
   <style>
+    .agenda-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1.1rem;
+    }
+
     .inscricao-card {
       border: 1px solid var(--border);
       border-radius: var(--radius-md);

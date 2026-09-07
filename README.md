@@ -679,8 +679,24 @@ de igreja em geral):
         Testado de ponta a ponta contra o Directus real (sem token): grupo de 3 pessoas com limite
         de 2 vagas confirma as duas primeiras e coloca a terceira na lista de espera, todas com o
         valor da faixa escolhida e o mesmo telefone.
-- [ ] **Agenda interna do evento (multi-sessão)** — pra congressos com várias palestras/horários
-      dentro do mesmo evento (palestrante, tema, horário), mostrado na página pública.
+- [x] **Agenda interna do evento (multi-sessão)** — nova coleção `sessoes_evento` (título,
+      palestrante, dia, horário início/fim, local, descrição, ordem), gerenciada numa aba própria
+      do editor ("Agenda (sessões)"), mesmo padrão de cartões de perguntas/faixas de valor.
+      Aparece na página pública do evento como uma seção "Programação", logo abaixo da descrição.
+      - **Agrupamento por dia é automático, não manual**: só agrupa quando o evento tem mais de um
+        dia (`event_date` ≠ `end_date`) **e** pelo menos uma sessão tem o campo "Dia" preenchido —
+        um seminário de um dia só mostra a lista direto, sem cabeçalho de data repetido à toa.
+      - **Check-in continua único por evento** (não por sessão/dia) — decisão deliberada por
+        enquanto: fracionar o check-in por sessão levantaria perguntas sobre re-check-in a cada
+        palestra, presença parcial em eventos de vários dias etc., que valem uma conversa própria
+        depois. A agenda existe hoje só pra informar o visitante, sem depender disso.
+      - `sessoes_evento` entra no Directus Flow que dispara o deploy (a agenda é conteúdo
+        público, ao contrário de `perguntas_evento`/`inscricoes_eventos`, que são só
+        operacionais) — editar a agenda publica sozinho, sem precisar mexer em outro lugar.
+        Exclusão em cascata no banco: apagar o evento apaga as sessões dele automaticamente.
+      Testado de ponta a ponta: evento de vários dias agrupa certo por dia (verificado contra o
+      Directus real), evento de um dia só mostra lista plana, e o CRUD da agenda no painel
+      (adicionar, editar, excluir) funciona.
 
 Terceira leva de pesquisa (comparativos de ferramentas de gestão de eventos em geral):
 
