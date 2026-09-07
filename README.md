@@ -371,8 +371,6 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       PDF depois. Exige um novo campo `tipo_responsavel` (seleção) em `eventos` — os eventos já
       cadastrados ainda não têm esse campo preenchido, e precisam ser categorizados aos poucos
       pelo Directus pra aparecerem nos filtros por responsável.
-- [ ] **Newsletter por e-mail** — resumo semanal automático (notícias + próximos eventos) via
-      Flow do Directus, para quem se cadastra com o e-mail.
 - [ ] **Progressive Web App (PWA)** — permite "instalar" o site na tela inicial do celular como
       se fosse um app, com ícone próprio, sem passar pela loja de aplicativos.
 - [ ] **Modo offline básico** — cache da programação semanal e contatos via Service Worker, para
@@ -431,6 +429,13 @@ novo sem necessidade.
   de gestão de membros usado pela igreja, não faz sentido duplicar aqui.
 - **Multilíngue (PT/EN/ES)** — a igreja não recebe público de outros idiomas com frequência que
   justifique manter traduções; o tradutor automático do navegador já cobre o caso raro.
+- **Newsletter por e-mail** — pesquisado a fundo (Resend, Mailjet, Brevo). O Brevo (o mais
+  recomendado, contatos ilimitados de graça) exige um clique manual ("Requeue") pra completar o
+  envio sempre que a lista passar de 300 inscritos, porque o plano grátis não permite programar
+  isso com antecedência nem enfileira sozinho o restante. A alternativa (programar o envio nós
+  mesmos, sem usar a Campanha do Brevo) tiraria esse clique manual, mas exigiria construir e
+  manter por conta própria o link de descadastro e o controle de quem já saiu da lista — risco e
+  trabalho maior que o benefício. Decidido não valer a pena por nenhum dos dois caminhos.
 
 ## Licença
 
