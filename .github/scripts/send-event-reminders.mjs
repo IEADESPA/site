@@ -1,6 +1,12 @@
 // Roda uma vez por dia (ver .github/workflows/event-notifications.yml).
-// Avisa, por notificação push do navegador, quem ativou os avisos em
-// /eventos/ sobre eventos especiais que acontecem amanhã.
+// Dois mecanismos de aviso, por notificação push do navegador, sobre
+// eventos especiais que acontecem amanhã:
+// 1. Quem ativou o aviso geral em /eventos/ (push_subscriptions) — só de
+//    eventos cujo responsável está na lista de preferência da pessoa, ou
+//    de todos, se ela não restringiu nada.
+// 2. Quem se inscreveu naquele evento específico e ativou o lembrete na
+//    própria página de inscrição (push_* em inscricoes_eventos) — sempre
+//    só daquele evento, nunca dos outros.
 import webpush from "web-push";
 
 const { DIRECTUS_URL, DIRECTUS_ADMIN_TOKEN, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, SITE_URL } = process.env;
@@ -15,6 +21,19 @@ function amanhaISO() {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
+}
+
+async function enviar(subscriptionKeys, payload) {
+  try {
+    await webpush.sendNotification(subscriptionKeys, payload);
+    return { expirada: false };
+  } catch (err) {
+    // 404/410: inscrição não existe mais no navegador do visitante
+    // (ex.: limpou os dados do site) — sem problema, só remove.
+    if (err.statusCode === 404 || err.statusCode === 410) return { expirada: true };
+    console.error("Falha ao enviar push:", err.statusCode, err.body);
+    return { expirada: false };
+  }
 }
 
 async function main() {
@@ -38,25 +57,24 @@ async function main() {
     return;
   }
 
+  // --- Mecanismo 1: avisos gerais, filtrados por responsável preferido ---
   const subsRes = await fetch(`${DIRECTUS_URL}/items/push_subscriptions?limit=-1`, {
     headers: { Authorization: `Bearer ${DIRECTUS_ADMIN_TOKEN}` },
   });
-  if (!subsRes.ok) throw new Error(`Falha ao buscar inscrições: ${subsRes.status}`);
+  if (!subsRes.ok) throw new Error(`Falha ao buscar inscrições gerais: ${subsRes.status}`);
   const { data: subs } = await subsRes.json();
 
-  if (subs.length === 0) {
-    console.log("Nenhum inscrito em notificações — nada a enviar.");
-    return;
-  }
+  console.log(`Mecanismo geral: ${matching.length} evento(s), ${subs.length} inscrito(s) em avisos.`);
 
-  console.log(`Enviando aviso de ${matching.length} evento(s) para ${subs.length} inscrito(s)...`);
-
-  const expiradas = new Set();
+  const expiradasGerais = new Set();
 
   for (const sub of subs) {
     const subscription = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
+    const preferencias = Array.isArray(sub.responsaveis) && sub.responsaveis.length > 0 ? sub.responsaveis : null;
 
     for (const event of matching) {
+      if (preferencias && !preferencias.includes(event.responsavel)) continue;
+
       const url = event.body ? `${SITE_URL}/evento/${event.slug}/` : `${SITE_URL}/eventos/`;
       const payload = JSON.stringify({
         title: `Amanhã: ${event.title}`,
@@ -64,26 +82,56 @@ async function main() {
         url,
       });
 
-      try {
-        await webpush.sendNotification(subscription, payload);
-      } catch (err) {
-        // 404/410: inscrição não existe mais no navegador do visitante
-        // (ex.: limpou os dados do site) — sem problema, só remove.
-        if (err.statusCode === 404 || err.statusCode === 410) {
-          expiradas.add(sub.id);
-        } else {
-          console.error(`Falha ao enviar para inscrição ${sub.id}:`, err.statusCode, err.body);
-        }
-      }
+      const { expirada } = await enviar(subscription, payload);
+      if (expirada) expiradasGerais.add(sub.id);
     }
   }
 
-  for (const id of expiradas) {
+  for (const id of expiradasGerais) {
     await fetch(`${DIRECTUS_URL}/items/push_subscriptions/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${DIRECTUS_ADMIN_TOKEN}` },
     });
-    console.log("Removida inscrição expirada:", id);
+    console.log("Removida inscrição geral expirada:", id);
+  }
+
+  // --- Mecanismo 2: lembrete de quem se inscreveu no próprio evento ---
+  const eventIds = matching.map((e) => e.id).join(",");
+  const inscritosRes = await fetch(
+    `${DIRECTUS_URL}/items/inscricoes_eventos?filter[_and][0][evento][_in]=${eventIds}&filter[_and][1][aguardando_vaga][_eq]=false&filter[_and][2][push_endpoint][_nnull]=true&fields=id,nome,evento,push_endpoint,push_p256dh,push_auth&limit=-1`,
+    { headers: { Authorization: `Bearer ${DIRECTUS_ADMIN_TOKEN}` } },
+  );
+  if (!inscritosRes.ok) throw new Error(`Falha ao buscar inscritos com lembrete: ${inscritosRes.status}`);
+  const { data: inscritos } = await inscritosRes.json();
+
+  console.log(`Mecanismo por inscrição: ${inscritos.length} inscrito(s) com lembrete ativado.`);
+
+  const expiradasInscricoes = new Set();
+  const eventsPorId = new Map(matching.map((e) => [e.id, e]));
+
+  for (const inscrito of inscritos) {
+    const event = eventsPorId.get(inscrito.evento);
+    if (!event) continue;
+
+    const subscription = { endpoint: inscrito.push_endpoint, keys: { p256dh: inscrito.push_p256dh, auth: inscrito.push_auth } };
+    const url = event.body ? `${SITE_URL}/evento/${event.slug}/` : `${SITE_URL}/eventos/`;
+    const payload = JSON.stringify({
+      title: `Amanhã: ${event.title}`,
+      body: `${inscrito.nome}, não esqueça! ${[event.time, event.location].filter(Boolean).join(" · ")}`.trim(),
+      url,
+    });
+
+    const { expirada } = await enviar(subscription, payload);
+    if (expirada) expiradasInscricoes.add(inscrito.id);
+  }
+
+  for (const id of expiradasInscricoes) {
+    await fetch(`${DIRECTUS_URL}/items/inscricoes_eventos/${id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${DIRECTUS_ADMIN_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ push_endpoint: null, push_p256dh: null, push_auth: null }),
+    });
+    console.log("Removido lembrete de inscrição expirado:", id);
   }
 
   console.log("Concluído.");

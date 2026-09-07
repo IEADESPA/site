@@ -220,6 +220,31 @@ seção é justamente para isso.
         - `DIRECTUS_ADMIN_TOKEN` — o mesmo token de administrador do Directus.
         - `VAPID_PRIVATE_KEY` — chave privada gerada especificamente para o envio de push (pedir
           a quem configurou esta funcionalidade; nunca fica no código, só no GitHub).
+      - **Preferência granular, pra não virar spam**: com muito evento cadastrado (praticamente
+        todo fim de semana até novembro), avisar de absolutamente tudo cansaria rápido e a pessoa
+        ia desativar de vez. O botão virou um painel: "Todos os eventos especiais" (padrão) ou
+        "Só de responsáveis específicos" — marca só os ministérios/departamentos que interessam
+        (lista vem do campo `responsavel` já cadastrado nos eventos), e o robô diário só avisa
+        dos eventos daquele responsável. Tem também **"Cancelar notificações"**, sempre visível
+        pra quem já ativou — chama `pushManager.unsubscribe()` no navegador e apaga a inscrição
+        no Directus.
+      - Sem permissão de leitura pra ninguém (mantém o "só cria" original), a preferência de cada
+        pessoa fica também guardada em `localStorage` do próprio navegador (endpoint + escolha),
+        só pra repopular o painel e permitir editar/cancelar depois — igualar/atualizar/apagar no
+        servidor usa `filter[endpoint]` (o endpoint da inscrição push, uma string enorme e
+        imprevisível gerada pelo navegador, funciona como uma senha de posse — mesmo modelo de
+        confiança já usado no `codigo` de 6 caracteres do check-in/certificado/crachá).
+- [x] **Lembrete automático só pra quem se inscreveu** — separado do aviso geral acima: depois de
+      confirmar inscrição num evento (`/evento/<slug>/`), aparece "Ativar lembrete deste evento" —
+      ativa notificação só daquele evento específico, pra aquela pessoa, guardando o endpoint de
+      push direto na própria linha da inscrição (`push_endpoint`/`push_p256dh`/`push_auth` em
+      `inscricoes_eventos`, atualizados por id, mesmo padrão de confiança do check-in público). Só
+      aparece pra quem ficou confirmado (quem entrou na lista de espera não sabe ainda se vai
+      participar). O robô diário (`send-event-reminders.mjs`) manda essa mensagem separadamente,
+      personalizada com o nome da pessoa, só daquele evento.
+      Testado de ponta a ponta com verificação real (sem token) contra o Directus: criar/atualizar
+      preferência do aviso geral por `filter[endpoint]`, cancelar (apaga a linha), e o PATCH por
+      id do lembrete de inscrição — todos batendo certo antes de ir pro navegador de verdade.
 - [x] **Modo escuro (dark mode)** — já existia (botão no cabeçalho, ao lado da busca), com
       preferência do sistema por padrão e alternância manual persistida por navegador. Testado
       contraste de cor nas 15 páginas principais (axe-core) e confirmado 0 problemas nos dois
@@ -592,9 +617,6 @@ decidir o que vale a pena:
       Testado de ponta a ponta: gráficos batem com a contagem esperada, o slicer recalcula a
       tabela e os gráficos ao trocar/limpar o filtro, e o PDF de encerramento inclui a seção de
       gráficos sem erros.
-- [ ] **Lembrete automático só pra quem se inscreveu** — hoje a notificação push (já existe) é
-      genérica, pra quem ativou avisos de qualquer evento; poderia avisar especificamente quem
-      está inscrito naquele evento, mais perto da data.
 
 Segunda leva de pesquisa (conteúdo sobre QR code em eventos de igreja, e plataformas de gestão
 de igreja em geral):

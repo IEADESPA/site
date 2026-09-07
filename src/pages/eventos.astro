@@ -77,6 +77,12 @@ const defaultMonthKey =
 
 const programacao = await getAllProgramacao();
 const instagram = siteConfig.socials.find((social) => social.label === "Instagram");
+
+// Pra quem não quer aviso de TODOS os eventos especiais (útil quando tem
+// evento praticamente todo fim de semana) — filtra por responsável.
+const responsaveisDisponiveis = [...new Set(events.map((e) => e.responsavel).filter((r): r is string => Boolean(r)))].sort((a, b) =>
+  a.localeCompare(b, "pt-BR"),
+);
 ---
 
 <BaseLayout title="Eventos" description={`Seminários, campanhas e eventos especiais da ${siteConfig.name}.`}>
@@ -131,9 +137,40 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
             {events.length > 0 && (
               <a href="/eventos/exportar/" class="link-sweep text-sm font-semibold text-accent">Baixar PDF de eventos</a>
             )}
-            <button type="button" class="link-sweep text-sm font-semibold text-accent" data-notify-toggle hidden>
-              Avisar quando um evento estiver chegando
-            </button>
+            <div class="notify-wrap" data-notify-wrap hidden>
+              <button type="button" class="link-sweep text-sm font-semibold text-accent" data-notify-toggle>
+                Avisar quando um evento estiver chegando
+              </button>
+              <div class="notify-panel" data-notify-panel hidden>
+                <p class="text-sm font-semibold">Quais eventos você quer receber aviso?</p>
+                {
+                  responsaveisDisponiveis.length > 0 ? (
+                    <>
+                      <label class="flex items-center gap-2 text-sm mt-2">
+                        <input type="radio" name="notify-modo" value="todos" data-notify-modo checked /> Todos os eventos especiais
+                      </label>
+                      <label class="flex items-center gap-2 text-sm mt-1">
+                        <input type="radio" name="notify-modo" value="selecionados" data-notify-modo /> Só de responsáveis específicos
+                      </label>
+                      <div class="mt-2 grid gap-1 notify-responsaveis" data-notify-responsaveis hidden>
+                        {responsaveisDisponiveis.map((r) => (
+                          <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" value={r} data-notify-responsavel /> {r}
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p class="text-xs text-muted-foreground mt-1">Você recebe aviso de todos os eventos especiais.</p>
+                  )
+                }
+                <div class="mt-3 flex flex-wrap gap-3">
+                  <button type="button" class="btn btn-solid" data-notify-salvar>Ativar notificações</button>
+                  <button type="button" class="btn btn-outline" data-notify-cancelar hidden>Cancelar notificações</button>
+                </div>
+                <p class="mt-2 text-xs text-muted-foreground" data-notify-status role="status" aria-live="polite" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -228,14 +265,23 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
 
       <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, vapidPublicKey: "BHjTzvfXIx0DAkcCgfJDNQO5N09SmO0jIPuTP8L6rxnEaITMn95fQH6kHFnbrEJE-Fdroim5bNnaKp5wwowXdak" }}>
         (() => {
-          const button = document.querySelector("[data-notify-toggle]");
-          if (!button) return;
+          const wrap = document.querySelector("[data-notify-wrap]");
+          const toggleBtn = document.querySelector("[data-notify-toggle]");
+          const panel = document.querySelector("[data-notify-panel]");
+          const modoInputs = document.querySelectorAll("[data-notify-modo]");
+          const responsaveisBloco = document.querySelector("[data-notify-responsaveis]");
+          const responsavelInputs = document.querySelectorAll("[data-notify-responsavel]");
+          const salvarBtn = document.querySelector("[data-notify-salvar]");
+          const cancelarBtn = document.querySelector("[data-notify-cancelar]");
+          const statusEl = document.querySelector("[data-notify-status]");
+          if (!wrap || !toggleBtn || !panel || !salvarBtn || !cancelarBtn) return;
 
           const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
           if (!supported) return;
-          button.hidden = false;
+          wrap.hidden = false;
 
-          const storageKey = "ieadespa-push-subscribed";
+          const ENDPOINT_KEY = "ieadespa-push-endpoint";
+          const RESPONSAVEIS_KEY = "ieadespa-push-responsaveis";
 
           const urlBase64ToUint8Array = (base64String) => {
             const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -244,30 +290,71 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
             return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
           };
 
-          const updateLabel = (subscribed) => {
-            button.textContent = subscribed
-              ? "Notificações de eventos ativadas"
-              : "Avisar quando um evento estiver chegando";
-            button.disabled = subscribed;
-          };
-
-          const alreadySubscribed = () => {
+          const endpointSalvo = () => {
             try {
-              return localStorage.getItem(storageKey) === "true";
+              return localStorage.getItem(ENDPOINT_KEY);
             } catch {
-              return false;
+              return null;
             }
           };
 
-          updateLabel(Notification.permission === "granted" && alreadySubscribed());
-
-          button.addEventListener("click", async () => {
-            button.disabled = true;
+          const responsaveisSalvos = () => {
             try {
-              const permission = await Notification.requestPermission();
-              if (permission !== "granted") {
-                button.textContent = "Permissão não concedida";
-                setTimeout(() => updateLabel(false), 2500);
+              const raw = localStorage.getItem(RESPONSAVEIS_KEY);
+              return raw ? JSON.parse(raw) : null;
+            } catch {
+              return null;
+            }
+          };
+
+          function preencherFormComPreferencias(responsaveis) {
+            if (responsaveis && responsaveis.length && modoInputs.length) {
+              const selecionadosInput = document.querySelector('[data-notify-modo][value="selecionados"]');
+              if (selecionadosInput) selecionadosInput.checked = true;
+              if (responsaveisBloco) responsaveisBloco.hidden = false;
+              responsavelInputs.forEach((input) => {
+                input.checked = responsaveis.includes(input.value);
+              });
+            }
+          }
+
+          function atualizarBotoes() {
+            const jaInscrito = Boolean(endpointSalvo());
+            toggleBtn.textContent = jaInscrito ? "Notificações ativadas — gerenciar" : "Avisar quando um evento estiver chegando";
+            salvarBtn.textContent = jaInscrito ? "Salvar alterações" : "Ativar notificações";
+            cancelarBtn.hidden = !jaInscrito;
+          }
+
+          atualizarBotoes();
+          preencherFormComPreferencias(responsaveisSalvos());
+
+          toggleBtn.addEventListener("click", () => {
+            panel.hidden = !panel.hidden;
+          });
+
+          modoInputs.forEach((input) => {
+            input.addEventListener("change", () => {
+              if (responsaveisBloco) responsaveisBloco.hidden = input.value !== "selecionados" || !input.checked;
+            });
+          });
+
+          function responsaveisEscolhidos() {
+            const modoSelecionados = document.querySelector('[data-notify-modo][value="selecionados"]');
+            if (!modoSelecionados || !modoSelecionados.checked) return null;
+            const marcados = Array.from(responsavelInputs)
+              .filter((input) => input.checked)
+              .map((input) => input.value);
+            return marcados.length ? marcados : null;
+          }
+
+          salvarBtn.addEventListener("click", async () => {
+            salvarBtn.disabled = true;
+            if (statusEl) statusEl.textContent = "";
+            try {
+              const responsaveis = responsaveisEscolhidos();
+              const permissao = await Notification.requestPermission();
+              if (permissao !== "granted") {
+                if (statusEl) statusEl.textContent = "Permissão não concedida.";
                 return;
               }
 
@@ -276,25 +363,71 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
               });
-
               const json = subscription.toJSON();
-              await fetch(`${directusUrl}/items/push_subscriptions`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  endpoint: json.endpoint,
-                  p256dh: json.keys.p256dh,
-                  auth: json.keys.auth,
-                }),
-              });
+
+              const endpointAnterior = endpointSalvo();
+              if (endpointAnterior && endpointAnterior === json.endpoint) {
+                // Já tinha inscrição neste navegador — só atualiza a preferência.
+                await fetch(`${directusUrl}/items/push_subscriptions`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    query: { filter: { endpoint: { _eq: json.endpoint } } },
+                    data: { responsaveis, p256dh: json.keys.p256dh, auth: json.keys.auth },
+                  }),
+                });
+              } else {
+                await fetch(`${directusUrl}/items/push_subscriptions`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, responsaveis }),
+                });
+              }
 
               try {
-                localStorage.setItem(storageKey, "true");
+                localStorage.setItem(ENDPOINT_KEY, json.endpoint);
+                localStorage.setItem(RESPONSAVEIS_KEY, JSON.stringify(responsaveis));
               } catch {}
-              updateLabel(true);
+
+              atualizarBotoes();
+              if (statusEl) {
+                statusEl.textContent = responsaveis
+                  ? `✅ Você só recebe aviso de: ${responsaveis.join(", ")}.`
+                  : "✅ Notificações ativadas para todos os eventos especiais.";
+              }
             } catch {
-              button.textContent = "Não foi possível ativar agora";
-              setTimeout(() => updateLabel(false), 2500);
+              if (statusEl) statusEl.textContent = "Não foi possível ativar agora. Tente novamente.";
+            } finally {
+              salvarBtn.disabled = false;
+            }
+          });
+
+          cancelarBtn.addEventListener("click", async () => {
+            cancelarBtn.disabled = true;
+            try {
+              const endpoint = endpointSalvo();
+              if (endpoint) {
+                await fetch(`${directusUrl}/items/push_subscriptions`, {
+                  method: "DELETE",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ query: { filter: { endpoint: { _eq: endpoint } } } }),
+                });
+              }
+              if ("serviceWorker" in navigator) {
+                const registration = await navigator.serviceWorker.getRegistration("/sw.js");
+                const subscription = await registration?.pushManager.getSubscription();
+                await subscription?.unsubscribe();
+              }
+              try {
+                localStorage.removeItem(ENDPOINT_KEY);
+                localStorage.removeItem(RESPONSAVEIS_KEY);
+              } catch {}
+              atualizarBotoes();
+              if (statusEl) statusEl.textContent = "Notificações canceladas — você não recebe mais avisos.";
+            } catch {
+              if (statusEl) statusEl.textContent = "Não foi possível cancelar agora. Tente novamente.";
+            } finally {
+              cancelarBtn.disabled = false;
             }
           });
         })();
@@ -321,6 +454,30 @@ const instagram = siteConfig.socials.find((social) => social.label === "Instagra
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1.5rem 1.6rem;
+  }
+
+  .notify-wrap {
+    position: relative;
+  }
+
+  .notify-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    z-index: 10;
+    width: 20rem;
+    max-width: 90vw;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--background);
+    padding: 1rem 1.15rem;
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.12));
+  }
+
+  .notify-responsaveis {
+    max-height: 9rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
   }
 
   .gallery-empty {

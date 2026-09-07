@@ -271,6 +271,13 @@ const structuredData = startDate
                   <p class="text-sm leading-relaxed text-muted-foreground" role="status" aria-live="polite" data-inscricao-status />
                 </div>
               </form>
+
+              <div class="mt-4" data-lembrete-bloco hidden>
+                <button type="button" class="btn btn-outline" data-lembrete-toggle>Ativar lembrete deste evento</button>
+                <p class="mt-2 text-xs text-muted-foreground">
+                  Você recebe uma notificação do navegador um dia antes do evento — só pra quem se inscreveu.
+                </p>
+              </div>
             ) : (
               <p class="mt-6 text-sm leading-relaxed text-muted-foreground">
                 {inscricaoEncerradaMotivo === "vencido" ? "O prazo de inscrição para este evento já encerrou." : "As inscrições para este evento estão encerradas."}
@@ -289,7 +296,14 @@ const structuredData = startDate
 
   {
     event.aceita_inscricao && inscricaoAberta && (
-      <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, vagasLimite: event.vagas_limite }}>
+      <script
+        is:inline
+        define:vars={{
+          directusUrl: DIRECTUS_URL,
+          vagasLimite: event.vagas_limite,
+          vapidPublicKey: "BHjTzvfXIx0DAkcCgfJDNQO5N09SmO0jIPuTP8L6rxnEaITMn95fQH6kHFnbrEJE-Fdroim5bNnaKp5wwowXdak",
+        }}
+      >
         // Sem caracteres ambíguos (0/O, 1/I/L) — pra ser fácil de digitar de
         // volta na portaria no dia do evento.
         const ALFABETO_CODIGO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -297,6 +311,46 @@ const structuredData = startDate
           const bytes = new Uint8Array(tamanho);
           crypto.getRandomValues(bytes);
           return Array.from(bytes, (b) => ALFABETO_CODIGO[b % ALFABETO_CODIGO.length]).join("");
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+          const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+          const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+          const rawData = atob(base64);
+          return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+        }
+
+        async function ativarLembrete(inscricaoId, botao) {
+          const suportado = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+          if (!suportado) {
+            botao.textContent = "Notificações não suportadas neste navegador";
+            botao.disabled = true;
+            return;
+          }
+          botao.disabled = true;
+          try {
+            const permissao = await Notification.requestPermission();
+            if (permissao !== "granted") {
+              botao.textContent = "Permissão não concedida";
+              botao.disabled = false;
+              return;
+            }
+            const registration = await navigator.serviceWorker.register("/sw.js");
+            const subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+            });
+            const json = subscription.toJSON();
+            await fetch(`${directusUrl}/items/inscricoes_eventos/${inscricaoId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ push_endpoint: json.endpoint, push_p256dh: json.keys.p256dh, push_auth: json.keys.auth }),
+            });
+            botao.textContent = "✅ Lembrete ativado!";
+          } catch {
+            botao.textContent = "Não foi possível ativar agora";
+            botao.disabled = false;
+          }
         }
 
         async function contarConfirmados(eventoId) {
@@ -386,6 +440,18 @@ const structuredData = startDate
                   ? `Vagas esgotadas no momento — você está na <strong>lista de espera</strong>. Seu código é <strong>${codigo}</strong>; guarde-o, porque se abrir vaga sua inscrição é confirmada automaticamente com esse mesmo código.`
                   : `Inscrição confirmada! Seu código de check-in é <strong>${codigo}</strong> — anote ou tire um print, você vai usar na entrada do evento.`;
               }
+
+              // Lembrete automático só faz sentido pra quem está confirmado —
+              // quem está na lista de espera ainda não sabe se vai participar.
+              if (!aguardandoVaga) {
+                const lembreteBloco = document.querySelector("[data-lembrete-bloco]");
+                const lembreteBotao = document.querySelector("[data-lembrete-toggle]");
+                if (lembreteBloco && lembreteBotao) {
+                  lembreteBloco.hidden = false;
+                  lembreteBotao.addEventListener("click", () => ativarLembrete(inscricaoId, lembreteBotao));
+                }
+              }
+
               form.reset();
             } catch {
               if (status) {
