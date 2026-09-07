@@ -504,12 +504,22 @@ uma plataforma de eventos especializada de terceiros**, apontando o já existent
            comunicar os valores de forma organizada quando o preço muda por tamanho de grupo.
       4. [x] **Certificado** — construído de forma independente desta aba, em
          `/certificado/<slug-do-evento>/` (ver acima), usando o mesmo código do check-in, sem
-         conta nem senha, sem exportação.
-      5. [ ] **Encerrar evento** — ação que grava um resumo agregado (total de inscritos,
-         presentes, pagos, valor arrecadado) direto no evento e **apaga** os dados pessoais
-         (nome, telefone, respostas) daquela edição — evita acumular centenas de inscrições de
-         eventos passados
-         junto com as do evento atual, e evita guardar dado pessoal além do necessário.
+         conta nem senha, sem exportação. A pessoa consegue baixar o próprio certificado **a
+         qualquer momento**, mesmo anos depois — a página não tem prazo de validade, só depende
+         do evento continuar existindo. Também dá pra baixar **os certificados de todos os
+         presentes de uma vez** (botão na tela de inscritos): um único PDF com uma página por
+         pessoa, reaproveitando o mesmo desenho (`src/lib/certificado.ts`, compartilhado entre as
+         duas telas). Testado de ponta a ponta: PDF em lote gerado só com quem está marcado
+         presente, na ordem certa, com o nome de cada um.
+      5. [x] **Encerrar evento** — **desenho corrigido depois de um erro real de planejamento**:
+         a ideia original (apagar nome/telefone/respostas) quebraria o certificado pra sempre,
+         já que ele depende de achar a pessoa pelo nome e pelo código. Corrigido: "Encerrar
+         evento" agora só remove o **telefone** de cada inscrito (o único dado que realmente não
+         serve mais pra nada depois do evento) — nome, código, presença, valores e respostas
+         continuam guardados permanentemente, exatamente pra garantir que o certificado sempre
+         funcione. Não é uma exclusão: o evento em si já é arquivado automaticamente (campo
+         `arquivado`, ver acima) assim que a data passa, independente dessa ação. Testado: só o
+         campo telefone é alterado, todo o resto permanece intacto.
       6. [ ] **Relatório automático** — ao encerrar, gera um rascunho de notícia/relatório público
          (quantas pessoas participaram, quem ministrou, fotos) para a aba de notícias/relatórios
          do site — sem valor em dinheiro, que nunca é publicado.

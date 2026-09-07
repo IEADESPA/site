@@ -16,7 +16,12 @@ const allPosts = visiblePosts(await getAllMensagens());
         <p class="eyebrow" data-painel-voltar>
           <a href="/painel-eventos/" class="text-accent">← Gestão de eventos</a>
         </p>
-        <h1 class="pagehead-title" data-painel-titulo>Inscritos</h1>
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 class="pagehead-title" data-painel-titulo>Inscritos</h1>
+          <button type="button" class="btn btn-outline" data-baixar-certificados hidden>
+            Baixar certificados de todos os presentes
+          </button>
+        </div>
         <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
       </header>
 
@@ -94,7 +99,12 @@ const allPosts = visiblePosts(await getAllMensagens());
   <SiteFooter />
 
   <script>
+    import { jsPDF } from "jspdf";
+    import { carregarLogoCertificado, desenharCertificado } from "@/lib/certificado";
     import { exigirAutenticacao } from "@/lib/painelAuth";
+
+    let eventoTitulo = "";
+    let eventoPeriodo = "";
 
     interface Inscricao {
       id: number;
@@ -513,7 +523,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         return;
       }
 
-      const resEvento = await fetch(`${directusUrl}/items/eventos/${eventoId}?fields=id,title`, {
+      const resEvento = await fetch(`${directusUrl}/items/eventos/${eventoId}?fields=id,title,event_date,end_date`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!resEvento.ok) {
@@ -522,11 +532,44 @@ const allPosts = visiblePosts(await getAllMensagens());
         return;
       }
       const eventoJson = await resEvento.json();
+      const evento = eventoJson.data;
 
-      if (tituloEl) tituloEl.textContent = `Inscritos — ${eventoJson.data.title}`;
+      eventoTitulo = evento.title;
+      const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+      eventoPeriodo = evento.event_date
+        ? evento.end_date && evento.end_date !== evento.event_date
+          ? `${dateFormatter.format(new Date(evento.event_date))} a ${dateFormatter.format(new Date(evento.end_date))}`
+          : dateFormatter.format(new Date(evento.event_date))
+        : "";
+
+      if (tituloEl) tituloEl.textContent = `Inscritos — ${evento.title}`;
       if (voltarLink) (voltarLink as HTMLAnchorElement).href = `/painel-eventos/evento/?id=${eventoId}`;
       if (carregando) carregando.hidden = true;
       if (conteudo) conteudo.hidden = false;
+
+      const baixarCertificadosBtn = document.querySelector<HTMLButtonElement>("[data-baixar-certificados]");
+      if (baixarCertificadosBtn) baixarCertificadosBtn.hidden = false;
+      baixarCertificadosBtn?.addEventListener("click", async () => {
+        const presentes = inscricoes.filter((i) => i.presente);
+        if (!presentes.length) {
+          alert("Ninguém confirmou presença ainda.");
+          return;
+        }
+        baixarCertificadosBtn.disabled = true;
+        baixarCertificadosBtn.textContent = "Gerando…";
+        try {
+          const logo = await carregarLogoCertificado();
+          const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+          presentes.forEach((pessoa, index) => {
+            if (index > 0) doc.addPage();
+            desenharCertificado(doc, { nome: pessoa.nome, eventoTitulo, eventoPeriodo, logo });
+          });
+          doc.save(`certificados-${eventoTitulo.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+        } finally {
+          baixarCertificadosBtn.disabled = false;
+          baixarCertificadosBtn.textContent = "Baixar certificados de todos os presentes";
+        }
+      });
 
       await carregarTudo();
     }

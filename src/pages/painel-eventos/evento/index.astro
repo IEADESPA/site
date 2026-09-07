@@ -151,7 +151,19 @@ const tipoPerguntaOpcoes = [
         </div>
       </form>
 
-      <div hidden class="mt-10 zona-perigo" data-zona-perigo>
+      <div hidden class="mt-10 zona-encerrar" data-zona-encerrar>
+        <p class="text-sm font-semibold">Encerrar evento</p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Remove só o telefone de cada inscrito (o único dado sem nenhuma utilidade depois do
+          evento). Nome, código, presença, respostas e valores <strong>continuam guardados pra
+          sempre</strong> — é o que garante que a pessoa consiga baixar o certificado dela a
+          qualquer momento, mesmo anos depois. Não é uma exclusão.
+        </p>
+        <button type="button" class="btn btn-outline mt-3" data-encerrar-evento>Encerrar evento</button>
+        <p class="mt-2 text-sm" data-encerrar-status role="status" aria-live="polite"></p>
+      </div>
+
+      <div hidden class="mt-6 zona-perigo" data-zona-perigo>
         <p class="text-sm font-semibold text-red-700">Excluir evento</p>
         <p class="mt-1 text-sm text-muted-foreground">
           Remove o evento, suas perguntas e todas as inscrições (com respostas). Não pode ser
@@ -433,8 +445,31 @@ const tipoPerguntaOpcoes = [
 
       const zonaPerigo = document.querySelector<HTMLElement>("[data-zona-perigo]");
       if (zonaPerigo) zonaPerigo.hidden = false;
+      const zonaEncerrar = document.querySelector<HTMLElement>("[data-zona-encerrar]");
+      if (zonaEncerrar) zonaEncerrar.hidden = false;
 
       await carregarPerguntas(token, eventoId);
+
+      document.querySelector("[data-encerrar-evento]")?.addEventListener("click", async () => {
+        const encerrarStatus = document.querySelector<HTMLElement>("[data-encerrar-status]");
+        if (
+          !confirm(
+            `Encerrar "${evento.title}"? O telefone de cada inscrito será apagado — nome, código, presença e respostas continuam guardados.`,
+          )
+        )
+          return;
+        if (encerrarStatus) encerrarStatus.textContent = "Encerrando…";
+        try {
+          await fetch(`${directusUrl}/items/inscricoes_eventos`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ query: { filter: { evento: { _eq: Number(eventoId) } } }, data: { telefone: null } }),
+          });
+          if (encerrarStatus) encerrarStatus.textContent = "✅ Evento encerrado — telefones removidos.";
+        } catch {
+          if (encerrarStatus) encerrarStatus.textContent = "Não foi possível encerrar agora. Tente novamente.";
+        }
+      });
 
       document.querySelector("[data-excluir-evento]")?.addEventListener("click", async () => {
         const excluirStatus = document.querySelector<HTMLElement>("[data-excluir-status]");
@@ -601,6 +636,14 @@ const tipoPerguntaOpcoes = [
   </script>
 
   <style is:global>
+    .zona-encerrar {
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.25rem;
+      max-width: 40rem;
+      background: var(--muted);
+    }
+
     .zona-perigo {
       border: 1px solid color-mix(in srgb, #b3261e 35%, var(--border));
       border-radius: var(--radius-md);

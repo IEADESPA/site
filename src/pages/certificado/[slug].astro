@@ -79,6 +79,7 @@ const periodoEvento = event.event_date
 
   <script>
     import { jsPDF } from "jspdf";
+    import { carregarLogoCertificado, desenharCertificado } from "@/lib/certificado";
 
     const form = document.querySelector<HTMLFormElement>("[data-certificado-form]");
     if (!form) throw new Error("formulário de certificado ausente");
@@ -90,84 +91,10 @@ const periodoEvento = event.event_date
     const resultado = document.querySelector<HTMLElement>("[data-certificado-resultado]");
     const codigoInput = document.getElementById("certificado-codigo") as HTMLInputElement;
 
-    const siteFullName = "Igreja Evangélica Assembleia de Deus Ministério do Seta em Parauapebas/PA";
-
-    let logoDataUrl: string | null = null;
-    async function carregarLogo(): Promise<string | null> {
-      if (logoDataUrl) return logoDataUrl;
-      try {
-        const res = await fetch("/logo-icon.png");
-        const blob = await res.blob();
-        logoDataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        return logoDataUrl;
-      } catch {
-        return null;
-      }
-    }
-
     async function gerarCertificado(nome: string) {
-      const logo = await carregarLogo();
+      const logo = await carregarLogoCertificado();
       const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
-      const largura = doc.internal.pageSize.getWidth();
-      const altura = doc.internal.pageSize.getHeight();
-      const margem = 28;
-
-      const OURO: [number, number, number] = [217, 179, 79];
-      const MARINHO: [number, number, number] = [15, 27, 51];
-      const CINZA: [number, number, number] = [90, 98, 112];
-
-      // Fundo e moldura dupla dourada.
-      doc.setFillColor(250, 248, 242);
-      doc.rect(0, 0, largura, altura, "F");
-      doc.setDrawColor(...OURO);
-      doc.setLineWidth(2.5);
-      doc.rect(margem, margem, largura - margem * 2, altura - margem * 2);
-      doc.setLineWidth(0.75);
-      doc.rect(margem + 8, margem + 8, largura - (margem + 8) * 2, altura - (margem + 8) * 2);
-
-      if (logo) doc.addImage(logo, "PNG", largura / 2 - 26, margem + 48, 52, 52);
-
-      doc.setTextColor(...MARINHO);
-      doc.setFont("times", "bold");
-      doc.setFontSize(38);
-      doc.text("CERTIFICADO", largura / 2, margem + 155, { align: "center" });
-
-      doc.setDrawColor(...OURO);
-      doc.setLineWidth(1);
-      doc.line(largura / 2 - 60, margem + 168, largura / 2 + 60, margem + 168);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(13);
-      doc.setTextColor(...CINZA);
-      doc.text(`A ${siteFullName} certifica que`, largura / 2, margem + 205, { align: "center" });
-
-      doc.setFont("times", "bold");
-      doc.setFontSize(30);
-      doc.setTextColor(...OURO);
-      doc.text(nome.toUpperCase(), largura / 2, margem + 260, { align: "center", maxWidth: largura - margem * 4 });
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(14);
-      doc.setTextColor(...MARINHO);
-      const corpo = `participou do evento "${eventoTitulo}"${eventoPeriodo ? `, realizado em ${eventoPeriodo}` : ""}.`;
-      const linhas = doc.splitTextToSize(corpo, largura - margem * 5);
-      doc.text(linhas, largura / 2, margem + 305, { align: "center" });
-
-      doc.setDrawColor(...OURO);
-      doc.setLineWidth(0.75);
-      doc.line(largura / 2 - 90, altura - margem - 62, largura / 2 + 90, altura - margem - 62);
-
-      doc.setFontSize(11);
-      doc.setTextColor(...CINZA);
-      doc.text(`Emitido em ${new Date().toLocaleDateString("pt-BR")}`, largura / 2, altura - margem - 40, { align: "center" });
-      doc.setFont("helvetica", "bold");
-      doc.text("IEADESPA", largura / 2, altura - margem - 24, { align: "center" });
-
+      desenharCertificado(doc, { nome, eventoTitulo, eventoPeriodo, logo });
       doc.save(`certificado-${nome.toLowerCase().replace(/\s+/g, "-")}.pdf`);
     }
 
