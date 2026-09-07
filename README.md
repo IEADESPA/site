@@ -790,9 +790,63 @@ foi "o que muda quando o evento é grande?", não só "quais botões faltam":
       existente ao número de presentes do evento em andamento, pra equipe acompanhar o
       andamento sem abrir o painel de inscritos numa outra tela.
 
-**Fora do escopo, por decisão já tomada antes** (não incluído acima de propósito): cupom de
-desconto com código de verdade, e qualquer coisa que exija processamento real de pagamento —
-ambos exigiriam uma plataforma de pagamento de verdade, o que já foi avaliado e descartado.
+**Fora do escopo, por decisão já tomada antes** (não incluído acima de propósito): qualquer coisa
+que exija processamento real de pagamento (checkout, cartão, PIX automático) — isso exigiria uma
+plataforma de pagamento de verdade, o que já foi avaliado e descartado. Cupom de desconto **sem**
+processamento de pagamento real (só ajusta o valor da inscrição, cobrança continua manual) foi
+construído — ver "Cupons de desconto" acima.
+
+Pesquisa sobre a página "Sobre" (grandes e pequenos sites, nonprofits e igrejas em geral —
+comparação de padrões do que costuma funcionar, não cópia de um site específico), a pedido do
+usuário, **sem construir nada ainda**:
+
+- **A seção "Liderança" hoje mistura dois papéis diferentes**: lista quem *prega* (autores de
+  mensagens), não quem *administra/governa* a igreja — que já tem sua própria estrutura
+  construída (`/orgaos/`: assembleia geral, conselho diaconal, diretoria executiva etc., de um
+  projeto anterior). A prática recomendada por quem escreve sobre página "Sobre" de
+  igreja/nonprofit é justamente diferenciar liderança pastoral de liderança administrativa, e
+  fotos + nome + papel de cada uma, não só uma lista de texto — a página atual não faz nenhuma
+  das duas coisas: não tem foto de ninguém, e nem linka pra `/orgaos/`.
+- **Falta uma declaração de fé/crenças** (Statement of Faith) — recorrente como item essencial de
+  página "Sobre" de igreja: um resumo curto e acessível do que a igreja crê, em linguagem simples
+  (não acadêmica), pra quem está decidindo se aquilo combina com a fé da pessoa. Hoje não existe
+  nada assim no site — mais perto disso é a tag "Fé e Doutrina" nas mensagens, que não é a mesma
+  coisa (mensagens específicas, não um resumo doutrinário).
+- **Sem nenhuma foto na página inteira** — nem da fachada/prédio, nem de um culto, nem da
+  liderança. Foto é apontado universalmente (sites grandes e pequenos) como o maior fator de
+  confiança numa página "Sobre" — texto sem nenhuma imagem passa a impressão de página
+  incompleta/sem rosto por trás.
+- **Sem vídeo de boas-vindas** — recorrente especificamente em pesquisa sobre igrejas: um vídeo
+  curto do pastor se apresentando/dando boas-vindas costuma ser um dos itens de maior impacto
+  numa página "Sobre" de igreja, mais pessoal que texto. (Mesma dependência já identificada pro
+  "mini-player" mais acima: só faz sentido quando existir gravação de vídeo/áudio de verdade.)
+- **Sem nenhum "prova social"** — depoimento de membro, número de anos de história, quantidade de
+  congregações/membros. A página de história (`/historia/`) e a de transparência
+  (`/transparencia/`) já têm parte desse conteúdo — a oportunidade é **linkar mais explicitamente**
+  a partir do "Sobre" (hoje só linka pra história, não pra transparência), não recriar o conteúdo.
+- **Texto único, sem seções nem contexto de tamanho** — o corpo vem de um único campo markdown
+  (`configuracoes.sobre_corpo`) sem estrutura fixa; o padrão recomendado (chega igual em site
+  grande e pequeno) é história curta → missão/valores → liderança → próximos passos, cada um com
+  seu próprio subtítulo, em vez de um bloco de texto corrido — mais fácil de escanear, sem baixar
+  a página inteira pra achar a parte que interessa.
+- **Sem link pra `/visitante/`** — a página de "primeira vez aqui" (o que esperar, estrutura pra
+  família, FAQ) já existe e é exatamente o "próximo passo" que pesquisa recomenda ao final de uma
+  página "Sobre" — hoje esse link só aparece nos próprios cards da home, não a partir do "Sobre".
+
+Nenhum desses itens foi construído ainda — anotado aqui pra decidir com calma quais valem a pena.
+
+Fontes consultadas (título e domínio, sem nome de produto/plataforma específico no texto acima):
+[Nonprofit Website Best Practices 2026](https://www.elevationweb.org/blog/nonprofit-website-best-practices/),
+[Guia de site de igreja (Tithely)](https://get.tithe.ly/blog/the-ultimate-guide-to-creating-a-successful-church-website),
+[Guia de site de igreja nonprofit (Donorbox)](https://donorbox.org/nonprofit-blog/build-a-church-website),
+[Exemplos de "About Us" de nonprofit (Wired Impact)](https://wiredimpact.com/blog/5-great-nonprofit-about-us-pages-tips-examples/),
+[Exemplos de "About Us" (Shopify)](https://www.shopify.com/blog/how-to-write-an-about-us-page),
+[Fundamentos da página "Sobre" de igreja (The Lead Pastor)](https://theleadpastor.com/church-management/church-about-us-page/),
+[Página "Sobre" de igreja além da história (UK Churches)](https://www.ukchurches.co.uk/more-than-just-history-how-to-write-a-compelling-about-us-page-for-your-church-website/),
+[Ideias de conteúdo pra aprofundar comunidade (The Lead Pastor)](https://theleadpastor.com/church-management/church-website-content-ideas/),
+[Página de equipe de igreja (ChurchTechToday)](https://churchtechtoday.com/church-staff-page/),
+[Dicas de "About Us" pra pequenos negócios (Salesforce)](https://www.salesforce.com/blog/small-business-about-us-page/),
+[Erros comuns de página "About" (OptinMonster)](https://optinmonster.com/6-common-about-page-mistakes-that-are-killing-your-conversions/).
 
 ### Ideias rejeitadas
 
