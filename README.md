@@ -700,9 +700,24 @@ de igreja em geral):
 
 Terceira leva de pesquisa (comparativos de ferramentas de gestão de eventos em geral):
 
-- [ ] **Comparação histórica entre edições do mesmo evento** — ex.: comparar o congresso deste
-      ano com o do ano anterior (nº de inscritos, taxa de comparecimento), usando o resumo que
-      fica salvo no "Encerrar evento" (passo 5, ainda não construído) como base de comparação.
+- [x] **Comparação histórica entre edições do mesmo evento** — desenhada de propósito pra não
+      supor periodicidade nenhuma: nem todo evento é anual, alguns ficam anos sem acontecer e
+      voltam depois. Novo campo **"Edição anterior"** (`evento_anterior`, aba "Dados do evento")
+      vincula manualmente esse evento a uma edição passada — a pessoa escolhe qual, não tem
+      detecção automática por data/título. Forma uma cadeia (esse evento → o anterior → o anterior
+      dele...) que pode pular qualquer intervalo de anos.
+      - **De onde vêm os números**: "Encerrar evento" (passo 5) já calculava tudo isso pro
+        relatório em PDF — agora também grava um retrato (`estatisticas_finais`: inscritos,
+        presentes, % de comparecimento, pagos/não pagos, valor arrecadado, data) direto no próprio
+        evento. Decisão: só existe comparação de edições que já foram encerradas — uma edição
+        vinculada mas ainda não encerrada simplesmente não entra na comparação ainda.
+      - **Nova aba "Histórico"** no editor: anda pela cadeia de edições vinculadas, monta uma
+        tabela cronológica (mais antiga → mais recente) com inscritos/presentes/comparecimento/
+        arrecadado, mais dois gráficos de barra (reaproveitando `src/lib/graficos.ts`, o mesmo
+        módulo dos gráficos de pergunta) comparando inscritos e comparecimento entre as edições.
+      Testado de ponta a ponta: cadeia com um hiato de 5 anos entre duas edições anda certinho e
+      monta a tabela na ordem cronológica certa (verificado contra o Directus real: vincular,
+      pular gerações, e o "Encerrar evento" gravando o retrato de números automaticamente).
 - [ ] **Múltiplos responsáveis por evento** — marcar quem administra cada evento especificamente,
       útil quando existir mais de uma conta usando o painel (hoje só uma conta usa).
 

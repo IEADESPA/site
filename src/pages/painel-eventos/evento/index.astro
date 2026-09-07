@@ -10,6 +10,13 @@ const congregacoes = (await fetchItems<{ id: number; name: string }>("congregaco
   a.name.localeCompare(b.name, "pt-BR"),
 );
 
+// Pra vincular esse evento a uma edição anterior — não precisa ser todo ano,
+// pode pular anos, então é uma lista livre, não uma sugestão automática.
+const eventosParaVincular = await fetchItems<{ id: number; title: string; event_date: string | null }>(
+  "eventos",
+  "fields=id,title,event_date&sort=-event_date",
+);
+
 const tipoResponsavelOpcoes = [
   { value: "", label: "Sem categoria" },
   { value: "diretoria", label: "Diretoria" },
@@ -53,6 +60,7 @@ const tipoPerguntaOpcoes = [
         <button type="button" class="tab-btn" data-tab="inscricao">Perguntas de inscrição</button>
         <button type="button" class="tab-btn" data-tab="pesquisa">Pesquisa pós-evento</button>
         <button type="button" class="tab-btn" data-tab="agenda">Agenda (sessões)</button>
+        <button type="button" class="tab-btn" data-tab="historico">Histórico</button>
         <button type="button" class="tab-btn" data-tab="avancado">Encerrar / Excluir</button>
       </div>
 
@@ -165,6 +173,24 @@ const tipoPerguntaOpcoes = [
             Com isso ativado, quem se inscrever pode adicionar o nome de outras pessoas na mesma
             inscrição (cada uma vira uma inscrição própria, com seu próprio código de check-in e
             certificado) — combine com faixas de valor acima pra dar desconto por grupo.
+          </p>
+        </div>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-evento-anterior">Edição anterior (opcional)</label>
+          <select id="f-evento-anterior" class="field">
+            <option value="">— Nenhuma (primeira edição, ou evento avulso) —</option>
+            {eventosParaVincular.map((e) => (
+              <option value={e.id}>
+                {e.title}
+                {e.event_date ? ` — ${e.event_date}` : ""}
+              </option>
+            ))}
+          </select>
+          <p class="text-xs text-muted-foreground">
+            Vincule só se esse evento for uma nova edição de algo que já rolou antes (seminário,
+            congresso, etc.) — não precisa ser todo ano, pode pular anos. Habilita a comparação
+            histórica na aba "Histórico".
           </p>
         </div>
 
@@ -283,6 +309,18 @@ const tipoPerguntaOpcoes = [
       </section>
       </div>
 
+      <div data-tab-panel="historico" hidden>
+      <section hidden class="mt-8" data-historico-secao aria-labelledby="historico-heading">
+        <h2 id="historico-heading" class="section-title">Histórico entre edições</h2>
+        <p class="mt-2 text-sm text-muted-foreground">
+          Compara esse evento com as edições anteriores vinculadas na aba "Dados do evento" — só
+          aparece número de uma edição depois que ela passa por "Encerrar evento" (é lá que os
+          números finais ficam gravados). Funciona mesmo que as edições não sejam todo ano.
+        </p>
+        <div class="mt-5" data-historico-conteudo></div>
+      </section>
+      </div>
+
       <div data-tab-panel="avancado" hidden>
       <div hidden class="mt-8 zona-encerrar" data-zona-encerrar>
         <p class="text-sm font-semibold">Encerrar evento</p>
@@ -313,7 +351,7 @@ const tipoPerguntaOpcoes = [
 
   <script>
     import { jsPDF } from "jspdf";
-    import { contarRespostas, desenharGraficoBarrasPDF } from "@/lib/graficos";
+    import { contarRespostas, desenharGraficoBarrasPDF, graficoBarrasSvg } from "@/lib/graficos";
     import { exigirAutenticacao } from "@/lib/painelAuth";
 
     interface Evento {
@@ -335,6 +373,18 @@ const tipoPerguntaOpcoes = [
       inscricoes_encerradas: boolean;
       faixas_valor: { descricao: string; valor: number }[] | null;
       permite_inscricao_grupo: boolean;
+      evento_anterior: number | null;
+      estatisticas_finais: EstatisticasFinais | null;
+    }
+
+    interface EstatisticasFinais {
+      dataEncerramento: string;
+      totalInscritos: number;
+      presentes: number;
+      taxaComparecimento: number;
+      pagos: number;
+      naoPagos: number;
+      valorArrecadado: number;
     }
 
     interface Pergunta {
@@ -375,6 +425,8 @@ const tipoPerguntaOpcoes = [
     const perguntasSecaoPesquisa = document.querySelector<HTMLElement>("[data-perguntas-secao-pesquisa]");
     const agendaSecao = document.querySelector<HTMLElement>("[data-agenda-secao]");
     const sessoesLista = document.querySelector<HTMLElement>("[data-sessoes-lista]");
+    const historicoSecao = document.querySelector<HTMLElement>("[data-historico-secao]");
+    const historicoConteudo = document.querySelector<HTMLElement>("[data-historico-conteudo]");
     const perguntasListaInscricao = document.querySelector<HTMLElement>("[data-perguntas-lista-inscricao]");
     const perguntasListaPesquisa = document.querySelector<HTMLElement>("[data-perguntas-lista-pesquisa]");
 
@@ -407,6 +459,7 @@ const tipoPerguntaOpcoes = [
     const fInscricoesAte = el<HTMLInputElement>("f-inscricoes-ate");
     const fInscricoesEncerradas = el<HTMLInputElement>("f-inscricoes-encerradas");
     const fInscricaoGrupo = el<HTMLInputElement>("f-inscricao-grupo");
+    const fEventoAnterior = el<HTMLSelectElement>("f-evento-anterior");
 
     function slugify(texto: string): string {
       return texto
@@ -438,6 +491,7 @@ const tipoPerguntaOpcoes = [
       fInscricoesAte.value = evento.inscricoes_ate ?? "";
       fInscricoesEncerradas.checked = Boolean(evento.inscricoes_encerradas);
       fInscricaoGrupo.checked = Boolean(evento.permite_inscricao_grupo);
+      fEventoAnterior.value = evento.evento_anterior ? String(evento.evento_anterior) : "";
       renderizarFaixas(evento.faixas_valor ?? []);
     }
 
@@ -459,6 +513,7 @@ const tipoPerguntaOpcoes = [
         inscricoes_ate: fInscricoesAte.value || null,
         inscricoes_encerradas: fInscricoesEncerradas.checked,
         permite_inscricao_grupo: fInscricaoGrupo.checked,
+        evento_anterior: fEventoAnterior.value ? Number(fEventoAnterior.value) : null,
         faixas_valor: lerFaixas(),
         aceita_inscricao: true,
       };
@@ -621,6 +676,82 @@ const tipoPerguntaOpcoes = [
       };
     }
 
+    // Anda pela cadeia de "evento_anterior" (que pode pular anos — não
+    // presume periodicidade nenhuma) até achar o começo ou repetir um id.
+    async function carregarHistorico(token: string, eventoAtual: Evento) {
+      if (!historicoConteudo) return;
+
+      const edicoes: Evento[] = [eventoAtual];
+      const vistos = new Set([eventoAtual.id]);
+      let cursor = eventoAtual.evento_anterior;
+
+      while (cursor && !vistos.has(cursor)) {
+        const res = await fetch(
+          `${directusUrl}/items/eventos/${cursor}?fields=id,title,event_date,evento_anterior,estatisticas_finais`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) break;
+        const anterior: Evento = (await res.json()).data;
+        edicoes.push(anterior);
+        vistos.add(anterior.id);
+        cursor = anterior.evento_anterior;
+      }
+
+      if (edicoes.length < 2) {
+        historicoConteudo.innerHTML = `<p class="text-sm text-muted-foreground">Nenhuma edição anterior vinculada — use "Edição anterior" na aba "Dados do evento" pra comparar com uma edição passada.</p>`;
+        return;
+      }
+
+      const cronologico = [...edicoes].reverse().filter((e) => e.estatisticas_finais);
+      if (!cronologico.length) {
+        historicoConteudo.innerHTML = `<p class="text-sm text-muted-foreground">${edicoes.length} edições vinculadas, mas nenhuma tem números salvos ainda — eles só aparecem depois que uma edição passa por "Encerrar evento".</p>`;
+        return;
+      }
+
+      const rotulo = (e: Evento) => `${e.title}${e.event_date ? ` (${e.event_date})` : ""}`;
+
+      const tabela = `
+        <div class="overflow-x-auto">
+          <table class="historico-tabela">
+            <thead>
+              <tr><th>Edição</th><th>Inscritos</th><th>Presentes</th><th>Comparecimento</th><th>Arrecadado</th></tr>
+            </thead>
+            <tbody>
+              ${cronologico
+                .map((e) => {
+                  const s = e.estatisticas_finais as EstatisticasFinais;
+                  return `
+                    <tr>
+                      <td>${escapeHtml(rotulo(e))}</td>
+                      <td>${s.totalInscritos}</td>
+                      <td>${s.presentes}</td>
+                      <td>${s.taxaComparecimento}%</td>
+                      <td>R$ ${Number(s.valorArrecadado).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  `;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      const graficoInscritos = graficoBarrasSvg(
+        cronologico.map((e) => ({ rotulo: rotulo(e), total: (e.estatisticas_finais as EstatisticasFinais).totalInscritos })),
+      );
+      const graficoComparecimento = graficoBarrasSvg(
+        cronologico.map((e) => ({ rotulo: rotulo(e), total: (e.estatisticas_finais as EstatisticasFinais).taxaComparecimento })),
+      );
+
+      historicoConteudo.innerHTML = `
+        ${tabela}
+        <div class="mt-6 grid gap-4 sm:grid-cols-2">
+          <div class="grafico-card"><p class="grafico-titulo">Inscritos por edição</p>${graficoInscritos}</div>
+          <div class="grafico-card"><p class="grafico-titulo">Comparecimento (%) por edição</p>${graficoComparecimento}</div>
+        </div>
+      `;
+    }
+
 
     async function iniciar() {
       const tokenObtido = await exigirAutenticacao(directusUrl);
@@ -652,11 +783,15 @@ const tipoPerguntaOpcoes = [
         linkInscritos.hidden = false;
       }
 
+      // Não faz sentido um evento se vincular a si mesmo.
+      fEventoAnterior.querySelector(`option[value="${eventoIdNumero}"]`)?.remove();
+
       if (carregando) carregando.hidden = true;
       if (form) form.hidden = false;
       if (perguntasSecaoInscricao) perguntasSecaoInscricao.hidden = false;
       if (perguntasSecaoPesquisa) perguntasSecaoPesquisa.hidden = false;
       if (agendaSecao) agendaSecao.hidden = false;
+      if (historicoSecao) historicoSecao.hidden = false;
       if (tabsBar) tabsBar.hidden = false;
 
       const zonaPerigo = document.querySelector<HTMLElement>("[data-zona-perigo]");
@@ -666,6 +801,7 @@ const tipoPerguntaOpcoes = [
 
       await carregarPerguntas(token, eventoIdNumero);
       await carregarSessoes(token, eventoIdNumero);
+      await carregarHistorico(token, evento);
 
       document.querySelector("[data-encerrar-evento]")?.addEventListener("click", async () => {
         const encerrarStatus = document.querySelector<HTMLElement>("[data-encerrar-status]");
@@ -839,6 +975,25 @@ const tipoPerguntaOpcoes = [
             method: "PATCH",
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ query: { filter: { evento: { _eq: Number(eventoId) } } }, data: { telefone: null } }),
+          });
+
+          // --- Guarda um retrato dos números finais — é a base da comparação
+          // histórica entre edições (aba "Histórico"), já que os números
+          // individuais (pago/presente) somem quando o evento for excluído
+          // um dia, mas esse resumo fica gravado no próprio evento. ---
+          const estatisticasFinais: EstatisticasFinais = {
+            dataEncerramento: new Date().toISOString().slice(0, 10),
+            totalInscritos,
+            presentes,
+            taxaComparecimento,
+            pagos: pagos.length,
+            naoPagos,
+            valorArrecadado,
+          };
+          await fetch(`${directusUrl}/items/eventos/${eventoId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ estatisticas_finais: estatisticasFinais }),
           });
 
           if (encerrarStatus) {
@@ -1122,6 +1277,43 @@ const tipoPerguntaOpcoes = [
   </script>
 
   <style is:global>
+    .historico-tabela {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .historico-tabela th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 2px solid var(--border);
+      color: var(--muted-foreground);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .historico-tabela td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .grafico-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      background: var(--background);
+      color: var(--foreground);
+    }
+
+    .grafico-titulo {
+      margin: 0 0 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
     .tab-bar {
       display: flex;
       flex-wrap: wrap;
