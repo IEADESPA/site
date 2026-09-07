@@ -561,8 +561,6 @@ decidir o que vale a pena:
       teste de ponta a ponta usou o token de administrador, que ignora permissões). Corrigido
       junto com esta entrega; testado com dados reais direto na API (não só mockado) pra garantir
       que o fluxo completo — confirmar, esperar, promover — funciona de verdade em produção.
-- [ ] **Exportar lista de inscritos (CSV/Excel)** — pra quem prefere abrir numa planilha em vez
-      de só ver na tela do painel; diferente do PDF resumido já existente pra eventos simples.
 - [ ] **Crachá/etiqueta de identificação em lote** — gerar um PDF com uma etiqueta por inscrito
       (nome grande, congregação, código), pra imprimir e cortar no dia do evento — reaproveitaria
       a mesma técnica já usada no certificado e no PDF de eventos (`jsPDF`).
@@ -644,6 +642,10 @@ novo sem necessidade.
   de gestão de membros usado pela igreja, não faz sentido duplicar aqui.
 - **Multilíngue (PT/EN/ES)** — a igreja não recebe público de outros idiomas com frequência que
   justifique manter traduções; o tradutor automático do navegador já cobre o caso raro.
+- **Exportar lista de inscritos (CSV/Excel)** — decidido não construir: gerar um arquivo solto de
+  dados pessoais que passa a circular fora do sistema (e-mail, pendrive, WhatsApp) é pior do ponto
+  de vista de segurança do que manter tudo dentro do painel, com autenticação e controle de
+  acesso. A tela de inscritos já cobre visualização, busca e filtro sem precisar exportar nada.
 - **Newsletter por e-mail** — pesquisado a fundo (Resend, Mailjet, Brevo). O Brevo (o mais
   recomendado, contatos ilimitados de graça) exige um clique manual ("Requeue") pra completar o
   envio sempre que a lista passar de 300 inscritos, porque o plano grátis não permite programar
