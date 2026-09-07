@@ -395,27 +395,21 @@ pesquisa transversal mais abaixo:
   pelo mesmo motivo que já levou a não inventar dado na Fase 4 (história).
 
 Última leva pedida pelo usuário, focada em painéis/sistemas de **gestão interna** (não página
-pública) — mais 2 fases com recomendação real de construir, e mais 3 assuntos pesquisados a fundo
-que resultaram em "não construir" (achados incorporados às entradas correspondentes de "Ideias
-rejeitadas" acima: diretório de membros, módulo de EBD e reserva de espaço/salão — nenhuma delas
-virou fase nova por decisão explícita, com o motivo já registrado ali):
+pública). Depois de revisar essa leva, o usuário esclareceu um limite importante que vale registrar
+aqui pra orientar toda pesquisa futura: **o site não deve propor recursos de "gestão de igreja"
+que dependam de conectar a outro sistema/banco de dados que já existe fora deste projeto** (outros
+apps do Azure, com seu próprio servidor) — isso exigiria integração via API com uma plataforma que
+"não tem nada a ver" com este site, e o esforço não compensa quando esse outro sistema já existe ou
+já está sendo construído à parte. Eventos são a exceção que confirma a regra: eventos **não**
+existem em nenhum sistema de gestão de igreja que a igreja já usa/está construindo, por isso fez
+sentido concentrar tanto esforço ali. Com esse limite mais claro, restou 1 fase nova (a outra —
+painel financeiro — foi retirada e move para "Ideias rejeitadas" abaixo, já que o usuário está
+construindo um sistema financeiro separado pra isso) e mais 3 assuntos pesquisados a fundo que já
+resultaram em "não construir" antes mesmo desse esclarecimento (achados incorporados às entradas
+correspondentes de "Ideias rejeitadas": diretório de membros, módulo de EBD e reserva de espaço/
+salão):
 
-- **Fase 16 — painel financeiro interno (tesouraria)**: distinto de `/transparencia/` (que já
-  existe e é pública) — o achado central da pesquisa é **não construir uma página nova no site**
-  pra isso. A recomendação é fazer tudo dentro do próprio Directus: duas coleções novas
-  (`lancamentos_financeiros` e `orcamento_categorias`) com permissão restrita a um papel novo
-  "Tesouraria" (nunca "Public", diferente de toda coleção de conteúdo do site), e montar o
-  dashboard em **Directus Insights** — recurso nativo já testado e aprovado no plano gratuito atual
-  para o módulo de eventos, cobrindo total por período, despesa por categoria e orçado vs.
-  realizado sem nenhum código novo. O único código que valeria a pena construir é um gerador de PDF
-  de prestação de contas (reaproveitando o mesmo `jsPDF` já usado no fechamento de evento), restrito
-  por login como `painel-eventos/`, que só lê os totais agregados e monta o relatório pra publicar
-  em `/transparencia/` — sem nome de doador, mesmo princípio de dado agregado já usado nos eventos.
-  Um dashboard customizado completo direto no navegador foi avaliado e **não recomendado**: dado
-  financeiro é sensível demais pra repetir o padrão de token em `sessionStorage` usado em dado
-  operacional de evento.
-
-- **Fase 17 — agendamento (visita pastoral)**: hoje "Visita pastoral" é só mais uma opção do
+- **Fase 16 — agendamento (visita pastoral)**: hoje "Visita pastoral" é só mais uma opção do
   `&lt;select&gt;` de assunto em `/contato/`, sem nenhum campo de preferência de horário — a pesquisa
   mostra que sites de referência não usam calendário de disponibilidade em tempo real pra isso
   (sessão pastoral sempre passa por triagem humana antes de confirmar), então o valor real está em
@@ -426,7 +420,7 @@ virou fase nova por decisão explícita, com o motivo já registrado ali):
   planejado na Fase 7 (LGPD), já que o motivo de uma visita pastoral pode revelar informação
   sensível sem a pessoa perceber que está compartilhando algo delicado num campo de texto livre.
 
-**Nada deste plano foi construído ainda** (fases 0 a 17, exceto o app instalável da Fase 13, que já
+**Nada deste plano foi construído ainda** (fases 0 a 16, exceto o app instalável da Fase 13, que já
 existia). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
@@ -1550,6 +1544,16 @@ novo sem necessidade.
   justifica o esforço. Só reconsiderar se houver reclamação real de sobreposição de horário — nesse
   caso, a opção de menor esforço é embutir (via iframe, como já é feito com o mapa em `/contato/`)
   uma agenda compartilhada gratuita, em vez de construir algo customizado.
+- **Painel financeiro interno (tesouraria)** — pesquisado a fundo (a recomendação técnica era usar
+  coleções novas no Directus com Directus Insights, sem página custom), mas **retirado do plano
+  depois de esclarecimento do usuário**: já existe um sistema financeiro separado sendo montado
+  pela igreja pra essa finalidade. Construir qualquer versão disso aqui duplicaria um sistema que já
+  está em andamento em outra plataforma — o mesmo motivo, generalizado, que já valia pra diretório
+  de membros e escala de voluntários: **o site não deve propor recursos de "gestão de igreja" que
+  dependam de conectar a outro sistema/banco de dados que já existe fora deste projeto** (outro app
+  do Azure com seu próprio servidor, exigindo integração via API só pra buscar dado de lá). Eventos
+  seguem sendo a exceção correta, porque não são cobertos por nenhum sistema de gestão que a igreja
+  já usa ou está construindo — esse é o critério a aplicar em qualquer ideia nova daqui pra frente.
 - **Multilíngue (PT/EN/ES)** — a igreja não recebe público de outros idiomas com frequência que
   justifique manter traduções; o tradutor automático do navegador já cobre o caso raro.
 - **Exportar lista de inscritos (CSV/Excel)** — decidido não construir: gerar um arquivo solto de
