@@ -536,8 +536,14 @@ Pesquisado o que plataformas de eventos (incluindo algumas voltadas especificame
 igreja) oferecem além do que já construímos — nada disso foi construído ainda, é só a lista pra
 decidir o que vale a pena:
 
-- [ ] **Duplicar evento** — clonar um evento existente (título, campos, perguntas) como ponto de
-      partida pra um evento parecido no futuro, em vez de recriar tudo do zero.
+- [x] **Duplicar evento** — botão "Duplicar" em cada card do painel principal (funciona também
+      com eventos arquivados, que continuam aparecendo na lista normalmente). Clona título
+      (com "(cópia)" no final), descrição, corpo, local/congregação, responsável e categoria,
+      horários, vagas, faixas de valor, e todas as perguntas do formulário — exatamente a
+      configuração que dá trabalho de montar de novo. **Datas, inscrições encerradas e
+      arquivamento voltam zerados** (é uma nova edição do evento, com data própria a definir).
+      Testado de ponta a ponta: configuração completa e perguntas replicadas corretamente na
+      nova cópia.
 - [ ] **Limite de vagas com trava automática** — hoje `vagas_limite` é só informativo (mostra o
       número, mas não impede inscrição além dele); poderia fechar o formulário sozinho ao
       atingir o limite, do mesmo jeito que `inscricoes_ate` já fecha por data.

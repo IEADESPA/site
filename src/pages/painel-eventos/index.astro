@@ -61,8 +61,9 @@ const allPosts = visiblePosts(await getAllMensagens());
     const novoBtn = document.querySelector<HTMLButtonElement>("[data-painel-novo-evento]");
 
     const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+    let token = "";
 
-    async function carregarEventos(token: string) {
+    async function carregarEventos() {
       if (!listaEl) return;
       const res = await fetch(
         `${directusUrl}/items/eventos?filter[aceita_inscricao][_eq]=true&fields=id,title,event_date,arquivado&sort=-event_date&limit=-1`,
@@ -79,13 +80,18 @@ const allPosts = visiblePosts(await getAllMensagens());
       listaEl.innerHTML = eventos
         .map(
           (evento) => `
-            <a href="/painel-eventos/evento/?id=${evento.id}" class="painel-evento-card">
-              <span class="painel-evento-titulo">${escapeHtml(evento.title)}</span>
-              <span class="painel-evento-data">
-                ${evento.event_date ? dateFormatter.format(new Date(evento.event_date)) : "Sem data"}
-                ${evento.arquivado ? " · arquivado" : ""}
-              </span>
-            </a>
+            <div class="painel-evento-card">
+              <a href="/painel-eventos/evento/?id=${evento.id}" class="painel-evento-link">
+                <span class="painel-evento-titulo">${escapeHtml(evento.title)}</span>
+                <span class="painel-evento-data">
+                  ${evento.event_date ? dateFormatter.format(new Date(evento.event_date)) : "Sem data"}
+                  ${evento.arquivado ? " · arquivado" : ""}
+                </span>
+              </a>
+              <button type="button" class="link-sweep text-sm font-semibold text-accent mt-2" data-duplicar data-evento-id="${evento.id}">
+                Duplicar
+              </button>
+            </div>
           `,
         )
         .join("");
@@ -94,6 +100,80 @@ const allPosts = visiblePosts(await getAllMensagens());
     function escapeHtml(value: string) {
       return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
     }
+
+    function slugify(texto: string): string {
+      return texto
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+
+    listaEl?.addEventListener("click", async (event) => {
+      const target = event.target as HTMLElement;
+      const botao = target.closest<HTMLButtonElement>("[data-duplicar]");
+      if (!botao) return;
+      event.preventDefault();
+
+      const eventoId = botao.dataset.eventoId;
+      botao.disabled = true;
+      botao.textContent = "Duplicando…";
+
+      try {
+        const resOriginal = await fetch(`${directusUrl}/items/eventos/${eventoId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const original = (await resOriginal.json()).data;
+
+        const novoTitulo = `${original.title} (cópia)`;
+        const resNovo = await fetch(`${directusUrl}/items/eventos`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: novoTitulo,
+            slug: slugify(novoTitulo),
+            description: original.description,
+            body: original.body,
+            location: original.location,
+            congregacao: original.congregacao,
+            responsavel: original.responsavel,
+            tipo_responsavel: original.tipo_responsavel,
+            time: original.time,
+            end_time: original.end_time,
+            vagas_limite: original.vagas_limite,
+            faixas_valor: original.faixas_valor,
+            // Datas e status ficam em branco — é uma nova edição do evento, com data própria.
+            event_date: null,
+            end_date: null,
+            inscricoes_ate: null,
+            inscricoes_encerradas: false,
+            arquivado: false,
+            aceita_inscricao: true,
+          }),
+        });
+        const novo = (await resNovo.json()).data;
+
+        const resPerguntas = await fetch(`${directusUrl}/items/perguntas_evento?filter[evento][_eq]=${eventoId}&sort=ordem&limit=-1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const perguntas: { label: string; tipo: string; opcoes: string[] | null; obrigatoria: boolean; ordem: number | null }[] =
+          (await resPerguntas.json()).data ?? [];
+
+        for (const pergunta of perguntas) {
+          await fetch(`${directusUrl}/items/perguntas_evento`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ ...pergunta, evento: novo.id }),
+          });
+        }
+
+        window.location.href = `/painel-eventos/evento/?id=${novo.id}`;
+      } catch {
+        botao.disabled = false;
+        botao.textContent = "Duplicar";
+      }
+    });
 
     novoBtn?.addEventListener("click", async () => {
       const token = await exigirAutenticacao(directusUrl);
@@ -115,8 +195,9 @@ const allPosts = visiblePosts(await getAllMensagens());
     sairBtn?.addEventListener("click", () => sair(directusUrl));
 
     async function iniciar() {
-      const token = await exigirAutenticacao(directusUrl);
-      if (!token) return;
+      const t = await exigirAutenticacao(directusUrl);
+      if (!t) return;
+      token = t;
 
       const res = await fetch(`${directusUrl}/users/me?fields=email`, { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
@@ -126,7 +207,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       if (usuarioWrap) usuarioWrap.hidden = false;
       if (usuarioEl) usuarioEl.textContent = json.data.email;
 
-      await carregarEventos(token);
+      await carregarEventos();
     }
 
     iniciar();
@@ -138,13 +219,17 @@ const allPosts = visiblePosts(await getAllMensagens());
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       padding: 1.25rem 1.4rem;
-      text-decoration: none;
-      color: inherit;
       transition: border-color var(--duration-fast) var(--ease-out);
     }
 
     .painel-evento-card:hover {
       border-color: var(--accent);
+    }
+
+    .painel-evento-link {
+      display: block;
+      text-decoration: none;
+      color: inherit;
     }
 
     .painel-evento-titulo {
