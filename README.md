@@ -928,6 +928,67 @@ Fontes consultadas (título e domínio, sem nome de produto/plataforma específi
 [Dicas de "About Us" pra pequenos negócios (Salesforce)](https://www.salesforce.com/blog/small-business-about-us-page/),
 [Erros comuns de página "About" (OptinMonster)](https://optinmonster.com/6-common-about-page-mistakes-that-are-killing-your-conversions/).
 
+#### SEO — por que o site não aparece nem buscando o nome da igreja (aguardando revisão)
+
+Pesquisado a pedido do usuário: **sem tráfego pago em nenhuma hipótese** — só otimização
+orgânica (a maioria das igrejas realmente não usa anúncio pago, então concorrer nesse terreno é
+possível). Antes de sugerir qualquer coisa, verifiquei o estado técnico atual do site de verdade
+(não só por suposição):
+
+**O que já está correto** (bom saber, pra não gastar esforço em cima do que não é o problema):
+`robots.txt` permite tudo e aponta pro sitemap; `sitemap.xml`/`sitemap-index.xml` respondem 200;
+não tem nenhuma tag `noindex` vazando pra página nenhuma pública; título, descrição e
+`<link rel="canonical">` de cada página são únicos e bem formados; Open Graph e Twitter Card
+completos; já existe **BreadcrumbList** (dado estruturado JSON-LD) nas páginas com trilha de
+navegação; já existe RSS. Ou seja, a base técnica do site em si não é o motivo de não aparecer.
+
+**A causa mais provável não é o código do site — é o que só existe fora dele:**
+- **Perfil da Empresa no Google (Google Business Profile)** — pra buscas do tipo "nome da igreja",
+  esse cadastro (gratuito, separado do site, feito em business.google.com) costuma pesar mais que
+  qualquer coisa no próprio site — é o que geralmente aparece com mapa/horários/foto na lateral da
+  busca. Se a igreja ainda não reivindicou esse perfil, essa é a ação de maior impacto disponível,
+  e não depende de nada técnico daqui.
+- **Domínio novo demora mesmo** — mesmo com tudo certo, o normal é de 2 a 4 semanas pra primeira
+  indexação e até 2-3 meses pra indexação completa; só estar cadastrado no Search Console não
+  acelera isso sozinho.
+- **No Search Console**, além de verificar a propriedade (já feito, segundo o usuário), confirmar
+  que o sitemap foi **enviado** na aba própria (não é automático só por verificar o domínio), e
+  usar a ferramenta "Inspeção de URL" → "Solicitar indexação" na home e nas páginas mais
+  importantes — isso não garante nada, mas empurra a fila de rastreamento.
+- **Citações e links de fora pra dentro (backlinks)** — cadastro em diretórios da própria
+  convenção/ministério da Assembleia de Deus, sites da prefeitura/associações locais de
+  Parauapebas, e qualquer parceria com outra organização que possa linkar de volta — tudo isso é
+  gratuito e ajuda a busca a confiar que a igreja "existe de verdade" no lugar que diz — mas
+  precisa ser feito manualmente, item por item, fora do código do site.
+
+**O que dá pra melhorar no próprio código** (esses sim, dá pra construir):
+- **Dado estruturado da igreja em si está incompleto** — hoje a única marcação JSON-LD do site
+  inteiro é um `WebSite` genérico (nome, URL, descrição); falta um bloco `Organization`/
+  `PlaceOfWorship` de verdade, com endereço, telefone, coordenadas (já existem cadastrados em
+  `configuracoes`) e `sameAs` apontando pras redes sociais — é exatamente o tipo de dado que ajuda
+  o Google a montar um "card" de identidade pra busca pelo nome.
+- **Nenhuma página de evento tem dado estruturado `Event`** — o site já tem um sistema de eventos
+  inteiro construído; adicionar o JSON-LD de `Event` (nome, data, local, se aceita inscrição) em
+  cada `/evento/<slug>/` é um ganho de "rich result" (aparecer com data/local direto na busca)
+  praticamente pronto, só falta o bloco de marcação.
+
+Nenhum desses itens foi construído ainda — anotado aqui pra decidir com calma. Importante deixar
+claro pro usuário: as duas ações de maior impacto real (Perfil da Empresa no Google e enviar o
+sitemap/solicitar indexação no Search Console) **não são coisas que se resolvem no código** —
+são cadastros/cliques que só quem administra as contas do Google consegue fazer.
+
+Fontes consultadas: [Local SEO pra nonprofits (Elevation)](https://www.elevationweb.org/blog/nonprofit-local-seo/),
+[Guia de Perfil da Empresa no Google pra igrejas (ReachRight)](https://reachrightstudios.com/blog/the-ultimate-google-business-profile-guide/),
+[Checklist de SEO local 2026 (LocalHero)](https://localhero.live/blog/local-seo-checklist-small-businesses-ultimate-edition/),
+[Quanto tempo o Google demora pra indexar um site novo (Grange)](https://www.grangewebdesign.com/blog/how-long-does-it-take-for-a-new-website-to-index/),
+[Por que o site não aparece no Google (Refuge Marketing)](https://refugemarketing.com/blog/website-not-showing-up-google/),
+[Checklist de SEO técnico 2026 (Kinetik)](https://www.kinetikagency.com/technical-seo-checklist-2026/),
+[Guia de dado estruturado/schema 2026 (Digital Applied)](https://www.digitalapplied.com/blog/structured-data-seo-2026-rich-results-guide),
+[Schema markup pra igrejas (Church Design Resource)](https://churchdesignresource.com/search-engines/schema-for-churches/),
+[Diretórios online pra igrejas (ReachRight)](https://reachrightstudios.com/blog/online-directories-for-churches/),
+[12 táticas de SEO pra igrejas (The Lead Pastor)](https://theleadpastor.com/church-management/seo-for-churches/),
+[Backlinks e autoridade de site de igreja (Missional Marketing)](https://missionalmarketing.com/church-website-authority-backlinks/).
+
 ### Ideias rejeitadas
 
 Avaliadas e descartadas por decisão explícita — registradas aqui só para não serem propostas de
