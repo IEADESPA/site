@@ -18,9 +18,14 @@ const allPosts = visiblePosts(await getAllMensagens());
         </p>
         <div class="flex flex-wrap items-baseline justify-between gap-3">
           <h1 class="pagehead-title" data-painel-titulo>Inscritos</h1>
-          <button type="button" class="btn btn-outline" data-baixar-certificados hidden>
-            Baixar certificados de todos os presentes
-          </button>
+          <div class="flex flex-wrap gap-3">
+            <button type="button" class="btn btn-outline" data-baixar-crachas hidden>
+              Baixar crachás de todos os confirmados
+            </button>
+            <button type="button" class="btn btn-outline" data-baixar-certificados hidden>
+              Baixar certificados de todos os presentes
+            </button>
+          </div>
         </div>
         <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
       </header>
@@ -107,10 +112,12 @@ const allPosts = visiblePosts(await getAllMensagens());
   <script>
     import { jsPDF } from "jspdf";
     import { carregarLogoCertificado, desenharCertificado } from "@/lib/certificado";
+    import { desenharCracha } from "@/lib/cracha";
     import { exigirAutenticacao } from "@/lib/painelAuth";
 
     let eventoTitulo = "";
     let eventoPeriodo = "";
+    let eventoTema = "";
 
     interface Inscricao {
       id: number;
@@ -538,7 +545,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         return;
       }
 
-      const resEvento = await fetch(`${directusUrl}/items/eventos/${eventoId}?fields=id,title,event_date,end_date`, {
+      const resEvento = await fetch(`${directusUrl}/items/eventos/${eventoId}?fields=id,title,description,event_date,end_date`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!resEvento.ok) {
@@ -550,6 +557,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       const evento = eventoJson.data;
 
       eventoTitulo = evento.title;
+      eventoTema = evento.description ?? "";
       const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
       eventoPeriodo = evento.event_date
         ? evento.end_date && evento.end_date !== evento.event_date
@@ -561,6 +569,51 @@ const allPosts = visiblePosts(await getAllMensagens());
       if (voltarLink) (voltarLink as HTMLAnchorElement).href = `/painel-eventos/evento/?id=${eventoId}`;
       if (carregando) carregando.hidden = true;
       if (conteudo) conteudo.hidden = false;
+
+      const baixarCrachasBtn = document.querySelector<HTMLButtonElement>("[data-baixar-crachas]");
+      if (baixarCrachasBtn) baixarCrachasBtn.hidden = false;
+      baixarCrachasBtn?.addEventListener("click", async () => {
+        const confirmados = inscricoes.filter((i) => !i.aguardando_vaga);
+        if (!confirmados.length) {
+          alert("Nenhum inscrito confirmado ainda.");
+          return;
+        }
+        baixarCrachasBtn.disabled = true;
+        baixarCrachasBtn.textContent = "Gerando…";
+        try {
+          const logo = await carregarLogoCertificado();
+          const doc = new jsPDF({ unit: "pt", format: "a4" });
+          const margem = 24;
+          const largura = doc.internal.pageSize.getWidth();
+          const altura = doc.internal.pageSize.getHeight();
+          const larguraCel = (largura - margem * 2) / 2;
+          const alturaCel = (altura - margem * 2) / 2;
+
+          confirmados.forEach((pessoa, index) => {
+            const posicaoNaPagina = index % 4;
+            if (index > 0 && posicaoNaPagina === 0) doc.addPage();
+
+            const coluna = posicaoNaPagina % 2;
+            const linha = Math.floor(posicaoNaPagina / 2);
+            const x = margem + coluna * larguraCel;
+            const y = margem + linha * alturaCel;
+
+            desenharCracha(doc, { x, y, largura: larguraCel, altura: alturaCel }, { nome: pessoa.nome, eventoTitulo, tema: eventoTema || null, logo });
+
+            // Linha pontilhada de corte, igual ao modelo físico usado hoje.
+            doc.setDrawColor(120);
+            doc.setLineDashPattern([2, 2], 0);
+            if (coluna === 0) doc.line(x + larguraCel, margem, x + larguraCel, altura - margem);
+            if (linha === 0) doc.line(margem, y + alturaCel, largura - margem, y + alturaCel);
+            doc.setLineDashPattern([], 0);
+          });
+
+          doc.save(`crachas-${eventoTitulo.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+        } finally {
+          baixarCrachasBtn.disabled = false;
+          baixarCrachasBtn.textContent = "Baixar crachás de todos os confirmados";
+        }
+      });
 
       const baixarCertificadosBtn = document.querySelector<HTMLButtonElement>("[data-baixar-certificados]");
       if (baixarCertificadosBtn) baixarCertificadosBtn.hidden = false;

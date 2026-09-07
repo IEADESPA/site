@@ -561,9 +561,20 @@ decidir o que vale a pena:
       teste de ponta a ponta usou o token de administrador, que ignora permissões). Corrigido
       junto com esta entrega; testado com dados reais direto na API (não só mockado) pra garantir
       que o fluxo completo — confirmar, esperar, promover — funciona de verdade em produção.
-- [ ] **Crachá/etiqueta de identificação em lote** — gerar um PDF com uma etiqueta por inscrito
-      (nome grande, congregação, código), pra imprimir e cortar no dia do evento — reaproveitaria
-      a mesma técnica já usada no certificado e no PDF de eventos (`jsPDF`).
+- [x] **Crachá de identificação** — inspirado num modelo físico real que a igreja já usa (4 por
+      folha A4, com linha de corte), sem copiar à risca — desenho próprio
+      (`src/lib/cracha.ts`, compartilhado entre as duas telas), com as cores de identidade do
+      site em vez do verde do modelo original. Duas portas, com o mesmo desenho de segurança já
+      usado no certificado:
+      - **Pública, individual, sem login** (`/cracha/<slug-do-evento>/`): a pessoa digita o
+        próprio código de check-in e baixa só o crachá dela, já pronto — sem precisar escrever o
+        nome à mão na caixa de identificação, como no processo manual.
+      - **No painel, autenticado, em lote** (tela de inscritos): "Baixar crachás de todos os
+        confirmados" — um único PDF, 4 por página com linha pontilhada de corte, só quem está
+        confirmado (lista de espera fica de fora, já que crachá é entregue antes/na entrada do
+        evento, antes do check-in acontecer).
+      Testado de ponta a ponta: PDF em lote com o número certo de páginas/posições, excluindo
+      quem está na lista de espera.
 - [ ] **Link rápido de WhatsApp por inscrito** — ao lado do telefone, na tela de inscritos, um
       link `wa.me/55...` pra equipe chamar a pessoa direto, sem copiar/colar o número.
 - [ ] **Gráfico visual de uma pergunta de seleção** — ex.: quantas pessoas escolheram cada opção
