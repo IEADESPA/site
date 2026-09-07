@@ -410,7 +410,7 @@ correspondentes de "Ideias rejeitadas": diretório de membros, módulo de EBD e 
 salão):
 
 - **Fase 16 — agendamento (visita pastoral)**: hoje "Visita pastoral" é só mais uma opção do
-  `&lt;select&gt;` de assunto em `/contato/`, sem nenhum campo de preferência de horário — a pesquisa
+  `<select>` de assunto em `/contato/`, sem nenhum campo de preferência de horário — a pesquisa
   mostra que sites de referência não usam calendário de disponibilidade em tempo real pra isso
   (sessão pastoral sempre passa por triagem humana antes de confirmar), então o valor real está em
   melhorar o formulário existente, não em construir um sistema de agenda: acrescentar um campo de
@@ -420,7 +420,53 @@ salão):
   planejado na Fase 7 (LGPD), já que o motivo de uma visita pastoral pode revelar informação
   sensível sem a pessoa perceber que está compartilhando algo delicado num campo de texto livre.
 
-**Nada deste plano foi construído ainda** (fases 0 a 16, exceto o app instalável da Fase 13, que já
+Última leva pedida pelo usuário, agora de volta ao que é puramente conteúdo/função do próprio site
+(sem depender de nenhum sistema/banco de dado externo — o mesmo critério da leva anterior), depois
+de esclarecido que "gestão de igreja" não é o objetivo aqui: vídeo, formato editorial de entrevista,
+depoimentos, e materiais compartilháveis. Mais 3 fases:
+
+- **Fase 17 — vídeo institucional**: trocar o link de saída do `videoUrl` de mensagem por um
+  "facade" (thumbnail estática do próprio YouTube + botão de play, só carregando o player pesado no
+  clique) é o item de maior retorno — mantém o visitante no site e evita ~500KB de JS carregado à
+  toa em toda página de mensagem com vídeo. Criar uma coleção `videos` no Directus, clonando 100% o
+  padrão já testado da Galeria (grid, campo `sort`, estado vazio) mas só com URL/ID do YouTube (sem
+  upload nem custo de Blob Storage), permite categorizar por tipo (documentário, bastidores, louvor,
+  infantil) reaproveitando o mesmo padrão de filtro já planejado nas Fases 2/3. Um **hub/página
+  dedicada de vídeo foi avaliado e adiado** — com o volume de conteúdo de hoje (só o `videoUrl` de
+  mensagem), uma página de categorias ficaria com aparência vazia; só construir quando houver
+  produção regular de vídeo variado, mesmo critério já usado pra não antecipar a Fase 4.
+
+- **Fase 18 — formato editorial: testemunho e depoimentos curtos**: dois formatos distintos, dois
+  tamanhos de esforço. **Testemunho/entrevista mais longa**: a categoria `testemunho` já existe no
+  campo `category` de Notícias (`src/lib/noticias.ts`), sem uso real hoje — não precisa de coleção
+  nova, só um campo opcional de "entrevistado" (nome + papel, mesmo padrão de `author_name`/
+  `author_role` já usado em Mensagens) e convenção editorial de perguntas em destaque no corpo
+  markdown. ⚠️ **Só lançar depois de definir quem é o dono da pauta** (quem convida e agenda a
+  entrevista, não quem escreve) — sem isso, risco de abandono real, mesmo padrão já visto em EBD/
+  newsletter/escala. **Depoimento curto (mural de depoimentos)**: formato bem menor — citação +
+  nome + foto opcional, não uma reportagem — clona a arquitetura já testada do Mural de oração
+  (coleção nova com moderação, criação pública restrita, leitura só do aprovado), mas **sem opção
+  de anônimo** (depoimento sem nome prejudica credibilidade) e com checkbox de consentimento
+  específico obrigatório (nome+foto+texto publicados permanentemente, mais sensível que o mural de
+  oração) — liga direto com a Fase 7 (LGPD). Página própria (`/depoimentos/`), linkada a partir do
+  Sobre, sem prazo de expiração automática (diferente do mural de oração, que expira sozinho).
+
+- **Fase 19 — cartão de versículo compartilhável**: reaproveita 100% a técnica já construída e em
+  produção do cartão de programação semanal (`programacao-semanal.png.ts`, SVG + `sharp`, sem
+  serviço externo) pra gerar uma imagem do versículo do dia já existente, pronta pra Stories/feed,
+  com botão "Compartilhar imagem" ao lado do "Ouvir" (`navigator.share()` com fallback pra
+  download). É o item de maior alcance orgânico por menor esforço encontrado nesta leva — ao
+  contrário de um kit de imprensa formal (avaliado e **descartado**: demanda real baixíssima pra
+  esse porte de igreja, mesmo padrão de outras ideias já rejeitadas), uma imagem de versículo é algo
+  que o próprio público usaria todo dia. Se um dia surgir pedido real de logo/foto em alta
+  resolução por terceiro, resolver com 2-3 arquivos soltos em `public/`, não uma página de imprensa
+  dedicada — e antes de disponibilizar qualquer foto real pra download livre, confirmar que o termo
+  de consentimento de imagem cobre esse uso específico (mais amplo que só aparecer na Galeria).
+  Devocional diário com reflexão original e plano de leitura bíblica anual construído do zero foram
+  pesquisados e **descartados** (ver "Ideias rejeitadas") — o "versículo do dia" já existente
+  cumpre esse papel sem risco de abandono.
+
+**Nada deste plano foi construído ainda** (fases 0 a 19, exceto o app instalável da Fase 13, que já
 existia). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
@@ -1554,6 +1600,24 @@ novo sem necessidade.
   do Azure com seu próprio servidor, exigindo integração via API só pra buscar dado de lá). Eventos
   seguem sendo a exceção correta, porque não são cobertos por nenhum sistema de gestão que a igreja
   já usa ou está construindo — esse é o critério a aplicar em qualquer ideia nova daqui pra frente.
+- **Kit de imprensa formal (logo em várias versões, fotos oficiais, boilerplate institucional)** —
+  pesquisado e descartado: media kit serve primariamente pra jornalista/parceiro externo pedir
+  material pronto, e não há evidência de cobertura de imprensa ou demanda de terceiros por ativo de
+  marca pra esse porte de igreja. Se surgir pedido real no futuro, resolver com 2-3 arquivos soltos
+  em `public/`, não uma página dedicada.
+- **Devocional diário com reflexão/comentário original** — pesquisado e descartado: exigiria
+  produção de texto teológico novo todos os dias, indefinidamente — risco de abandono maior que
+  qualquer outra ideia já rejeitada aqui, porque o problema se repetiria diariamente em vez de
+  semanalmente (como EBD) ou pontualmente (como newsletter). O "versículo do dia" já existente
+  cumpre o papel de leitura diária guiada sem depender de ninguém escrever nada novo.
+- **Plano de leitura bíblica anual construído do zero** — pesquisado e descartado: o mercado já
+  resolve isso de graça, em escala que a igreja não alcançaria (aplicativo dedicado com milhões de
+  planos completados, inclusive em parceria com sociedade bíblica brasileira). Construir uma versão
+  própria seria competir sem chance real com algo que muitos membros provavelmente já usam.
+  Alternativa de baixo risco, se um dia fizer sentido: um plano temático curto e com prazo definido
+  (2-4 semanas, ex. Advento), reaproveitando o banco de versículos que já existe no repositório, com
+  progresso salvo em `localStorage` (mesmo padrão já usado pro modo de leitura fácil) — sem exigir
+  produção de texto novo nem compromisso contínuo.
 - **Multilíngue (PT/EN/ES)** — a igreja não recebe público de outros idiomas com frequência que
   justifique manter traduções; o tradutor automático do navegador já cobre o caso raro.
 - **Exportar lista de inscritos (CSV/Excel)** — decidido não construir: gerar um arquivo solto de
