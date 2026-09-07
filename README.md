@@ -540,6 +540,24 @@ ainda, é só a lista pra decidir o que vale a pena:
       genérica, pra quem ativou avisos de qualquer evento; poderia avisar especificamente quem
       está inscrito naquele evento, mais perto da data.
 
+Segunda leva de pesquisa (blog da e-inscricao.com sobre QR code em eventos de igreja, e
+plataformas de gestão de igreja como WayChurch/Sancton):
+
+- [ ] **Check-in por QR Code** — hoje a pessoa digita o código de 6 caracteres; poderia mostrar
+      também um QR Code (gerado na hora da confirmação, sem servidor extra) pra escanear com a
+      câmera do celular na entrada — mais rápido que digitar quando a fila é grande.
+- [ ] **Pesquisa de satisfação pós-evento** — reaproveitando a mesma infraestrutura de perguntas
+      dinâmicas já existente, um formulário curto liberado só depois que o evento termina.
+- [ ] **Inscrição em grupo (família)** — uma pessoa preenche o formulário uma vez só e adiciona
+      mais nomes (ex.: cônjuge, filhos) na mesma submissão, em vez de cada um preencher
+      separadamente.
+- [ ] **Agenda interna do evento (multi-sessão)** — pra congressos com várias palestras/horários
+      dentro do mesmo evento (palestrante, tema, horário), mostrado na página pública.
+- [ ] **Fechamento de caixa em PDF** — gerar automaticamente o mesmo tipo de relatório que a
+      tesouraria já preenche à mão hoje (total arrecadado, forma de conferência, espaço pra
+      assinatura de presidente/secretário/tesoureiro), a partir dos dados de `pago`/`valor` já
+      existentes — era exatamente o processo manual mostrado no PDF real que inspirou este módulo.
+
 **Fora do escopo, por decisão já tomada antes** (não incluído acima de propósito): cupom de
 desconto com código de verdade, e qualquer coisa que exija processamento real de pagamento —
 ambos exigiriam uma plataforma de pagamento de verdade, o que já foi avaliado e descartado.
