@@ -389,8 +389,18 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
         iPhone.
       - **Ainda não faz nada offline** — só habilita a instalação. Isso é o próximo item da lista
         ("Modo offline básico"), de propósito separado daqui.
-- [ ] **Modo offline básico** — cache da programação semanal e contatos via Service Worker, para
-      funcionar mesmo sem internet (útil em áreas de sinal fraco).
+- [x] **Modo offline básico** — cache enxuto e de propósito curto no service worker
+      (`public/sw.js`): só a página inicial, `/eventos/` (programação) e `/contato/`, mais os
+      arquivos de estilo/script/fonte necessários pra elas renderizarem — nada de fotos, PDFs,
+      áudio ou outras páginas, exatamente pra não pesar no armazenamento do celular (testado:
+      **~380 KB no total** depois de visitar as três páginas, nada perto de "1 giga de cache").
+      Estratégia "rede primeiro, cache como reserva": online, sempre busca a versão mais nova
+      (nenhum impacto de desempenho pra quem está conectado); só cai pro cache quando a rede
+      falha. Qualquer outra página do site, se a internet cair, mostra uma tela amigável de "sem
+      conexão" (`public/offline.html`) em vez do erro feio do navegador, mesmo sem estar na lista
+      curta de páginas cacheadas. Testado de ponta a ponta com Playwright (simulando offline de
+      verdade): página cacheada carrega inteira com cabeçalho, página não-cacheada cai no
+      fallback, e o tamanho do cache medido bate com o esperado.
 - [ ] **Busca por proximidade nas congregações** — usar a localização do navegador (com permissão
       do visitante) para ordenar as congregações da mais próxima para a mais distante.
 - [ ] **Painel "hoje na igreja"** — tela pensada para ficar num telão/TV na recepção, mostrando
