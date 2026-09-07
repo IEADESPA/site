@@ -462,7 +462,17 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
          navegação nem na busca do site (não é área pra visitante) — só um link discreto no
          rodapé ("Gestão de eventos", ao lado do "Painel de conteúdo" que já existia), pra quem
          administra achar sem precisar decorar a URL.
-      2. [ ] Criar evento + suas perguntas (substitui o cadastro no Directus).
+      2. [x] **Criar evento + suas perguntas** — `/painel-eventos/` (painel principal): lista os
+         eventos com inscrição em cards, mais um botão "+ Novo evento" que já cria o registro e
+         abre o editor. `/painel-eventos/evento/?id=<id>` (um único editor, id via query string —
+         continua site estático, sem página por evento): todos os campos do evento (data,
+         horário, congregação ou local avulso, responsável e categoria, vagas, prazo de
+         inscrição), botão "Gerar do título" pro endereço (slug) — o Directus não gera isso
+         sozinho, agora o painel gera. Logo abaixo, gestão completa das perguntas do formulário de
+         inscrição: adicionar, editar (texto, tipo, ordem, opções, obrigatória) e excluir, tudo
+         inline, sem sair da página. Testado de ponta a ponta (Playwright, mockando as respostas
+         do Directus): criar evento, carregar e editar campos, gerar slug, salvar, adicionar
+         pergunta, editá-la, excluí-la.
       3. [ ] Inscritos, pagamento e check-in reunidos numa única tela.
       4. [x] **Certificado** — construído de forma independente desta aba, em
          `/certificado/<slug-do-evento>/` (ver acima), usando o mesmo código do check-in, sem

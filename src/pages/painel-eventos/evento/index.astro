@@ -1,0 +1,488 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getAllMensagens());
+const congregacoes = (await fetchItems<{ id: number; name: string }>("congregacoes", "fields=id,name&sort=name")).sort((a, b) =>
+  a.name.localeCompare(b.name, "pt-BR"),
+);
+
+const tipoResponsavelOpcoes = [
+  { value: "", label: "Sem categoria" },
+  { value: "diretoria", label: "Diretoria" },
+  { value: "conselho", label: "Conselho" },
+  { value: "congregacao", label: "Congregação" },
+  { value: "departamento", label: "Departamento/Ministério" },
+  { value: "area", label: "Área/Regional" },
+];
+
+const tipoPerguntaOpcoes = [
+  { value: "texto_curto", label: "Texto curto" },
+  { value: "texto_longo", label: "Texto longo" },
+  { value: "numero", label: "Número" },
+  { value: "data", label: "Data" },
+  { value: "selecao_unica", label: "Seleção única" },
+  { value: "selecao_multipla", label: "Seleção múltipla" },
+];
+---
+
+<BaseLayout title="Editar evento — Gestão de eventos" description="Área restrita da equipe." noindex>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas evento-canvas" data-directus-url={DIRECTUS_URL}>
+      <header class="pagehead">
+        <p class="eyebrow"><a href="/painel-eventos/" class="text-accent">← Gestão de eventos</a></p>
+        <h1 class="pagehead-title" data-painel-titulo>Evento</h1>
+        <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
+      </header>
+
+      <div hidden data-painel-erro class="gallery-empty mt-8">
+        <p class="text-sm text-muted-foreground">Evento não encontrado.</p>
+      </div>
+
+      <form hidden class="mt-8 grid gap-5 max-w-2xl" data-evento-form>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-title">Título</label>
+          <input id="f-title" class="field" required />
+        </div>
+
+        <div class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-slug">Endereço (slug)</label>
+            <input id="f-slug" class="field" placeholder="nome-do-evento" />
+          </div>
+          <button type="button" class="btn btn-outline" data-gerar-slug>Gerar do título</button>
+        </div>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-description">Resumo curto</label>
+          <input id="f-description" class="field" placeholder="Aparece na listagem e no compartilhamento" />
+        </div>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-body">Descrição completa (markdown)</label>
+          <textarea id="f-body" rows="6" class="field"></textarea>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-event-date">Data</label>
+            <input id="f-event-date" type="date" class="field" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-end-date">Data final (se for vários dias)</label>
+            <input id="f-end-date" type="date" class="field" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-time">Horário</label>
+            <input id="f-time" class="field" placeholder="19h30" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-end-time">Horário final</label>
+            <input id="f-end-time" class="field" placeholder="22h" />
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-congregacao">Congregação (se aplicável)</label>
+            <select id="f-congregacao" class="field">
+              <option value="">— Nenhuma (usar local abaixo) —</option>
+              {congregacoes.map((c) => <option value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-location">Local (se não for numa congregação)</label>
+            <input id="f-location" class="field" />
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-responsavel">Responsável (nome/ministério)</label>
+            <input id="f-responsavel" class="field" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-tipo-responsavel">Categoria do responsável</label>
+            <select id="f-tipo-responsavel" class="field">
+              {tipoResponsavelOpcoes.map((o) => <option value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-vagas">Vagas (informativo, opcional)</label>
+            <input id="f-vagas" type="number" min="0" class="field" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-inscricoes-ate">Inscrições até</label>
+            <input id="f-inscricoes-ate" type="date" class="field" />
+          </div>
+        </div>
+
+        <div class="grid gap-3">
+          <label class="flex items-center gap-2 text-sm">
+            <input id="f-inscricoes-encerradas" type="checkbox" /> Encerrar inscrições manualmente agora
+          </label>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <button type="submit" class="btn btn-solid" data-evento-salvar>Salvar evento</button>
+          <p class="text-sm" data-evento-status role="status" aria-live="polite"></p>
+        </div>
+      </form>
+
+      <section hidden class="mt-16" data-perguntas-secao aria-labelledby="perguntas-heading">
+        <h2 id="perguntas-heading" class="section-title">Perguntas do formulário de inscrição</h2>
+        <p class="mt-2 text-sm text-muted-foreground">
+          Cada evento define suas próprias perguntas — não existe campo fixo além de nome e
+          telefone. Ex.: "Qual sua congregação?", "Vai levar acompanhante?", "Contribuição (R$)".
+        </p>
+
+        <div class="mt-5 grid gap-3" data-perguntas-lista></div>
+
+        <div class="mt-6 pergunta-card" data-pergunta-nova>
+          <p class="text-sm font-semibold">+ Nova pergunta</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <input type="text" class="field" placeholder="Texto da pergunta" data-novo-label />
+            <select class="field" data-novo-tipo>
+              {tipoPerguntaOpcoes.map((o) => <option value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <textarea class="field mt-3" rows="2" placeholder="Opções (uma por linha) — só pra seleção única/múltipla" data-novo-opcoes hidden></textarea>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <label class="flex items-center gap-2 text-sm">
+              <input type="checkbox" data-novo-obrigatoria /> Obrigatória
+            </label>
+            <button type="button" class="btn btn-outline" data-adicionar-pergunta>Adicionar pergunta</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <SiteFooter />
+
+  <script>
+    import { exigirAutenticacao } from "@/lib/painelAuth";
+
+    interface Evento {
+      id: number;
+      title: string;
+      slug: string | null;
+      description: string | null;
+      body: string | null;
+      event_date: string | null;
+      end_date: string | null;
+      time: string | null;
+      end_time: string | null;
+      congregacao: number | null;
+      location: string | null;
+      responsavel: string | null;
+      tipo_responsavel: string | null;
+      vagas_limite: number | null;
+      inscricoes_ate: string | null;
+      inscricoes_encerradas: boolean;
+    }
+
+    interface Pergunta {
+      id: number;
+      ordem: number | null;
+      label: string;
+      tipo: string;
+      opcoes: string[] | null;
+      obrigatoria: boolean;
+    }
+
+    const container = document.querySelector<HTMLElement>("[data-directus-url]");
+    if (!container) throw new Error("contêiner do painel ausente");
+    const directusUrl = container.dataset.directusUrl ?? "";
+
+    const idParam = new URLSearchParams(window.location.search).get("id");
+    const eventoId = idParam ? Number(idParam) : null;
+
+    const carregando = document.querySelector<HTMLElement>("[data-painel-carregando]");
+    const erroEl = document.querySelector<HTMLElement>("[data-painel-erro]");
+    const tituloEl = document.querySelector<HTMLElement>("[data-painel-titulo]");
+    const form = document.querySelector<HTMLFormElement>("[data-evento-form]");
+    const statusEl = document.querySelector<HTMLElement>("[data-evento-status]");
+    const perguntasSecao = document.querySelector<HTMLElement>("[data-perguntas-secao]");
+    const perguntasLista = document.querySelector<HTMLElement>("[data-perguntas-lista]");
+
+    const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const fTitle = el<HTMLInputElement>("f-title");
+    const fSlug = el<HTMLInputElement>("f-slug");
+    const fDescription = el<HTMLInputElement>("f-description");
+    const fBody = el<HTMLTextAreaElement>("f-body");
+    const fEventDate = el<HTMLInputElement>("f-event-date");
+    const fEndDate = el<HTMLInputElement>("f-end-date");
+    const fTime = el<HTMLInputElement>("f-time");
+    const fEndTime = el<HTMLInputElement>("f-end-time");
+    const fCongregacao = el<HTMLSelectElement>("f-congregacao");
+    const fLocation = el<HTMLInputElement>("f-location");
+    const fResponsavel = el<HTMLInputElement>("f-responsavel");
+    const fTipoResponsavel = el<HTMLSelectElement>("f-tipo-responsavel");
+    const fVagas = el<HTMLInputElement>("f-vagas");
+    const fInscricoesAte = el<HTMLInputElement>("f-inscricoes-ate");
+    const fInscricoesEncerradas = el<HTMLInputElement>("f-inscricoes-encerradas");
+
+    function slugify(texto: string): string {
+      return texto
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+
+    document.querySelector("[data-gerar-slug]")?.addEventListener("click", () => {
+      fSlug.value = slugify(fTitle.value);
+    });
+
+    function preencherFormulario(evento: Evento) {
+      fTitle.value = evento.title ?? "";
+      fSlug.value = evento.slug ?? "";
+      fDescription.value = evento.description ?? "";
+      fBody.value = evento.body ?? "";
+      fEventDate.value = evento.event_date ?? "";
+      fEndDate.value = evento.end_date ?? "";
+      fTime.value = evento.time ?? "";
+      fEndTime.value = evento.end_time ?? "";
+      fCongregacao.value = evento.congregacao ? String(evento.congregacao) : "";
+      fLocation.value = evento.location ?? "";
+      fResponsavel.value = evento.responsavel ?? "";
+      fTipoResponsavel.value = evento.tipo_responsavel ?? "";
+      fVagas.value = evento.vagas_limite ? String(evento.vagas_limite) : "";
+      fInscricoesAte.value = evento.inscricoes_ate ?? "";
+      fInscricoesEncerradas.checked = Boolean(evento.inscricoes_encerradas);
+    }
+
+    function lerFormulario() {
+      return {
+        title: fTitle.value.trim(),
+        slug: fSlug.value.trim() || slugify(fTitle.value),
+        description: fDescription.value.trim() || null,
+        body: fBody.value || null,
+        event_date: fEventDate.value || null,
+        end_date: fEndDate.value || null,
+        time: fTime.value.trim() || null,
+        end_time: fEndTime.value.trim() || null,
+        congregacao: fCongregacao.value ? Number(fCongregacao.value) : null,
+        location: fLocation.value.trim() || null,
+        responsavel: fResponsavel.value.trim() || null,
+        tipo_responsavel: fTipoResponsavel.value || null,
+        vagas_limite: fVagas.value ? Number(fVagas.value) : null,
+        inscricoes_ate: fInscricoesAte.value || null,
+        inscricoes_encerradas: fInscricoesEncerradas.checked,
+        aceita_inscricao: true,
+      };
+    }
+
+    const rotuloTipoPergunta: Record<string, string> = {
+      texto_curto: "Texto curto",
+      texto_longo: "Texto longo",
+      numero: "Número",
+      data: "Data",
+      selecao_unica: "Seleção única",
+      selecao_multipla: "Seleção múltipla",
+    };
+
+    function escapeHtml(value: string) {
+      return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+    }
+
+    async function carregarPerguntas(token: string, id: number) {
+      if (!perguntasLista) return;
+      const res = await fetch(`${directusUrl}/items/perguntas_evento?filter[evento][_eq]=${id}&sort=ordem&limit=-1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      const perguntas: Pergunta[] = json.data ?? [];
+
+      perguntasLista.innerHTML = perguntas
+        .map(
+          (p) => `
+            <div class="pergunta-card" data-pergunta-id="${p.id}">
+              <div class="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                <input type="text" class="field" value="${escapeHtml(p.label)}" data-campo="label" />
+                <select class="field" data-campo="tipo">
+                  ${Object.entries(rotuloTipoPergunta)
+                    .map(([value, label]) => `<option value="${value}" ${value === p.tipo ? "selected" : ""}>${label}</option>`)
+                    .join("")}
+                </select>
+                <input type="number" class="field ordem-input" value="${p.ordem ?? 0}" data-campo="ordem" title="Ordem" />
+              </div>
+              <textarea class="field mt-3" rows="2" placeholder="Opções (uma por linha)" data-campo="opcoes" ${
+                p.tipo === "selecao_unica" || p.tipo === "selecao_multipla" ? "" : "hidden"
+              }>${(p.opcoes ?? []).join("\n")}</textarea>
+              <div class="mt-3 flex items-center justify-between gap-3">
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" data-campo="obrigatoria" ${p.obrigatoria ? "checked" : ""} /> Obrigatória
+                </label>
+                <div class="flex gap-3">
+                  <button type="button" class="btn btn-outline" data-salvar-pergunta>Salvar</button>
+                  <button type="button" class="btn btn-outline" data-excluir-pergunta>Excluir</button>
+                </div>
+              </div>
+            </div>
+          `,
+        )
+        .join("");
+    }
+
+    async function iniciar() {
+      const token = await exigirAutenticacao(directusUrl);
+      if (!token) return;
+
+      if (!eventoId) {
+        if (carregando) carregando.hidden = true;
+        if (erroEl) erroEl.hidden = false;
+        return;
+      }
+
+      const res = await fetch(`${directusUrl}/items/eventos/${eventoId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        if (carregando) carregando.hidden = true;
+        if (erroEl) erroEl.hidden = false;
+        return;
+      }
+      const json = await res.json();
+      const evento: Evento = json.data;
+
+      if (tituloEl) tituloEl.textContent = evento.title;
+      preencherFormulario(evento);
+      if (carregando) carregando.hidden = true;
+      if (form) form.hidden = false;
+      if (perguntasSecao) perguntasSecao.hidden = false;
+
+      await carregarPerguntas(token, eventoId);
+
+      form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!statusEl) return;
+        statusEl.textContent = "Salvando…";
+        try {
+          const res = await fetch(`${directusUrl}/items/eventos/${eventoId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(lerFormulario()),
+          });
+          if (!res.ok) throw new Error("falha ao salvar");
+          statusEl.textContent = "✅ Evento salvo!";
+        } catch {
+          statusEl.textContent = "Não foi possível salvar agora.";
+        }
+      });
+
+      document.querySelector("[data-novo-tipo]")?.addEventListener("change", (event) => {
+        const select = event.target as HTMLSelectElement;
+        const opcoesEl = document.querySelector<HTMLTextAreaElement>("[data-novo-opcoes]");
+        if (opcoesEl) opcoesEl.hidden = select.value !== "selecao_unica" && select.value !== "selecao_multipla";
+      });
+
+      document.querySelector("[data-adicionar-pergunta]")?.addEventListener("click", async () => {
+        const labelEl = document.querySelector<HTMLInputElement>("[data-novo-label]");
+        const tipoEl = document.querySelector<HTMLSelectElement>("[data-novo-tipo]");
+        const opcoesEl = document.querySelector<HTMLTextAreaElement>("[data-novo-opcoes]");
+        const obrigatoriaEl = document.querySelector<HTMLInputElement>("[data-novo-obrigatoria]");
+        if (!labelEl?.value.trim()) return;
+
+        const opcoes = opcoesEl?.value
+          .split("\n")
+          .map((linha) => linha.trim())
+          .filter(Boolean);
+
+        await fetch(`${directusUrl}/items/perguntas_evento`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            evento: eventoId,
+            label: labelEl.value.trim(),
+            tipo: tipoEl?.value,
+            opcoes: opcoes?.length ? opcoes : null,
+            obrigatoria: Boolean(obrigatoriaEl?.checked),
+            ordem: 99,
+          }),
+        });
+
+        labelEl.value = "";
+        if (opcoesEl) opcoesEl.value = "";
+        if (obrigatoriaEl) obrigatoriaEl.checked = false;
+        await carregarPerguntas(token, eventoId);
+      });
+
+      perguntasLista?.addEventListener("click", async (event) => {
+        const target = event.target as HTMLElement;
+        const card = target.closest<HTMLElement>("[data-pergunta-id]");
+        if (!card) return;
+        const perguntaId = card.dataset.perguntaId;
+
+        if (target.matches("[data-excluir-pergunta]")) {
+          if (!confirm("Excluir essa pergunta?")) return;
+          await fetch(`${directusUrl}/items/perguntas_evento/${perguntaId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          await carregarPerguntas(token, eventoId);
+          return;
+        }
+
+        if (target.matches("[data-salvar-pergunta]")) {
+          const labelInput = card.querySelector<HTMLInputElement>('[data-campo="label"]');
+          const tipoSelect = card.querySelector<HTMLSelectElement>('[data-campo="tipo"]');
+          const ordemInput = card.querySelector<HTMLInputElement>('[data-campo="ordem"]');
+          const opcoesTextarea = card.querySelector<HTMLTextAreaElement>('[data-campo="opcoes"]');
+          const obrigatoriaInput = card.querySelector<HTMLInputElement>('[data-campo="obrigatoria"]');
+
+          const opcoes = opcoesTextarea?.value
+            .split("\n")
+            .map((linha) => linha.trim())
+            .filter(Boolean);
+
+          await fetch(`${directusUrl}/items/perguntas_evento/${perguntaId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              label: labelInput?.value.trim(),
+              tipo: tipoSelect?.value,
+              ordem: ordemInput?.value ? Number(ordemInput.value) : 0,
+              opcoes: opcoes?.length ? opcoes : null,
+              obrigatoria: Boolean(obrigatoriaInput?.checked),
+            }),
+          });
+          await carregarPerguntas(token, eventoId);
+        }
+      });
+
+      perguntasLista?.addEventListener("change", (event) => {
+        const target = event.target as HTMLElement;
+        if (!target.matches('[data-campo="tipo"]')) return;
+        const card = target.closest<HTMLElement>("[data-pergunta-id]");
+        const opcoesTextarea = card?.querySelector<HTMLTextAreaElement>('[data-campo="opcoes"]');
+        const valor = (target as HTMLSelectElement).value;
+        if (opcoesTextarea) opcoesTextarea.hidden = valor !== "selecao_unica" && valor !== "selecao_multipla";
+      });
+    }
+
+    iniciar();
+  </script>
+
+  <style>
+    .evento-canvas {
+      max-width: 48rem;
+    }
+
+    .pergunta-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.25rem;
+    }
+
+    .ordem-input {
+      max-width: 5rem;
+    }
+  </style>
+</BaseLayout>

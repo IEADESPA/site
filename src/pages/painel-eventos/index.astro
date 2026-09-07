@@ -14,22 +14,24 @@ const allPosts = visiblePosts(await getAllMensagens());
     <div class="canvas" data-directus-url={DIRECTUS_URL}>
       <header class="pagehead">
         <p class="eyebrow">Área restrita</p>
-        <h1 class="pagehead-title">Gestão de eventos</h1>
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 class="pagehead-title">Gestão de eventos</h1>
+          <p class="text-sm text-muted-foreground" data-painel-usuario-wrap hidden>
+            <span data-painel-usuario></span> ·{" "}
+            <button type="button" class="link-sweep text-accent font-semibold" data-painel-sair>Sair</button>
+          </p>
+        </div>
         <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
       </header>
 
       <div hidden data-painel-conteudo>
-        <p class="mt-4 text-sm text-muted-foreground">
-          Autenticado como <strong data-painel-usuario></strong>.
-          <button type="button" class="link-sweep text-accent font-semibold" data-painel-sair>Sair</button>
-        </p>
+        <div class="mt-8 flex flex-wrap items-baseline justify-between gap-3">
+          <h2 class="section-title">Eventos com inscrição</h2>
+          <button type="button" class="btn btn-solid" data-painel-novo-evento>+ Novo evento</button>
+        </div>
 
-        <div class="mt-10 gallery-empty">
-          <p class="text-sm leading-relaxed text-muted-foreground">
-            O restante da gestão de eventos (criar evento, perguntas, inscritos, encerrar evento)
-            ainda vai ser construído aqui, passo a passo. Por enquanto, isso confirma que o login
-            está funcionando.
-          </p>
+        <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-painel-eventos-lista>
+          <p class="text-sm text-muted-foreground">Carregando eventos…</p>
         </div>
       </div>
     </div>
@@ -37,79 +39,125 @@ const allPosts = visiblePosts(await getAllMensagens());
   <SiteFooter />
 
   <script>
+    import { exigirAutenticacao, sair } from "@/lib/painelAuth";
+
+    interface EventoResumo {
+      id: number;
+      title: string;
+      event_date: string | null;
+      arquivado: boolean;
+    }
+
     const container = document.querySelector<HTMLElement>("[data-directus-url]");
     if (!container) throw new Error("contêiner do painel ausente");
-
     const directusUrl = container.dataset.directusUrl ?? "";
+
     const carregando = document.querySelector<HTMLElement>("[data-painel-carregando]");
     const conteudo = document.querySelector<HTMLElement>("[data-painel-conteudo]");
+    const usuarioWrap = document.querySelector<HTMLElement>("[data-painel-usuario-wrap]");
     const usuarioEl = document.querySelector<HTMLElement>("[data-painel-usuario]");
     const sairBtn = document.querySelector<HTMLButtonElement>("[data-painel-sair]");
+    const listaEl = document.querySelector<HTMLElement>("[data-painel-eventos-lista]");
+    const novoBtn = document.querySelector<HTMLButtonElement>("[data-painel-novo-evento]");
 
-    const TOKEN_KEY = "painel_eventos_token";
+    const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
-    function irParaLogin() {
-      window.location.href = "/painel-eventos/entrar/";
-    }
+    async function carregarEventos(token: string) {
+      if (!listaEl) return;
+      const res = await fetch(
+        `${directusUrl}/items/eventos?filter[aceita_inscricao][_eq]=true&fields=id,title,event_date,arquivado&sort=-event_date&limit=-1`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const json = await res.json();
+      const eventos: EventoResumo[] = json.data ?? [];
 
-    async function obterTokenValido(): Promise<string | null> {
-      const tokenAtual = sessionStorage.getItem(TOKEN_KEY);
-      if (tokenAtual) return tokenAtual;
-
-      // Sem token em memória (aba nova, ou expirou): tenta renovar usando o
-      // cookie httpOnly do refresh token, sem pedir login de novo.
-      try {
-        const res = await fetch(`${directusUrl}/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "cookie" }),
-        });
-        if (!res.ok) return null;
-        const json = await res.json();
-        sessionStorage.setItem(TOKEN_KEY, json.data.access_token);
-        return json.data.access_token;
-      } catch {
-        return null;
+      if (!eventos.length) {
+        listaEl.innerHTML = `<p class="text-sm text-muted-foreground">Nenhum evento com inscrição ainda. Crie o primeiro acima.</p>`;
+        return;
       }
+
+      listaEl.innerHTML = eventos
+        .map(
+          (evento) => `
+            <a href="/painel-eventos/evento/?id=${evento.id}" class="painel-evento-card">
+              <span class="painel-evento-titulo">${escapeHtml(evento.title)}</span>
+              <span class="painel-evento-data">
+                ${evento.event_date ? dateFormatter.format(new Date(evento.event_date)) : "Sem data"}
+                ${evento.arquivado ? " · arquivado" : ""}
+              </span>
+            </a>
+          `,
+        )
+        .join("");
     }
+
+    function escapeHtml(value: string) {
+      return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+    }
+
+    novoBtn?.addEventListener("click", async () => {
+      const token = await exigirAutenticacao(directusUrl);
+      if (!token) return;
+      novoBtn.disabled = true;
+      try {
+        const res = await fetch(`${directusUrl}/items/eventos`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "Novo evento", aceita_inscricao: true }),
+        });
+        const json = await res.json();
+        window.location.href = `/painel-eventos/evento/?id=${json.data.id}`;
+      } catch {
+        novoBtn.disabled = false;
+      }
+    });
+
+    sairBtn?.addEventListener("click", () => sair(directusUrl));
 
     async function iniciar() {
-      const token = await obterTokenValido();
-      if (!token) {
-        irParaLogin();
-        return;
-      }
+      const token = await exigirAutenticacao(directusUrl);
+      if (!token) return;
 
-      const res = await fetch(`${directusUrl}/users/me?fields=email`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        sessionStorage.removeItem(TOKEN_KEY);
-        irParaLogin();
-        return;
-      }
-
+      const res = await fetch(`${directusUrl}/users/me?fields=email`, { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
+
       if (carregando) carregando.hidden = true;
       if (conteudo) conteudo.hidden = false;
+      if (usuarioWrap) usuarioWrap.hidden = false;
       if (usuarioEl) usuarioEl.textContent = json.data.email;
-    }
 
-    sairBtn?.addEventListener("click", async () => {
-      try {
-        await fetch(`${directusUrl}/auth/logout`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "cookie" }),
-        });
-      } catch {}
-      sessionStorage.removeItem(TOKEN_KEY);
-      irParaLogin();
-    });
+      await carregarEventos(token);
+    }
 
     iniciar();
   </script>
+
+  <style>
+    .painel-evento-card {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.4rem;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color var(--duration-fast) var(--ease-out);
+    }
+
+    .painel-evento-card:hover {
+      border-color: var(--accent);
+    }
+
+    .painel-evento-titulo {
+      display: block;
+      font-weight: 600;
+      font-size: 1.0625rem;
+    }
+
+    .painel-evento-data {
+      display: block;
+      margin-top: 0.35rem;
+      color: var(--muted-foreground);
+      font-size: 0.8125rem;
+    }
+  </style>
 </BaseLayout>
