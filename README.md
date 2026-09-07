@@ -194,6 +194,62 @@ Lista aberta de funcionalidades ainda não construídas, para avaliar e prioriza
 sentido. Marque com `[x]` o que decidir construir, ou adicione novos itens livremente — esta
 seção é justamente para isso.
 
+### Plano de fases — melhorias página por página (aguardando decisão)
+
+Depois de concluída a aba de eventos, o usuário pediu uma pesquisa ampla (9 rodadas, cobrindo
+todas as páginas do site) e um plano em fases pra adaptar o site com base nela. O detalhe de cada
+achado está nas seções de pesquisa logo abaixo ("Mais personalizações pesquisadas", pesquisa de
+SEO, pesquisa de melhorias página por página) — isto aqui é só o resumo organizado em ordem de
+execução. **Nada deste plano foi construído ainda.**
+
+- **Fase 0 — bug real encontrado durante a pesquisa (fazer antes de qualquer coisa)**: o contador
+  "orando por você" do Mural de oração pode ser manipulado (incrementa um número calculado no
+  próprio navegador de quem clica, sem trava nenhuma do lado do servidor, e nada impede clique
+  repetido na mesma visita). Correção simples e isolada, sem depender do resto do plano.
+
+- **Fase 1 — mudança de modelo de dado que o resto depende**: hoje só existe campo pra **um**
+  líder por órgão (`leader_name`/`leader_role`/`leader_photo`), mais um caso especial fixo só pra
+  "diretoria executiva" sem foto/bio. Órgãos colegiados (assembleia, conselho fiscal) não têm como
+  listar vários membros — isso precisa ser resolvido no Directus antes de melhorar a exibição de
+  Órgãos (fases seguintes dependem disso).
+
+- **Fase 2 — reaproveita dado que já existe, zero conteúdo novo necessário da igreja** (a fase com
+  mais itens, e a mais rápida de entregar):
+  - Congregações: mapa embutido em cada página individual (mesma técnica grátis já usada em
+    Contato — só falta reaproveitar).
+  - Início: botão "Assista ao vivo" (o link já existe no código, só não aparece em lugar nenhum);
+    endereço mais perto do topo; reduzir os 8 itens de "Acesso rápido" pra 3-4 essenciais.
+  - Notícias: filtro por categoria na listagem; "mais notícias" relacionado por categoria (hoje é
+    só cronológico).
+  - Doações: QR code Pix gerado a partir da chave já cadastrada (mesmo princípio dos QR codes do
+    check-in de eventos); avisos de segurança em texto (conferir nome do recebedor, sugerir
+    finalidade na descrição do Pix).
+  - Transparência: CNPJ também nesta página; resumo de "último relatório publicado" no topo.
+  - Busca: fallback de "0 resultados" com sugestões/links úteis; navegação por teclado igual ao
+    atalho Ctrl+K.
+  - Galeria: lightbox (clique pra ampliar a foto).
+
+- **Fase 3 — melhorias de UX que exigem mais decisão de desenho, ainda sem conteúdo novo**:
+  - Órgãos: separar visualmente Governança de Departamentos/Serviços; CTA diferente pra órgão
+    deliberativo/eleito vs. equipe de voluntariado.
+  - Congregações: unificar a tecnologia de mapa (hoje a listagem usa Leaflet, Contato usa Google
+    Maps — dois sistemas diferentes); estado "localização em cadastro" pra quem não tem lat/lng,
+    em vez de simplesmente sumir do mapa.
+  - Galeria: agrupamento por evento/álbum, imagem responsiva (`srcset`), paginação.
+  - Mural de oração: proteção básica contra spam (honeypot), caminho "confidencial" separado do
+    público, prazo de moderação no aviso pós-envio.
+  - Visitante: horário/endereço logo no topo (não só nos "próximos passos"); FAQ revisado pra
+    cobrir dúvidas específicas de quem nunca foi a um culto pentecostal.
+
+- **Fase 4 — depende de conteúdo/decisão que só a igreja pode gerar** (a página/funcionalidade já
+  poderia ser construída, mas ficaria vazia sem isso primeiro): fotos reais de culto/comunidade
+  (hero da home, Sobre, Congregações, Ministérios), bios e mandato dos membros de cada órgão,
+  texto da declaração de fé, descrição de cada ministério, vídeo de boas-vindas.
+
+- **Fase 5 — páginas inteiramente novas** (maior escopo cada uma, avaliar prioridade só depois das
+  fases anteriores): Crenças/O que Cremos, Ministérios, página de Kids dedicada, Ao vivo/Assista
+  online.
+
 - [x] **Atalho de busca rápida (Ctrl+K)** — melhorado: agora cobre eventos, temas, pregadores e
       páginas institucionais (10 tipos de conteúdo), com filtros por categoria e busca sem
       distinção de acento.
@@ -1081,6 +1137,56 @@ Fontes consultadas (títulos, sem nome de produto/plataforma específico no text
 [Transparência de governança (Church Transparency Project)](https://churchtransparency.org/governance-transparency/),
 [Boas práticas de página de localização (NN/g)](https://www.nngroup.com/articles/store-finders-and-locators/),
 [Site de igreja multi-campus (Vision Room)](https://www.visionroom.com/multisite-church-website-approach-3-campus-select-option/).
+
+**Segunda leva desta pesquisa — as páginas que faltavam** (Transparência, Doações, Visitante,
+Mural de oração, Galeria, Busca):
+
+**Transparência**: sem quebra visual de receitas/despesas (só lista de PDFs + gráfico de
+crescimento de congregações); sem indicação de "último relatório publicado" nem cadência esperada;
+sem menção de auditoria/parecer independente; CNPJ não aparece nesta página (só em Doações).
+
+**Doações**: sem menção a recibo de doação; sem aviso pra conferir o nome do recebedor no Pix antes
+de confirmar (proteção contra golpe de Pix clonado, puramente informativo); sem campo sugerido
+pra indicar finalidade (dízimo/oferta/campanha) na descrição do Pix; chave Pix só em texto, sem
+QR code estático pra copiar (reduziria erro de digitação, sem processador nenhum envolvido).
+
+**Visitante**: FAQ depende 100% do que for cadastrado no CMS, sem garantia de cobrir dúvidas
+específicas do contexto pentecostal (manifestações, duração do culto, chamada ao altar); página é
+só texto, sem foto/vídeo do ambiente ou do estilo de louvor; "estrutura para famílias" não fala de
+check-in infantil nem triagem de voluntários; horário/endereço só aparece nos "próximos passos",
+não logo no topo.
+
+**Mural de oração**: 
+- ⚠️ **Achado que é bug de verdade, não só sugestão**: o contador "orando por você" incrementa
+  calculando `valor atual + 1` no próprio navegador de quem clica e grava direto — dá pra chamar a
+  API manualmente e definir qualquer número, e nada impede a mesma pessoa clicar várias vezes na
+  mesma visita (o botão só trava durante o próprio clique, depois libera nesse envio de novo).
+  Vale corrigir antes de tudo o mais desta página, com uma trava simples por navegador (não
+  resolve 100% — só limitar via navegador nunca é uma trava perfeita — mas corta o caso comum).
+- Sem proteção nenhuma contra spam/envio automatizado no formulário de pedido (nem honeypot, nem
+  limite de envios) — a única defesa hoje é a moderação humana depois do envio.
+- Não existe caminho "confidencial, só pra equipe pastoral" separado do mural público — todo
+  pedido aprovado vira público, sem opção de pedido sensível não passar por ali.
+- Mensagem pós-envio não diz quanto tempo a moderação costuma levar.
+
+**Galeria**: fotos numa grade só, sem agrupar por evento/álbum — vai virar uma parede confusa
+conforme o acervo cresce; nenhuma foto abre em tamanho maior ao clicar (sem lightbox); imagem
+sempre no mesmo tamanho fixo, não adaptado ao dispositivo; busca todo o acervo de uma vez, sem
+paginação, o que só cresce com o tempo.
+
+**Busca**: busca sem resultado nenhum não sugere nada nem linka pra outro lugar do site, só mostra
+"0 resultados"; o índice de busca não inclui o corpo dos textos, só título/resumo — uma pesquisa
+por uma frase ou versículo citado dentro de uma mensagem não encontra nada mesmo a mensagem
+existindo; sem ordenação por relevância (é tudo por ordem fixa do índice); a página `/busca`
+própria não tem a mesma navegação por teclado que o atalho rápido (Cmd/Ctrl+K) já tem.
+
+Fontes consultadas (mais desta leva): [Transparência financeira de nonprofit (Zeffy)](https://www.zeffy.com/blog/nonprofit-organization-transparency),
+[Doação via Pix pra igreja (Cora)](https://www.cora.com.br/blog/como-registrar-doacoes-pix-na-contabilidade-da-igreja/),
+[Página "planeje sua visita" de igreja (ChurchTrac)](https://www.churchtrac.com/blog/the-perfect-church-plan-your-visit-page),
+[Sistema de pedido de oração (UKChurches)](https://www.ukchurches.co.uk/creating-a-prayer-request-system-for-your-church-website/),
+[Mural de oração digital (Sermon Shots)](https://sermonshots.com/blog/how-to-create-a-digital-prayer-wall-for-your-congregation/),
+[Padrão de galeria de imagens (UX Patterns for Developers)](https://uxpatterns.dev/patterns/media/image-gallery),
+[Boas práticas de busca no site (Nielsen Norman Group)](https://www.nngroup.com/articles/site-search-suggestions/).
 
 ### Ideias rejeitadas
 
