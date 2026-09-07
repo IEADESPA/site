@@ -48,6 +48,26 @@ const isCurrentPath = (href: string) =>
           </svg>
         </a>
 
+        <div class="pwa-install-wrap">
+          <button
+            type="button"
+            class="icon-btn"
+            data-pwa-install-btn
+            aria-label="Instalar o site como aplicativo"
+            title="Instalar o site como aplicativo"
+            hidden
+          >
+            <svg aria-hidden="true" class="h-[1.05rem] w-[1.05rem]" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+            </svg>
+          </button>
+          <p class="pwa-ios-tip" data-pwa-ios-tip hidden role="tooltip">
+            No iPhone/iPad: toque em <strong>Compartilhar</strong> e depois em
+            <strong>"Adicionar à Tela de Início"</strong>.
+          </p>
+        </div>
+
         <button
           type="button"
           class="icon-btn"
@@ -510,10 +530,83 @@ const isCurrentPath = (href: string) =>
         if (event.matches && !menuPanel.hidden) setMenuOpen(false);
       });
     }
+
+    /* Registra o service worker em todo o site (não só quando a pessoa ativa
+       notificação de evento) — sem isso, o navegador não considera o site
+       instalável na maioria dos casos. Não faz cache nem funciona offline
+       (ver public/sw.js), só habilita a instalação. */
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    const installBtn = document.querySelector("[data-pwa-install-btn]");
+    const iosTip = document.querySelector("[data-pwa-ios-tip]");
+
+    if (installBtn && !isStandalone) {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      if (isIOS) {
+        installBtn.hidden = false;
+        installBtn.addEventListener("click", () => {
+          if (!iosTip) return;
+          iosTip.hidden = !iosTip.hidden;
+        });
+        document.addEventListener("click", (event) => {
+          if (!iosTip || iosTip.hidden) return;
+          if (event.target === installBtn || installBtn.contains(event.target)) return;
+          if (event.target === iosTip || iosTip.contains(event.target)) return;
+          iosTip.hidden = true;
+        });
+      } else {
+        let deferredPrompt = null;
+
+        window.addEventListener("beforeinstallprompt", (event) => {
+          event.preventDefault();
+          deferredPrompt = event;
+          installBtn.hidden = false;
+        });
+
+        installBtn.addEventListener("click", async () => {
+          if (!deferredPrompt) return;
+          installBtn.hidden = true;
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          deferredPrompt = null;
+        });
+
+        window.addEventListener("appinstalled", () => {
+          installBtn.hidden = true;
+        });
+      }
+    }
   })();
 </script>
 
 <style>
+  .pwa-install-wrap {
+    position: relative;
+  }
+
+  .pwa-ios-tip {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 30;
+    width: max-content;
+    max-width: 16rem;
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+    box-shadow: 0 12px 30px rgb(0 0 0 / 18%);
+    padding: 0.75rem 0.9rem;
+    color: var(--foreground);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
   .search-dialog {
     position: fixed;
     inset: 0;

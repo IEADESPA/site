@@ -371,8 +371,24 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
       PDF depois. Exige um novo campo `tipo_responsavel` (seleção) em `eventos` — os eventos já
       cadastrados ainda não têm esse campo preenchido, e precisam ser categorizados aos poucos
       pelo Directus pra aparecerem nos filtros por responsável.
-- [ ] **Progressive Web App (PWA)** — permite "instalar" o site na tela inicial do celular como
-      se fosse um app, com ícone próprio, sem passar pela loja de aplicativos.
+- [x] **Progressive Web App (PWA)** — instalar o site na tela inicial do celular (ou na área de
+      trabalho do computador), como se fosse um app, sem passar pela loja de aplicativos. O
+      manifest (`site.webmanifest`) e os ícones já existiam; faltava o essencial pra instalação
+      funcionar de verdade:
+      - Service worker (`public/sw.js`, já existia só pra notificação push) agora é registrado em
+        **todo o site**, não só quando a pessoa ativa o aviso de evento — sem isso o navegador não
+        considera o site instalável na maioria dos casos.
+      - Botão "Instalar app" no cabeçalho (ícone de download): no Android/desktop (Chrome, Edge),
+        aparece sozinho quando o navegador sinaliza que o site pode ser instalado
+        (`beforeinstallprompt`) e dispara o instalador nativo ao clicar. No iPhone/iPad (que não
+        tem esse recurso), mostra uma instrução curta (Compartilhar → Adicionar à Tela de Início).
+      - Metatags do iOS (`apple-mobile-web-app-capable` etc.) pra a instalação abrir em tela cheia,
+        sem a barra do Safari.
+      - Testado de ponta a ponta (Playwright): service worker ativo, manifest válido, botão
+        aparece/funciona simulando o evento do Chrome, e a instrução correta aparece simulando um
+        iPhone.
+      - **Ainda não faz nada offline** — só habilita a instalação. Isso é o próximo item da lista
+        ("Modo offline básico"), de propósito separado daqui.
 - [ ] **Modo offline básico** — cache da programação semanal e contatos via Service Worker, para
       funcionar mesmo sem internet (útil em áreas de sinal fraco).
 - [ ] **Busca por proximidade nas congregações** — usar a localização do navegador (com permissão
