@@ -996,7 +996,12 @@ possível). Antes de sugerir qualquer coisa, verifiquei o estado técnico atual 
 não tem nenhuma tag `noindex` vazando pra página nenhuma pública; título, descrição e
 `<link rel="canonical">` de cada página são únicos e bem formados; Open Graph e Twitter Card
 completos; já existe **BreadcrumbList** (dado estruturado JSON-LD) nas páginas com trilha de
-navegação; já existe RSS. Ou seja, a base técnica do site em si não é o motivo de não aparecer.
+navegação; já existe RSS. **Correção depois de olhar com mais calma** (a primeira leitura deste
+levantamento errou nisso, registrado aqui pra não confundir quem ler depois): a página inicial e a
+de contato já tinham, sim, um dado estruturado `Church` completo (endereço, telefone, horários de
+culto), e cada página de evento já tinha `Event` — só faltava mesmo o `sameAs` (link pros perfis
+de rede social), que foi adicionado logo em seguida. Ou seja, a base técnica do site em si —
+dado estruturado incluído — não é o motivo de não aparecer.
 
 **A causa mais provável não é o código do site — é o que só existe fora dele:**
 - **Perfil da Empresa no Google (Google Business Profile)** — pra buscas do tipo "nome da igreja",
@@ -1017,21 +1022,12 @@ navegação; já existe RSS. Ou seja, a base técnica do site em si não é o mo
   gratuito e ajuda a busca a confiar que a igreja "existe de verdade" no lugar que diz — mas
   precisa ser feito manualmente, item por item, fora do código do site.
 
-**O que dá pra melhorar no próprio código** (esses sim, dá pra construir):
-- **Dado estruturado da igreja em si está incompleto** — hoje a única marcação JSON-LD do site
-  inteiro é um `WebSite` genérico (nome, URL, descrição); falta um bloco `Organization`/
-  `PlaceOfWorship` de verdade, com endereço, telefone, coordenadas (já existem cadastrados em
-  `configuracoes`) e `sameAs` apontando pras redes sociais — é exatamente o tipo de dado que ajuda
-  o Google a montar um "card" de identidade pra busca pelo nome.
-- **Nenhuma página de evento tem dado estruturado `Event`** — o site já tem um sistema de eventos
-  inteiro construído; adicionar o JSON-LD de `Event` (nome, data, local, se aceita inscrição) em
-  cada `/evento/<slug>/` é um ganho de "rich result" (aparecer com data/local direto na busca)
-  praticamente pronto, só falta o bloco de marcação.
-
-Nenhum desses itens foi construído ainda — anotado aqui pra decidir com calma. Importante deixar
-claro pro usuário: as duas ações de maior impacto real (Perfil da Empresa no Google e enviar o
-sitemap/solicitar indexação no Search Console) **não são coisas que se resolvem no código** —
-são cadastros/cliques que só quem administra as contas do Google consegue fazer.
+**No próprio código, já está feito**: o `sameAs` foi adicionado ao dado estruturado `Church` da
+home e do contato (commit logo após esta pesquisa) — não sobrou pendência técnica de dado
+estruturado. O que resta de verdade pra melhorar a chance de aparecer **não é código, é cadastro
+fora do site**: reivindicar o Perfil da Empresa no Google, e confirmar no Search Console que o
+sitemap foi enviado / solicitar indexação da home — **isso não se resolve escrevendo código**, só
+quem administra as contas do Google consegue fazer.
 
 Fontes consultadas: [Local SEO pra nonprofits (Elevation)](https://www.elevationweb.org/blog/nonprofit-local-seo/),
 [Guia de Perfil da Empresa no Google pra igrejas (ReachRight)](https://reachrightstudios.com/blog/the-ultimate-google-business-profile-guide/),
