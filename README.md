@@ -241,13 +241,14 @@ seção é justamente para isso.
 
 Tentativa nº 1 (inscrição própria com controle de pagamento manual no Directus, por pessoa) foi
 construída, testada de ponta a ponta e **reprovada** na avaliação prática — comparado com uma
-plataforma de eventos de verdade (Even3), não se sustentava. Revisado depois de analisar prints
-reais de um módulo de eventos completo: a lição principal foi que **controle financeiro por
-pessoa não é o objetivo** — só interessa um total geral do evento, lançado manualmente no sistema
-de membros (fora do site). E-mail também ficou fora — nunca é armazenado.
+plataforma de eventos profissional de verdade, não se sustentava. Revisado depois de analisar
+prints reais de um módulo de eventos completo: a lição principal foi que **controle financeiro
+por pessoa não é o objetivo** — só interessa um total geral do evento, lançado manualmente no
+sistema de membros (fora do site). E-mail também ficou fora — nunca é armazenado.
 
-Para evento complexo de verdade (pago, com certificado, check-in), **usar Even3/Sympla**,
-apontando o já existente campo `registration_url` pra lá — não vale a pena reconstruir isso aqui.
+Para evento complexo de verdade (pago, com certificado, check-in) sem construir nada aqui, **usar
+uma plataforma de eventos especializada de terceiros**, apontando o já existente campo
+`registration_url` pra lá — não vale a pena reconstruir isso aqui.
 
 - [x] **Evento semanal** (culto) — já existia (coleção `programacao`).
 - [x] **Evento simples** (festa, aniversário) — coleção `eventos`:
@@ -475,7 +476,7 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
          pergunta, editá-la, excluí-la.
       3. [x] **Inscritos, pagamento e check-in reunidos numa única tela** —
          `/painel-eventos/evento/inscritos/?id=<id>`, linkado por um botão "Ver inscritos" no
-         editor. Pesquisado como Even3/Sympla/Eventbrite organizam essa tela antes de desenhar
+         editor. Pesquisado como plataformas de eventos profissionais organizam essa tela antes de desenhar
          (cartões de estatística no topo, filtros rápidos por status, badges de pago/presente,
          busca ao vivo — um padrão real do setor, não inventado). Ficou:
          - 4 cartões de estatística: inscritos, pagos, presentes, valor arrecadado (soma de quem
@@ -515,9 +516,9 @@ apontando o já existente campo `registration_url` pra lá — não vale a pena 
 
 #### Mais personalizações pesquisadas (aguardando revisão)
 
-Pesquisado o que plataformas de eventos (incluindo a e-inscricao.com, feita especificamente pra
-eventos cristãos no Brasil) oferecem além do que já construímos — nada disso foi construído
-ainda, é só a lista pra decidir o que vale a pena:
+Pesquisado o que plataformas de eventos (incluindo algumas voltadas especificamente a eventos de
+igreja) oferecem além do que já construímos — nada disso foi construído ainda, é só a lista pra
+decidir o que vale a pena:
 
 - [ ] **Duplicar evento** — clonar um evento existente (título, campos, perguntas) como ponto de
       partida pra um evento parecido no futuro, em vez de recriar tudo do zero.
@@ -540,8 +541,8 @@ ainda, é só a lista pra decidir o que vale a pena:
       genérica, pra quem ativou avisos de qualquer evento; poderia avisar especificamente quem
       está inscrito naquele evento, mais perto da data.
 
-Segunda leva de pesquisa (blog da e-inscricao.com sobre QR code em eventos de igreja, e
-plataformas de gestão de igreja como WayChurch/Sancton):
+Segunda leva de pesquisa (conteúdo sobre QR code em eventos de igreja, e plataformas de gestão
+de igreja em geral):
 
 - [ ] **Check-in por QR Code** — hoje a pessoa digita o código de 6 caracteres; poderia mostrar
       também um QR Code (gerado na hora da confirmação, sem servidor extra) pra escanear com a
@@ -557,6 +558,16 @@ plataformas de gestão de igreja como WayChurch/Sancton):
       tesouraria já preenche à mão hoje (total arrecadado, forma de conferência, espaço pra
       assinatura de presidente/secretário/tesoureiro), a partir dos dados de `pago`/`valor` já
       existentes — era exatamente o processo manual mostrado no PDF real que inspirou este módulo.
+
+Terceira leva de pesquisa (comparativos de ferramentas de gestão de eventos em geral):
+
+- [ ] **Comparação histórica entre edições do mesmo evento** — ex.: comparar o congresso deste
+      ano com o do ano anterior (nº de inscritos, taxa de comparecimento), usando o resumo que
+      fica salvo no "Encerrar evento" (passo 5, ainda não construído) como base de comparação.
+- [ ] **Múltiplos responsáveis por evento** — marcar quem administra cada evento especificamente,
+      útil quando existir mais de uma conta usando o painel (hoje só uma conta usa).
+- [ ] **Relatório-resumo do evento em PDF** — uma visão geral (não só o fechamento de caixa) pra
+      prestação de contas à diretoria: nº de inscritos, presentes, congregações representadas.
 
 **Fora do escopo, por decisão já tomada antes** (não incluído acima de propósito): cupom de
 desconto com código de verdade, e qualquer coisa que exija processamento real de pagamento —
