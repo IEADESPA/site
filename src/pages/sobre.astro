@@ -5,11 +5,49 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { authorSlug, getAllAuthors, getAllMensagens, visiblePosts } from "@/lib/posts";
-import { fetchConfiguracoes } from "@/lib/directus";
+import { fetchConfiguracoes, fetchItems } from "@/lib/directus";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const authors = getAllAuthors(allPosts);
 const config = await fetchConfiguracoes();
+
+interface RegistroHistorico {
+  period: string | null;
+}
+interface Congregacao {
+  id: number;
+}
+interface OrgaoResumo {
+  category: string;
+}
+
+const [historico, congregacoes, orgaos] = await Promise.all([
+  fetchItems<RegistroHistorico>("historia"),
+  fetchItems<Congregacao>("congregacoes"),
+  fetchItems<OrgaoResumo>("ministerios"),
+]);
+
+/**
+ * "Prova social" real: nenhum número aqui é inventado — vem do que já está
+ * cadastrado (marco mais antigo da história, congregações reais,
+ * ministérios/departamentos fora da governança). Fica de fora qualquer coisa
+ * que exigiria fabricar fato sobre pessoa real (depoimento, bio) — ver Fase 4
+ * no README sobre o porquê.
+ */
+const anoFundacao = historico
+  .map((registro) => registro.period?.match(/\d{4}/)?.[0])
+  .filter((ano): ano is string => Boolean(ano))
+  .map(Number)
+  .reduce((menor, ano) => Math.min(menor, ano), new Date().getFullYear());
+const anosDeHistoria = new Date().getFullYear() - anoFundacao;
+const numeroCongregacoes = congregacoes.length;
+const numeroMinisterios = orgaos.filter((orgao) => orgao.category !== "governanca").length;
+
+const estatisticas = [
+  anosDeHistoria > 0 && { valor: `${anosDeHistoria}+`, rotulo: "anos de história", href: "/historia/" },
+  numeroCongregacoes > 0 && { valor: `${numeroCongregacoes}`, rotulo: "congregações", href: "/congregacoes/" },
+  numeroMinisterios > 0 && { valor: `${numeroMinisterios}`, rotulo: "ministérios e departamentos", href: "/orgaos/" },
+].filter((item): item is { valor: string; rotulo: string; href: string } => Boolean(item));
 
 /**
  * Quebra o texto único de `sobre_corpo` em seções fixas, usando os títulos
@@ -48,6 +86,19 @@ const secoesSobre = await Promise.all(
         <h1 class="pagehead-title">{siteConfig.name}</h1>
         <p class="pagehead-description">{config.about}</p>
       </header>
+
+      {
+        estatisticas.length > 0 && (
+          <div class="sobre-estatisticas" role="list">
+            {estatisticas.map((item) => (
+              <a href={item.href} class="sobre-estatistica link-sweep" role="listitem">
+                <span class="sobre-estatistica-valor">{item.valor}</span>
+                <span class="sobre-estatistica-rotulo">{item.rotulo}</span>
+              </a>
+            ))}
+          </div>
+        )
+      }
 
       <div class="grid gap-8 mt-2">
         {
@@ -111,5 +162,35 @@ const secoesSobre = await Promise.all(
   .sobre-secao {
     border-left: 3px solid var(--accent);
     padding-left: 1.25rem;
+  }
+
+  .sobre-estatisticas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  .sobre-estatistica {
+    display: grid;
+    gap: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1rem;
+    text-align: center;
+    color: var(--foreground);
+  }
+
+  .sobre-estatistica-valor {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .sobre-estatistica-rotulo {
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+    text-wrap: balance;
   }
 </style>

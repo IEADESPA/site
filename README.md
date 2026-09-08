@@ -405,12 +405,29 @@ não foi construído.
   (tema sozinho, com resumo e feed corretos — o filtro de pregador só não é exibido hoje porque só
   existe 1 pregador cadastrado, comportamento correto do próprio código).
 
-- **Fase 4 — depende de conteúdo/decisão que só a igreja pode gerar** (a página/funcionalidade já
-  poderia ser construída, mas ficaria vazia sem isso primeiro): fotos reais de culto/comunidade
-  (hero da home, Sobre, Congregações, Ministérios), bios e mandato dos membros de cada órgão,
-  texto da declaração de fé, descrição de cada ministério, vídeo de boas-vindas, prova social
-  (depoimento de membro, tempo de história, nº de congregações — dado já existe em parte em
-  `/historia/`/`/transparencia/`, mas precisa virar destaque também no Sobre).
+- [x] **Fase 4 — depende de conteúdo/decisão que só a igreja pode gerar.** Dividida em duas
+  categorias, tratadas de forma diferente de propósito:
+
+  **Construído agora, com dado 100% real** (nada inventado): a "prova social" em `/sobre/` —
+  faixa de estatísticas logo abaixo do cabeçalho (anos de história, calculado do marco mais antigo
+  de `/historia/`; número de congregações; número de ministérios/departamentos fora da governança)
+  — todos os três números vêm direto do que já está cadastrado no Directus, sem nenhum valor fixo
+  no código. Também preenchidas as 2 descrições de ministério que ainda diziam "A definir"
+  (Departamento de Senhoras e Departamento de Homens), com texto genérico real no mesmo padrão dos
+  outros 11 ministérios já descritos — não é fato específico inventado, é a mesma descrição de
+  função que qualquer departamento equivalente teria. A declaração de fé ("O que cremos") já existia
+  de verdade em `sobre_corpo` desde antes desta fase — conferido, não precisou de nada novo.
+
+  **Deliberadamente NÃO fabricado**, ao contrário da permissão de inventar conteúdo dada na Fase 3
+  — porque aqui a natureza do dado é diferente: não é texto genérico de preenchimento, é uma
+  afirmação de fato específica atribuída a uma pessoa real e identificável, ou uma imagem/vídeo que
+  pretende retratar esta igreja especificamente. Publicar isso fabricado seria diferente de um
+  texto placeholder — seria uma mentira sobre uma pessoa ou sobre a própria igreja, no ar. Ficam
+  para quando a igreja fornecer o dado real: fotos reais de culto/comunidade (hero da home, Sobre,
+  Congregações, Ministérios); os nomes reais de vice-presidente/secretário(a)/tesoureiro(a) da
+  diretoria (hoje "A definir" em `orgao_membros` — mesma pendência já listada no topo deste
+  README); bios dos membros de cada órgão; vídeo de boas-vindas; depoimento de membro. Este é o
+  mesmo critério já usado para não inventar coordenada de GPS na Fase 3.
 
 - **Fase 5 — páginas inteiramente novas** (maior escopo cada uma, avaliar prioridade só depois das
   fases anteriores): Crenças/O que Cremos, Ministérios, página de Kids dedicada, Ao vivo/Assista
