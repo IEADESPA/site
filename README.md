@@ -292,6 +292,25 @@ não foi construído.
   diretoria mostra os 4 membros migrados corretamente, e uma página de departamento sem membro
   cadastrado ainda mostra o CTA certo sem quebrar.
 
+  **Aprimorado além do que a fase pedia originalmente**, a pedido do usuário: (1) **Tipos de órgão
+  agora são geridos direto no Directus**, numa coleção nova `orgao_categorias` (id/label/description/
+  sort), em vez de ficarem fixos no código — o campo `category` de `ministerios` virou uma relação
+  de verdade pra essa coleção (migração sem perda: os 4 valores que já existiam como texto solto
+  viraram as 4 categorias iniciais, sem precisar tocar nos órgãos já cadastrados). Agora dá pra criar
+  um tipo novo (ex.: "Secretarias da Igreja") só cadastrando na coleção, sem mudança de código —
+  `orgaos.astro`/`orgao/[slug].astro` já leem a lista dinamicamente. Testado de ponta a ponta:
+  criei uma categoria e um órgão de teste, confirmei que apareceram corretamente agrupados na
+  listagem e na página individual, depois apaguei os dois. (2) **"Há quanto tempo está no cargo"**:
+  quando o campo `since` tem um ano reconhecível (ex. "2012"), a página calcula e mostra "(há X
+  anos)" automaticamente, com um selo "longa trajetória" quando passa de 10 anos — sem exigir data
+  exata, já que ninguém guarda de cor o dia certo. (3) **Histórico de quem já compôs o órgão**: uma
+  seção recolhida (`<details>`) lista os membros com `current = false`, sem precisar de nenhuma
+  subpágina por ano/mandato — a alternativa de "uma página por ano de mandato" foi avaliada e
+  descartada (ver "Ideias rejeitadas"): cresceria sem limite a cada novo mandato, pra um ganho que
+  uma seção recolhida na própria página do órgão já entrega. Os três itens testados juntos com dado
+  real de teste (categoria nova, órgão de teste, membro atual com 14 anos de mandato e um membro
+  histórico) antes de apagar tudo.
+
 - **Fase 2 — reaproveita dado que já existe, zero conteúdo novo necessário da igreja** (a fase com
   mais itens, e a mais rápida de entregar):
   - Congregações: mapa embutido em cada página individual (mesma técnica grátis já usada em
@@ -1619,6 +1638,12 @@ software de gestão de igreja comercial específico no texto acima):
 Avaliadas e descartadas por decisão explícita — registradas aqui só para não serem propostas de
 novo sem necessidade.
 
+- **Subpágina por ano de mandato pra cada órgão (ex.: "Diretoria 2020", "Diretoria 2021"...)** —
+  avaliado e descartado: cresceria uma página nova a cada mandato, sem limite, pro mesmo ganho que
+  uma seção de histórico recolhida (`<details>`) já entrega na própria página do órgão. O campo
+  `current = false` em `orgao_membros` já preserva o dado de quem passou por ali; se um dia quiserem
+  algo mais elaborado (linha do tempo visual, por exemplo), dá pra construir sobre esse mesmo dado
+  sem mudar schema.
 - **"Ao vivo agora" automático** — aviso que aparece sozinho quando há transmissão ao vivo. As
   duas formas possíveis de fazer isso (interruptor manual no painel, ou checagem automática via
   API) foram descartadas: a primeira tem um fluxo ruim pra quem está no evento, a segunda tem

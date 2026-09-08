@@ -14,8 +14,13 @@ interface Orgao {
   slug: string;
   name: string;
   description: string;
-  category: "governanca" | "departamentos" | "secretarias" | "servicos";
+  category: string;
   body: string | null;
+}
+
+interface Categoria {
+  id: string;
+  label: string;
 }
 
 interface MembroOrgao {
@@ -28,17 +33,12 @@ interface MembroOrgao {
   term_end: string | null;
 }
 
-const CATEGORY_LABEL: Record<Orgao["category"], string> = {
-  governanca: "Governança",
-  departamentos: "Departamentos",
-  secretarias: "Secretarias",
-  servicos: "Serviços",
-};
-
 // Órgãos deliberativos/eleitos (conselho, assembleia, diretoria) chegam à
 // composição por eleição/indicação formal — diferente de um departamento,
-// que qualquer pessoa pode procurar pra servir como voluntária.
-const isGovernanca = (categoria: Orgao["category"]) => categoria === "governanca";
+// que qualquer pessoa pode procurar pra servir como voluntária. O tipo em
+// si (nome/descrição) é gerido no Directus, não fica fixo no código — só
+// esse identificador "governanca" continua com tratamento especial de UI.
+const isGovernanca = (categoria: string) => categoria === "governanca";
 
 export async function getStaticPaths() {
   const orgaos = await fetchItems<Orgao>("ministerios");
@@ -52,13 +52,28 @@ interface Props {
 const { orgao } = Astro.props;
 const allPosts = visiblePosts(await getAllMensagens());
 const bodyHtml = orgao.body ? await marked.parse(orgao.body) : null;
-const membros = await fetchItems<MembroOrgao>(
-  "orgao_membros",
-  `filter[orgao][_eq]=${orgao.id}&filter[current][_eq]=true&sort[]=sort`,
-);
+const [membros, historico, categorias] = await Promise.all([
+  fetchItems<MembroOrgao>("orgao_membros", `filter[orgao][_eq]=${orgao.id}&filter[current][_eq]=true&sort[]=sort`),
+  fetchItems<MembroOrgao>("orgao_membros", `filter[orgao][_eq]=${orgao.id}&filter[current][_eq]=false&sort[]=sort`),
+  fetchItems<Categoria>("orgao_categorias"),
+]);
+const categoriaLabel = categorias.find((categoria) => categoria.id === orgao.category)?.label ?? orgao.category;
 const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
   (noticia) => noticia.data.orgaoRelacionado === orgao.id,
 );
+
+/** "Há X anos" a partir de um texto livre tipo "2019", "jan/2019" — só
+ * calcula quando dá pra extrair um ano de 4 dígitos plausível; em qualquer
+ * outro formato (ex. "Indeterminado"), não mostra nada em vez de arriscar
+ * uma conta errada. */
+function anosNoCargo(desde: string | null): number | null {
+  if (!desde) return null;
+  const match = /\b(19|20)\d{2}\b/.exec(desde);
+  if (!match) return null;
+  const ano = Number(match[0]);
+  const anos = new Date().getFullYear() - ano;
+  return anos >= 0 ? anos : null;
+}
 ---
 
 <BaseLayout title={orgao.name} description={orgao.description}>
@@ -67,7 +82,7 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
     <div class="canvas">
       <header class="pagehead">
         <Breadcrumbs items={[{ label: "Órgãos", href: "/orgaos/" }, { label: orgao.name }]} />
-        <p class="eyebrow">{CATEGORY_LABEL[orgao.category]}</p>
+        <p class="eyebrow">{categoriaLabel}</p>
         <h1 class="pagehead-title">{orgao.name}</h1>
         <p class="pagehead-description">{orgao.description}</p>
       </header>
@@ -90,6 +105,10 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
                   {membros[0].since && `Desde ${membros[0].since}`}
                   {membros[0].since && membros[0].term_end && " · "}
                   {membros[0].term_end && `Mandato até ${membros[0].term_end}`}
+                  {anosNoCargo(membros[0].since) !== null && ` (há ${anosNoCargo(membros[0].since)} anos)`}
+                  {(anosNoCargo(membros[0].since) ?? 0) >= 10 && (
+                    <span class="tenure-badge">longa trajetória</span>
+                  )}
                 </p>
               )}
               {membros[0].bio && <p class="mt-2 text-sm leading-relaxed">{membros[0].bio}</p>}
@@ -123,6 +142,8 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
                       {membro.since && `Desde ${membro.since}`}
                       {membro.since && membro.term_end && " · "}
                       {membro.term_end && `Mandato até ${membro.term_end}`}
+                      {anosNoCargo(membro.since) !== null && ` (há ${anosNoCargo(membro.since)} anos)`}
+                      {(anosNoCargo(membro.since) ?? 0) >= 10 && <span class="tenure-badge">longa trajetória</span>}
                     </span>
                   )}
                   {membro.bio && <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{membro.bio}</p>}
@@ -130,6 +151,31 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
               ))}
             </ul>
           </section>
+        )
+      }
+
+      {
+        historico.length > 0 && (
+          <details class="mt-12 historico-details">
+            <summary class="cursor-pointer text-sm font-semibold text-accent">
+              Ver quem já compôs este órgão ({historico.length})
+            </summary>
+            <ul class="mt-5 grid gap-4 sm:grid-cols-2">
+              {historico.map((membro) => (
+                <li class="board-card">
+                  <span class="block text-xs font-semibold tracking-wide text-muted-foreground uppercase">{membro.role}</span>
+                  <span class="mt-1 block text-lg font-semibold tracking-tight">{membro.name}</span>
+                  {(membro.since || membro.term_end) && (
+                    <span class="mt-0.5 block text-xs text-muted-foreground">
+                      {membro.since && `Desde ${membro.since}`}
+                      {membro.since && membro.term_end && " · "}
+                      {membro.term_end && `Até ${membro.term_end}`}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
         )
       }
 
@@ -200,5 +246,22 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
     border-radius: var(--radius-full);
     object-fit: cover;
     margin-bottom: 0.75rem;
+  }
+
+  .tenure-badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: var(--radius-full);
+    background: var(--muted);
+    color: var(--accent-strong);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .historico-details ul {
+    opacity: 0.9;
   }
 </style>

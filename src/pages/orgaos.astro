@@ -10,38 +10,31 @@ interface Orgao {
   slug: string;
   name: string;
   description: string;
-  category: "governanca" | "departamentos" | "secretarias" | "servicos";
+  category: string;
 }
 
-const CATEGORIES: { value: Orgao["category"]; label: string; description: string }[] = [
-  {
-    value: "governanca",
-    label: "Governança",
-    description: "Assembleia, ministério geral e conselhos que deliberam sobre a condução da igreja.",
-  },
-  {
-    value: "departamentos",
-    label: "Departamentos",
-    description: "Grupos organizados por faixa etária e perfil: crianças, jovens, senhoras e homens.",
-  },
-  {
-    value: "secretarias",
-    label: "Secretarias",
-    description: "Missões, ação social, família e escola bíblica.",
-  },
-  {
-    value: "servicos",
-    label: "Serviços",
-    description: "Louvor, adoração e demais equipes que servem diretamente nos cultos.",
-  },
-];
+interface Categoria {
+  id: string;
+  label: string;
+  description: string | null;
+}
 
 const allPosts = visiblePosts(await getAllMensagens());
-const orgaos = await fetchItems<Orgao>("ministerios", "sort[]=sort");
-const groups = CATEGORIES.map((category) => ({
-  ...category,
-  items: orgaos.filter((orgao) => orgao.category === category.value),
-})).filter((group) => group.items.length > 0);
+const [orgaos, categorias] = await Promise.all([
+  fetchItems<Orgao>("ministerios", "sort[]=sort"),
+  fetchItems<Categoria>("orgao_categorias", "sort[]=sort"),
+]);
+// Os tipos de órgão são geridos direto no Directus (coleção "Categorias de
+// Órgão") — a igreja pode criar um tipo novo por lá sem precisar de mudança
+// de código aqui; a listagem só agrupa pelo que já existe.
+const groups = categorias
+  .map((categoria) => ({
+    value: categoria.id,
+    label: categoria.label,
+    description: categoria.description ?? "",
+    items: orgaos.filter((orgao) => orgao.category === categoria.id),
+  }))
+  .filter((group) => group.items.length > 0);
 ---
 
 <BaseLayout
