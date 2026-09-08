@@ -538,21 +538,51 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
   que exponha esses utilitários — fica registrada como pendência técnica, não como algo recusado por
   design.
 
-  **Confirmado por teste real, mas só corrigível fora desta sessão (precisa de Azure Portal/CLI)**:
-  - **Rate limiter do Directus está desligado** — confirmado direto: `GET /server/info` retorna
-    `"rateLimit":false,"rateLimitGlobal":false`, e 10 tentativas de login errado em sequência
-    voltaram `401` sem nenhum bloqueio ou atraso. Ligar exige variáveis de ambiente no App Service
-    do Directus (`RATE_LIMITER_ENABLED=true`, mais `RATE_LIMITER_STORE`, `RATE_LIMITER_POINTS`,
-    `RATE_LIMITER_DURATION` — configuração de servidor, não dá pra fazer pela API REST).
-  - **Força do `SECRET`** — não dá pra verificar remotamente (o valor não é exposto pela API, e nem
-    deveria ser) nem trocar sem acesso às variáveis de ambiente do App Service do Directus no Azure.
-    Quem tem acesso ao Portal deve confirmar que é uma string longa e aleatória, não um valor de
-    exemplo/padrão.
-  - **Retenção de backup do PostgreSQL Flexible Server** e **teste real de restauração** — mudança e
-    teste feitos no Azure Portal (Backup and restore do recurso PostgreSQL), fora do alcance desta
-    sessão.
-  - **Soft delete e versionamento no container do Blob Storage** — mudança feita no Azure Portal
-    (Data protection do Storage Account), também fora do alcance desta sessão.
+  **Atualização — acesso ao Azure foi concedido nesta mesma conversa** (um service principal
+  temporário, escopado só a 3 recursos: o App Service do Directus, o PostgreSQL Flexible Server e a
+  Storage Account `storageigrejaportal`, criado pelo próprio usuário e revogável a qualquer
+  momento). Com isso, o que antes só dava pra documentar como pendência virou trabalho concluído e
+  testado de verdade:
+
+  - **Retenção de backup do PostgreSQL**: aumentada de 7 para **35 dias**, confirmado via API
+    (`backupRetentionDays: 35`, servidor `Ready`).
+  - **Teste real de restauração, feito de ponta a ponta**: restaurado um servidor novo e separado
+    (`ieadespa-directus-db-restoretest`, a partir de um ponto no tempo recente), conectado nele com
+    um usuário `pg` temporário instalado só pra esse teste, e **conferido dado real** — as 54
+    tabelas esperadas presentes, `congregacoes` com 41 linhas, `historia` com 21, `orgao_membros`
+    com 4, `mensagens` com 15 (a primeira sendo "A graça que nos salva" — bate com o que já se sabia
+    de fases anteriores). Backup confirmado funcional na prática, não só configurado. Servidor de
+    teste apagado logo em seguida (existiu por ~17 minutos, custo estimado abaixo de R$ 0,30,
+    aprovado previamente pelo usuário).
+  - **Blob Storage**: soft delete de blob e de container **já estavam ativados** (7 dias, decisão de
+    quem provisionou a infraestrutura originalmente) — só faltava o **versionamento**, ativado agora
+    e confirmado (`isVersioningEnabled: true`).
+  - **Rate limiter do Directus — configurado corretamente, mas confirmado ineficaz na prática**: o
+    usuário aplicou as variáveis de ambiente certas (`RATE_LIMITER_ENABLED=true`,
+    `RATE_LIMITER_STORE=memory`, `RATE_LIMITER_POINTS=25`, `RATE_LIMITER_DURATION=1`) — confirmado
+    que aplicaram, via `GET /server/info` mostrando `rateLimit: {points: 25, duration: 1}` (antes
+    era `false`). Mas **testado com até 60 tentativas de login simultâneas contra o servidor real, e
+    nenhuma foi bloqueada** — 100% `401`, nenhum `429`. Isso não é erro de configuração: é um
+    **bug conhecido e não corrigido do próprio Directus**
+    ([issue #23067](https://github.com/directus/directus/issues/23067), fechada pela equipe do
+    Directus como "not planned"). A proteção contra força bruta de login **continua não
+    funcionando de verdade**, apesar de configurada — fica ligada à mesma solução da extensão
+    customizada (próximo item), que pode implementar bloqueio de tentativas por fora, com código
+    nosso.
+  - **Força do `SECRET`**: ainda não verificado — verificar isso exigiria ler as variáveis de
+    ambiente do App Service, e o classificador de segurança do próprio Claude Code bloqueou
+    corretamente essa leitura (evita expor segredo de produção sem necessidade). Quem tem acesso ao
+    Portal deve confirmar visualmente que é uma string longa e aleatória.
+
+  **Descoberto durante o processo — como o Directus roda de verdade**: é um container da imagem
+  oficial `directus/directus:12.3.1` (Docker Hub), publicado via o recurso mais novo "Site
+  Containers" do Azure App Service, **sem nenhum volume montado ainda**. Isso é uma boa notícia pro
+  problema da criptografia do telefone (Fase 6, item anterior) e do próprio rate limiter: dá pra
+  montar um volume de arquivos (Azure Files) em `/directus/extensions` e instalar uma extensão
+  customizada com acesso real a `crypto`/`fetch` — diferente do sandbox do Flow, uma extensão de
+  verdade roda em Node.js completo — sem precisar reconstruir nem trocar a imagem oficial. **Isso
+  ainda não foi construído** — é o próximo passo natural, que resolveria ao mesmo tempo o hash real
+  do telefone e o bloqueio de força bruta que o rate limiter do Directus deveria fazer e não faz.
 
 - **Fase 7 — LGPD e privacidade** (a política de privacidade hoje é literalmente um rascunho —
   `privacidade.astro` ainda tem o comentário "Substitua pelo texto definitivo... antes de publicar
