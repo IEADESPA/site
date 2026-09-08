@@ -8,5 +8,15 @@
   },
   "mimeTypes": {
     ".webmanifest": "application/manifest+json"
-  }
+  },
+  "routes": [
+    {
+      "route": "/_astro/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    },
+    {
+      "route": "/fonts/*",
+      "headers": { "Cache-Control": "public, max-age=31536000" }
+    }
+  ]
 }

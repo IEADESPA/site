@@ -1,6 +1,6 @@
 ﻿import { categories, categorySlug, type Category } from "@/config/categories";
 import { siteConfig } from "@/config/site";
-import { directusAssetUrl, fetchItems } from "@/lib/directus";
+import { COVER_WIDTHS, directusAssetSrcset, directusAssetUrl, fetchItems } from "@/lib/directus";
 
 export { categories, categorySlug, type Category };
 
@@ -32,6 +32,7 @@ export interface PostData {
   updatedDate?: Date;
   author: { name: string; role: string };
   cover?: string;
+  coverSrcset?: string;
   videoUrl?: string;
   featured: boolean;
   draft: boolean;
@@ -62,6 +63,7 @@ function toPost(m: DirectusMensagem): Post {
       updatedDate: m.updated_date ? new Date(m.updated_date) : undefined,
       author: { name: m.author_name, role: m.author_role },
       cover: m.cover ? directusAssetUrl(m.cover, { width: 1600, quality: 80, format: "webp" }) : undefined,
+      coverSrcset: m.cover ? directusAssetSrcset(m.cover, COVER_WIDTHS, { quality: 80, format: "webp" }) : undefined,
       videoUrl: m.video_url ?? undefined,
       featured: m.featured,
       draft: m.draft,

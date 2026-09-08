@@ -6,7 +6,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { congregacaoEndereco, DIRECTUS_URL, TELEFONE_HASH_URL, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { COVER_WIDTHS, congregacaoEndereco, DIRECTUS_URL, TELEFONE_HASH_URL, directusAssetSrcset, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
 import { hasEventPage } from "@/lib/eventos";
 
 interface Congregacao {
@@ -84,6 +84,7 @@ const bodyHtml = event.body ? await marked.parse(event.body) : "";
    horário de onde o build roda, podendo mostrar o dia errado. */
 const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 const cover = event.cover ? directusAssetUrl(event.cover, { width: 1600, quality: 80, format: "webp" }) : undefined;
+const coverSrcset = event.cover ? directusAssetSrcset(event.cover, COVER_WIDTHS, { quality: 80, format: "webp" }) : undefined;
 const config = await fetchConfiguracoes();
 
 const timeRange = event.time ? `${event.time}${event.end_time ? ` às ${event.end_time}` : ""}` : null;
@@ -201,7 +202,16 @@ const structuredData = startDate
 
       {cover && (
         <figure class="article-image inner mt-10">
-          <img src={cover} alt={event.title} loading="eager" decoding="async" class="w-full" />
+          <img
+            src={cover}
+            srcset={coverSrcset}
+            sizes="100vw"
+            alt={event.title}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+            class="w-full"
+          />
         </figure>
       )}
 

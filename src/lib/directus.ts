@@ -129,6 +129,22 @@ export const directusAssetUrl = (fileId: string, transform?: ImageTransform) => 
   return `${url}?${params.toString()}`;
 };
 
+/**
+ * Monta um `srcset` com várias larguras da mesma imagem, pra o navegador
+ * baixar só o tamanho que precisa (uma tela de celular não precisa da
+ * imagem de 1600px pensada pra desktop) — usado nas capas de evento/
+ * mensagem/notícia, que antes serviam uma única largura fixa pra qualquer
+ * dispositivo.
+ */
+export const directusAssetSrcset = (
+  fileId: string,
+  widths: number[],
+  transform?: Omit<ImageTransform, "width">,
+) => widths.map((width) => `${directusAssetUrl(fileId, { ...transform, width })} ${width}w`).join(", ");
+
+/** Larguras padrão pras capas de evento/mensagem/notícia — celular, tablet, desktop. */
+export const COVER_WIDTHS = [640, 1024, 1600];
+
 /** Dados institucionais e de contato, editáveis em Directus → Configurações do Site. */
 export interface Configuracoes {
   tagline: string;

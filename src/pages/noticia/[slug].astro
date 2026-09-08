@@ -103,7 +103,16 @@ const structuredData = {
 
       {data.cover && (
         <figure class="article-image inner">
-          <img src={data.cover} alt={data.title} loading="eager" decoding="async" class="w-full" />
+          <img
+            src={data.cover}
+            srcset={data.coverSrcset}
+            sizes="100vw"
+            alt={data.title}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+            class="w-full"
+          />
         </figure>
       )}
 

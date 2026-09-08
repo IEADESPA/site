@@ -1,5 +1,5 @@
 import { formatDate } from "@/lib/posts";
-import { directusAssetUrl, fetchItems } from "@/lib/directus";
+import { COVER_WIDTHS, directusAssetSrcset, directusAssetUrl, fetchItems } from "@/lib/directus";
 
 export { formatDate };
 
@@ -32,6 +32,7 @@ export interface NoticiaData {
   category: string;
   date: Date;
   cover?: string;
+  coverSrcset?: string;
   featured: boolean;
   draft: boolean;
   orgaoRelacionado: number | null;
@@ -55,6 +56,7 @@ function toNoticia(n: DirectusNoticia): Noticia {
       category: n.category,
       date: new Date(n.date),
       cover: n.cover ? directusAssetUrl(n.cover, { width: 1600, quality: 80, format: "webp" }) : undefined,
+      coverSrcset: n.cover ? directusAssetSrcset(n.cover, COVER_WIDTHS, { quality: 80, format: "webp" }) : undefined,
       featured: n.featured,
       draft: n.draft,
       orgaoRelacionado: n.orgao_relacionado,

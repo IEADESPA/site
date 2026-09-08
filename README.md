@@ -716,13 +716,29 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
   Depois das duas correções, **nova rodada do `axe-core` nas mesmas 28 páginas voltou com 0
   violações.**
 
-- **Fase 9 — performance e Core Web Vitals**: `fetchpriority="high"` nas imagens de capa de
-  evento/mensagem/notícia (já usam `loading="eager"` certo, só falta esse atributo — maior retorno
-  pelo menor esforço disponível hoje); gerar 2-3 larguras (`srcset`) para essas mesmas capas, hoje
-  servidas numa única largura de 1600px pra qualquer dispositivo; `staticwebapp.config.json` (mesmo
-  arquivo da Fase 6) também define `Cache-Control` de longo prazo pros assets versionados do build;
-  `<link rel="preconnect">` pro domínio do Directus, evitando gastar uma rodada de DNS+TLS antes da
-  primeira imagem carregar.
+- [x] **Fase 9 — performance e Core Web Vitals.** Os 4 pontos identificados, todos construídos e
+  **medidos de verdade** (não só aplicados por suposição — não existia nenhum conteúdo real com
+  capa cadastrada em produção pra testar, então foi criada uma mensagem e uma imagem de teste reais,
+  medido, e apagado tudo depois):
+
+  - **`srcset` com 3 larguras (640/1024/1600px)** nas capas de evento/mensagem/notícia — novo
+    helper `directusAssetSrcset` em `src/lib/directus.ts`. **Medido com navegador real em duas
+    telas**: no viewport mobile (390px) o navegador baixou a versão de 640px (**42,7 KB**); no
+    desktop (1440px), a de 1600px (222 KB) — **redução real de 5,2× no mobile**, não uma estimativa.
+  - **`fetchpriority="high"`** nas mesmas 3 capas (já usavam `loading="eager"` certo, só faltava
+    esse atributo — confirmado presente no HTML gerado).
+  - **`Cache-Control` de longo prazo** em `staticwebapp.config.json` (mesmo arquivo da Fase 6): 1
+    ano + `immutable` pra `/_astro/*` (nome de arquivo já tem hash de conteúdo — o Astro garante
+    que muda o nome se o conteúdo mudar, então "nunca expira" é seguro de verdade); 1 ano (sem
+    `immutable`, porque o nome do arquivo não tem hash) pra `/fonts/*`. **Testado com o emulador
+    oficial da Azure** (o mesmo motivo de sempre: `astro preview` não aplica esse arquivo) —
+    cabeçalho confirmado presente nos dois casos.
+  - **`<link rel="preconnect">` + `dns-prefetch`** pro domínio do Directus em `BaseLayout.astro` —
+    confirmado presente no HTML de toda página (é onde toda imagem/dado do site vem).
+
+  **Verificação adicional, além do pedido**: conferido que nenhuma outra imagem do site (logo,
+  ícones, imagem de compartilhamento social) passa de ~180KB ou está sem otimização — nenhum outro
+  ponto do tamanho dos 4 já corrigidos foi encontrado.
 
 - **Fase 10 — analytics e promoção de conteúdo**: o gap real não é "falta newsletter", é que o RSS
   já existe (`/rss.xml`, mensagens + notícias) mas é tecnicamente descoberto e invisível pra quem
@@ -1045,9 +1061,9 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   aceita, quem pode fixar/desafixar da home, quantos itens fixados ao mesmo tempo) — por isso ficam
   só como intenção registrada, não como escopo fechado igual às Fases 21 e 22.
 
-**Fases 0 a 8 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 9 a 23,
-nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia antes
-mesmo desta pesquisa). O detalhe completo de cada achado (com a
+**Fases 0 a 9 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 10 a
+23, nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia
+antes mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
 fontes consultadas.
