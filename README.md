@@ -784,7 +784,67 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   [Eventbrite — Waitlist](https://www.eventbrite.com/features/waitlist/),
   [Eventbrite — Registration](https://www.eventbrite.com/features/registration/).
 
-**Fases 0 a 5 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 6 a 21,
+- **Fase 22 — gestão de camisetas/uniformes**: pedida pelo usuário, hoje resolvida só por planilha
+  (Excel) — o objetivo explícito é sair do Excel. **Só escopo e planejamento, não é pra construir
+  agora.**
+
+  **Por que não é só "mais um campo no evento"**: uma camiseta/uniforme muitas vezes não pertence a
+  um evento só — um ministério pode ter um uniforme único que vale pro ano inteiro, pra toda
+  programação daquele ministério (o exemplo dado pelo usuário: um departamento com uma camiseta
+  fixa usada em todos os encontros do ano). Ao mesmo tempo, também precisa servir um evento
+  específico e pontual — o usuário citou como exemplo uma marcha/caminhada com várias igrejas da
+  cidade (tipo "Marcha para Jesus"), que já poderia em tese ser cadastrada no módulo de eventos
+  atual (percurso, data, ministérios participantes), mas trava exatamente na parte de camiseta, que
+  hoje não existe em lugar nenhum do sistema. **Pergunta em aberto pra decidir na análise futura**:
+  isso é um módulo à parte (reutilizável por qualquer evento ou por nenhum) ou um recurso dentro do
+  módulo de eventos? O usuário levantou essa dúvida e não decidiu — fica registrada, não resolvida.
+
+  **O que a gestão de camiseta precisaria fazer, descrito pelo próprio usuário**:
+  - **Lado de quem compra** (self-service, com login): ver o valor, escolher tamanho e modelo
+    (masculino/feminino), saber o próprio lote, e ver automaticamente se a própria camiseta já
+    chegou ou não — sem precisar perguntar pra ninguém.
+  - **Lado de quem administra**: controlar valor de custo vs. valor de venda (lucro), quem comprou e
+    quem não comprou, quem pagou inteiro, quem pagou metade, quem ficou de pagar fiado, quem já
+    recebeu a peça e quem ainda não recebeu, o que ainda está pra chegar, e quantas unidades a mais
+    pedir de folga/encaixe (tamanhos que sempre faltam).
+
+  **Pesquisa feita agora, por pedido explícito do usuário — existe algo pronto e gratuito que já
+  resolve isso?** Não, nada encontrado cobre o conjunto completo. Duas categorias existem, e as
+  duas erram o alvo por motivos diferentes:
+  - **Sistemas de loja de roupa** (Siscoban, SIGE Lite, Stoqui e similares, com plano grátis) — são
+    feitos pra uma loja com estoque físico e cliente de balcão, não pro caso real: um lote único
+    fechado uma vez por ano, vendido por encomenda antes de existir estoque. Forçar esse encaixe
+    seria usar a ferramenta errada pro problema errado.
+  - **Plataformas de "group order" de camiseta** (Custom Ink, CreateMyTee, Fourthwall, e
+    similares) — resolvem tamanho + pagamento em grupo, mas são americanas, em inglês, cobradas em
+    dólar, e **obrigam a comprar a camiseta física delas** — não servem pra uma igreja brasileira
+    que já tem sua própria gráfica/fornecedor. Por baixo, ainda são só um formulário bonito — não
+    fazem a gestão de lucro/custo/fiado/lote que o usuário descreveu. **O "formulário Google" que o
+    usuário disse explicitamente que não é isso** é, na prática, o teto do que essas ferramentas
+    prontas entregam.
+  - **Conclusão da pesquisa**: não existe ferramenta pronta e gratuita que cubra o caso completo —
+    se a igreja quiser sair do Excel de verdade (com o lado financeiro completo: fiado, lucro,
+    lote, chegada), a única forma encontrada é construir algo sob medida. Fica pra uma análise de
+    caso futura decidir se compensa o esforço, seguindo o mesmo critério já usado na Fase 21.
+
+  Fontes consultadas: [Siscoban](https://siscoban.com.br/sistema-para-loja-de-roupas/),
+  [SIGE Lite](https://www.sigelite.com.br/sistema-de-gestao-para-lojas-de-roupa),
+  [Stoqui](https://www.stoqui.com.br/segmento/sistema-para-loja-de-roupas),
+  [Custom Ink — Group Order Form](https://www.customink.com/help_center/collecting-sizes-and-payment-with-gof),
+  [CreateMyTee — Group Order](https://www.createmytee.com/About/GroupOrder/),
+  [Fourthwall — Church Group T-Shirts](https://fourthwall.com/make-your-own/church-group-t-shirts).
+
+- **Fase 23 — opinião pública (enquetes) e destaque de notícias na página inicial**: pedida pelo
+  usuário na mesma conversa, junto com a Fase 22 — **também só registro, não construir agora**.
+  Enquete/opinião pública provavelmente pertence à aba de Notícias, como um tipo de publicação a
+  mais (ao lado do texto normal). Separadamente, o usuário quer poder **fixar/destacar notícias
+  importantes na página inicial** — deu como exemplo o próprio anúncio de camiseta/uniforme (Fase
+  22) ou um evento especial — hoje a home não tem esse tipo de destaque fixável, só o feed normal.
+  As duas ideias precisam de mais conversa antes de virar plano (que tipo de pergunta uma enquete
+  aceita, quem pode fixar/desafixar da home, quantos itens fixados ao mesmo tempo) — por isso ficam
+  só como intenção registrada, não como escopo fechado igual às Fases 21 e 22.
+
+**Fases 0 a 5 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 6 a 23,
 nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia antes
 mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
