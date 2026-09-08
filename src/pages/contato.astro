@@ -110,6 +110,7 @@ const mapsLinkHref = mapsHref(config);
               <option value="duvida">Dúvida geral</option>
               <option value="oracao">Pedido de oração</option>
               <option value="visita">Visita pastoral</option>
+              <option value="lgpd">Meus dados pessoais (LGPD)</option>
               <option value="outro">Outro assunto</option>
             </select>
           </div>
@@ -121,10 +122,30 @@ const mapsLinkHref = mapsHref(config);
             <a href="/mural-de-oracao/" class="underline underline-offset-2">mural de oração</a>.
           </p>
 
+          <p class="contact-privacy-note" data-contact-lgpd hidden>
+            Você pode pedir acesso, correção, portabilidade ou exclusão dos seus dados, com base na
+            Lei Geral de Proteção de Dados (LGPD). Pra localizarmos seus dados, diga no campo abaixo{" "}
+            <strong>qual formulário você usou</strong> (mural de oração, inscrição em evento,
+            contato) e, se possível, <strong>o nome e telefone usados</strong>. Respondemos em até
+            15 dias. Veja o processo completo na{" "}
+            <a href="/privacidade/#seus-direitos" class="underline underline-offset-2">
+              política de privacidade
+            </a>.
+          </p>
+
           <div class="grid gap-2" data-contact-anon-field hidden>
             <label class="contact-checkbox">
               <input type="checkbox" name="anonymous" id="contact-anonymous" data-contact-anonymous />
               Prefiro enviar de forma anônima (sem nome nem e-mail)
+            </label>
+          </div>
+
+          <div class="grid gap-2" data-contact-consent-field hidden>
+            <label class="contact-checkbox">
+              <input type="checkbox" id="contact-consent" data-contact-consent />
+              Autorizo o uso deste pedido pela {siteConfig.name} para o propósito de oração/apoio
+              pastoral descrito acima — dado sobre convicção religiosa pede consentimento
+              específico (ver <a href="/privacidade/" target="_blank" class="underline underline-offset-2">política de privacidade</a>).
             </label>
           </div>
 
@@ -178,6 +199,7 @@ const mapsLinkHref = mapsHref(config);
           const typeSelect = form.querySelector("[data-contact-type]");
           const heading = form.querySelector("[data-contact-heading]");
           const privacyNote = form.querySelector("[data-contact-privacy]");
+          const lgpdNote = form.querySelector("[data-contact-lgpd]");
           const anonField = form.querySelector("[data-contact-anon-field]");
           const anonCheckbox = form.querySelector("[data-contact-anonymous]");
           const nameField = form.querySelector("[data-contact-name-field]");
@@ -188,30 +210,51 @@ const mapsLinkHref = mapsHref(config);
           const messageLabel = form.querySelector("[data-contact-message-label]");
           const messageField = form.querySelector("[data-contact-message]");
           const submitButton = form.querySelector("[data-contact-submit]");
+          const consentField = form.querySelector("[data-contact-consent-field]");
+          const consentInput = form.querySelector("[data-contact-consent]");
 
           /* O assunto "Pedido de oração" muda o próprio formulário: título,
              rótulos, um aviso de confidencialidade e a opção de enviar sem
              se identificar — em vez de só mais uma opção num dropdown. */
           const applyType = () => {
             const isOracao = typeSelect?.value === "oracao";
+            const isLgpd = typeSelect?.value === "lgpd";
             const isAnon = isOracao && anonCheckbox instanceof HTMLInputElement && anonCheckbox.checked;
 
-            if (heading) heading.textContent = isOracao ? "Envie seu pedido de oração" : "Envie uma mensagem";
+            if (heading) {
+              heading.textContent = isOracao
+                ? "Envie seu pedido de oração"
+                : isLgpd
+                  ? "Solicitação sobre meus dados (LGPD)"
+                  : "Envie uma mensagem";
+            }
             if (privacyNote) privacyNote.hidden = !isOracao;
+            if (lgpdNote) lgpdNote.hidden = !isLgpd;
             if (anonField) anonField.hidden = !isOracao;
             if (messageLabel) messageLabel.textContent = isOracao ? "Seu pedido de oração" : "Mensagem";
             if (nameLabel) nameLabel.textContent = isOracao ? "Nome (opcional se enviar anônimo)" : "Nome";
             if (messageField) {
               messageField.placeholder = isOracao
                 ? "Conte com suas palavras o que você gostaria que a igreja orasse."
-                : "";
+                : isLgpd
+                  ? "Ex.: Quero pedir a exclusão dos meus dados. Me inscrevi no evento X em [data] com o nome Y e telefone Z."
+                  : "";
             }
-            if (submitButton) submitButton.textContent = isOracao ? "Enviar pedido de oração" : "Enviar mensagem";
+            if (submitButton) {
+              submitButton.textContent = isOracao
+                ? "Enviar pedido de oração"
+                : isLgpd
+                  ? "Enviar solicitação"
+                  : "Enviar mensagem";
+            }
 
             if (nameField) nameField.hidden = isAnon;
             if (emailField) emailField.hidden = isAnon;
             if (nameInput) nameInput.required = !isAnon;
             if (emailInput) emailInput.required = !isAnon;
+
+            if (consentField) consentField.hidden = !isOracao;
+            if (consentInput) consentInput.required = isOracao;
           };
 
           typeSelect?.addEventListener("change", applyType);
@@ -229,6 +272,12 @@ const mapsLinkHref = mapsHref(config);
             const button = form.querySelector("button[type=submit]");
             const data = new FormData(form);
             const isAnon = anonCheckbox instanceof HTMLInputElement && anonCheckbox.checked && !anonField?.hidden;
+            const isOracao = typeSelect?.value === "oracao";
+
+            if (isOracao && !(consentInput instanceof HTMLInputElement && consentInput.checked)) {
+              if (status) status.textContent = "Marque a autorização de uso do pedido de oração antes de enviar.";
+              return;
+            }
 
             if (button) button.disabled = true;
             if (status) status.textContent = "Enviando…";
@@ -240,6 +289,7 @@ const mapsLinkHref = mapsHref(config);
                 message: data.get("message"),
               };
               if (!isAnon) payload.email = data.get("email");
+              if (isOracao) payload.consentimento_lgpd = true;
 
               const response = await fetch(`${directusUrl}/items/contato_mensagens`, {
                 method: "POST",

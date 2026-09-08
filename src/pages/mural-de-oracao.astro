@@ -2,6 +2,7 @@
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
 import { DIRECTUS_URL } from "@/lib/directus";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 
@@ -47,6 +48,19 @@ const allPosts = visiblePosts(await getAllMensagens());
           <span>
             <strong>Enviar de forma confidencial</strong> — só a equipe pastoral vê, nunca aparece
             publicado aqui no mural.
+          </span>
+        </label>
+
+        <label class="mural-confidencial-toggle">
+          <input type="checkbox" id="mural-consentimento" required />
+          <span>
+            Autorizo o uso deste pedido de oração (incluindo meu nome, se eu escrever um) pela{" "}
+            {siteConfig.name} para o propósito de intercessão descrito nesta página — dado sobre
+            convicção religiosa é uma categoria especial de dado pessoal, e por isso pede
+            consentimento específico. Veja como tratamos isso na{" "}
+            <a href="/privacidade/" target="_blank" class="underline underline-offset-2">
+              política de privacidade
+            </a>.
           </span>
         </label>
 
@@ -196,8 +210,9 @@ const allPosts = visiblePosts(await getAllMensagens());
         const texto = document.getElementById("mural-texto").value.trim();
         const nome = document.getElementById("mural-nome").value.trim();
         const confidencial = document.getElementById("mural-confidencial").checked;
+        const consentimentoLgpd = document.getElementById("mural-consentimento").checked;
         const honeypot = document.getElementById("mural-site").value;
-        if (!texto) return;
+        if (!texto || !consentimentoLgpd) return;
 
         // Bot preencheu o campo escondido — finge sucesso sem mandar nada
         // pro Directus, sem dar nenhuma pista pro bot de que foi barrado.
@@ -212,7 +227,7 @@ const allPosts = visiblePosts(await getAllMensagens());
           const res = await fetch(`${directusUrl}/items/mural_oracao`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ texto, nome: nome || null, confidencial }),
+            body: JSON.stringify({ texto, nome: nome || null, confidencial, consentimento_lgpd: consentimentoLgpd }),
           });
           if (!res.ok) throw new Error("falha ao enviar");
           form.reset();

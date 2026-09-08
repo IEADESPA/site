@@ -631,14 +631,33 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
     antigo do Directus (`Verificar inscricao (codigo + telefone)`) foi **apagado** (não só
     desativado) depois dessa confirmação.
 
-- **Fase 7 — LGPD e privacidade** (a política de privacidade hoje é literalmente um rascunho —
-  `privacidade.astro` ainda tem o comentário "Substitua pelo texto definitivo... antes de publicar
-  oficialmente"): reescrever a política cobrindo de fato cada coleção que trata dado pessoal
-  (mural de oração, contato, inscrições de evento — incluindo o campo de resposta livre, que pode
-  captar dado sensível dependendo da pergunta do evento), a base legal de cada uma, e um canal
-  claro pro titular pedir acesso/exclusão; adicionar checkbox de consentimento específico nos
-  formulários que coletam dado sensível (mural de oração e pedido de oração no contato — hoje
-  nenhum formulário do site tem isso).
+- [x] **Fase 7 — LGPD e privacidade.** Pedida explicitamente pelo usuário pra ir além do mínimo
+  legal ("nós devemos ser o exemplo"). Construído:
+
+  - **`/privacidade/` reescrita do zero** (antes era literalmente um rascunho, com o comentário
+    "substitua pelo texto definitivo..."). Cobre, com linguagem acessível e citando o artigo da
+    LGPD correspondente: quem é o controlador (nome, CNPJ, endereço), quem responde pelo papel de
+    encarregado de dados (DPO) e como contatar, uma tabela por coleção que trata dado pessoal
+    (mural de oração, contato, inscrição em evento, notificação push) com finalidade/base
+    legal/prazo de retenção/quem acessa própria de cada uma — não uma regra única genérica —,
+    explicação em linguagem simples de como o hash do telefone funciona e por que ele fica
+    guardado para sempre, uma seção específica sobre crianças/adolescentes (Art. 14 — dado de
+    menor só com consentimento do responsável, nunca coletado diretamente), os 6 direitos do
+    titular (Art. 18) com como exercer cada um, canal de reclamação à ANPD, e o que fica só no
+    navegador (`localStorage`) sem nunca chegar ao servidor.
+  - **Checkbox de consentimento específico** (Art. 11 — dado sobre convicção religiosa é categoria
+    especial) no mural de oração e no formulário de contato quando o assunto é pedido de oração —
+    `required`, bloqueia o envio pelo próprio navegador se não marcado, testado confirmando que
+    `validity.valid` fica `false` sem a marcação.
+  - **Prova de consentimento guardada, não só a intenção na tela**: novo campo
+    `consentimento_lgpd` (booleano) em `mural_oracao` e `contato_mensagens`, gravado como `true` no
+    momento do envio — importante porque a LGPD (Art. 8º, §2º) coloca o ônus da prova do
+    consentimento no controlador, não em quem deu o consentimento.
+  - **Canal de exercício de direitos de verdade, não só uma promessa no texto**: novo assunto
+    "Meus dados pessoais (LGPD)" no formulário de contato (`/contato/?assunto=lgpd`), com texto
+    próprio explicando o que informar pra localizar o registro e o prazo de resposta (15 dias) —
+    testado confirmando que o assunto muda o título, o texto de ajuda e o placeholder da mensagem.
+  - **Retenção do telefone, decisão explícita do usuário — ver detalhe completo abaixo.**
 
   **Prazo de retenção — decisão explícita do usuário, não mais uma pendência em aberto**: o
   telefone de inscrição em evento é guardado **para sempre, por design, e isso é intencional** —
@@ -992,7 +1011,7 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   aceita, quem pode fixar/desafixar da home, quantos itens fixados ao mesmo tempo) — por isso ficam
   só como intenção registrada, não como escopo fechado igual às Fases 21 e 22.
 
-**Fases 0 a 5 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 6 a 23,
+**Fases 0 a 7 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 8 a 23,
 nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia antes
 mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
