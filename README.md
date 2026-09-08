@@ -635,12 +635,23 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
   `privacidade.astro` ainda tem o comentário "Substitua pelo texto definitivo... antes de publicar
   oficialmente"): reescrever a política cobrindo de fato cada coleção que trata dado pessoal
   (mural de oração, contato, inscrições de evento — incluindo o campo de resposta livre, que pode
-  captar dado sensível dependendo da pergunta do evento), a base legal de cada uma, prazo de
-  retenção (hoje indefinido por design — o código deixa dado de evento "para sempre") e um canal
+  captar dado sensível dependendo da pergunta do evento), a base legal de cada uma, e um canal
   claro pro titular pedir acesso/exclusão; adicionar checkbox de consentimento específico nos
   formulários que coletam dado sensível (mural de oração e pedido de oração no contato — hoje
-  nenhum formulário do site tem isso); documentar como processo manual uma rotina periódica de
-  arquivamento/exclusão de dado de evento encerrado.
+  nenhum formulário do site tem isso).
+
+  **Prazo de retenção — decisão explícita do usuário, não mais uma pendência em aberto**: o
+  telefone de inscrição em evento é guardado **para sempre, por design, e isso é intencional** —
+  ele é a chave que permite pedir segunda via de certificado/crachá anos depois (o usuário chamou
+  isso de "perpetuidade" do documento), e desde a Fase 6 ele é guardado como hash (`scrypt`), nunca
+  em texto puro — reter um hash indefinidamente não tem o mesmo risco que reter o dado real, porque
+  não dá pra reverter o hash de volta pro telefone mesmo com acesso total ao banco. (Antes da Fase
+  6 existia uma rotina que apagava o telefone ao encerrar o evento — **removida**, porque contradizia
+  o próprio propósito: sem telefone não tem como verificar código depois, então "encerrar" estava
+  quebrando a "segunda via" que deveria garantir.) Já **outros dados do formulário de inscrição**
+  (respostas de pergunta livre, por exemplo) não têm essa mesma justificativa de perpetuidade —
+  esses continuam candidatos a uma rotina de arquivamento/exclusão periódica, a ser documentada como
+  processo manual quando essa fase for priorizada.
 
 - **Fase 8 — acessibilidade (WCAG)**: no PDF de certificado/crachá (`jsPDF`), nenhuma biblioteca
   gratuita gera tagging completo — o realista é definir idioma do documento e aceitar que o

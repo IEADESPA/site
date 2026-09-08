@@ -401,10 +401,10 @@ const tipoPerguntaOpcoes = [
         <p class="text-sm font-semibold">Encerrar evento</p>
         <p class="mt-1 text-sm text-muted-foreground">
           Baixa um relatório de encerramento em PDF (resumo + fechamento de caixa) e cria um
-          rascunho de notícia (não publicado, pra revisar antes) — depois remove só o telefone de
-          cada inscrito. Nome, código, presença, respostas e valores <strong>continuam guardados
-          pra sempre</strong> — é o que garante que a pessoa consiga baixar o certificado dela a
-          qualquer momento, mesmo anos depois. Não é uma exclusão.
+          rascunho de notícia (não publicado, pra revisar antes). Nome, código, telefone (guardado
+          como hash — nunca em texto puro, ver README/Fase 6), presença, respostas e valores
+          <strong>continuam guardados pra sempre</strong> — é o que garante que a pessoa consiga
+          baixar o certificado dela a qualquer momento, mesmo anos depois. Não é uma exclusão.
         </p>
         <button type="button" class="btn btn-outline mt-3" data-encerrar-evento>Encerrar evento</button>
         <p class="mt-2 text-sm" data-encerrar-status role="status" aria-live="polite"></p>
@@ -1001,7 +1001,7 @@ const tipoPerguntaOpcoes = [
         const encerrarStatus = document.querySelector<HTMLElement>("[data-encerrar-status]");
         if (
           !confirm(
-            `Encerrar "${evento.title}"? Isso baixa o relatório de encerramento, cria um rascunho de notícia, e apaga o telefone de cada inscrito (nome, código, presença e respostas continuam guardados).`,
+            `Encerrar "${evento.title}"? Isso baixa o relatório de encerramento e cria um rascunho de notícia. Nada é apagado — nome, código, telefone (hash) e respostas continuam guardados para sempre, pra quem precisar de uma segunda via de certificado/documento no futuro.`,
           )
         )
           return;
@@ -1163,14 +1163,6 @@ const tipoPerguntaOpcoes = [
             }),
           });
 
-          // --- Remove só o telefone, mantém o resto pra sempre ---
-          if (encerrarStatus) encerrarStatus.textContent = "Removendo telefones…";
-          await fetch(`${directusUrl}/items/inscricoes_eventos`, {
-            method: "PATCH",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ query: { filter: { evento: { _eq: Number(eventoId) } } }, data: { telefone: null } }),
-          });
-
           // --- Guarda um retrato dos números finais — é a base da comparação
           // histórica entre edições (aba "Histórico"), já que os números
           // individuais (pago/presente) somem quando o evento for excluído
@@ -1192,7 +1184,7 @@ const tipoPerguntaOpcoes = [
 
           if (encerrarStatus) {
             encerrarStatus.textContent =
-              "✅ Evento encerrado — relatório baixado, rascunho de notícia criado (revise antes de publicar), telefones removidos.";
+              "✅ Evento encerrado — relatório baixado, rascunho de notícia criado (revise antes de publicar).";
           }
         } catch {
           if (encerrarStatus) encerrarStatus.textContent = "Não foi possível encerrar agora. Tente novamente.";
