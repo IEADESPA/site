@@ -114,8 +114,8 @@ e-mail e senha criado para cada pessoa.
 - **Coleções disponíveis**: Mensagens, Relatórios, Ministérios, Eventos, Galeria, Congregações —
   todas com leitura pública liberada (política "Public"), para o site conseguir buscar os dados
   sem precisar de nenhum token secreto.
-- **Mídia**: fotos e PDFs enviados no Directus vão direto para o Azure Blob Storage (conta
-  `storageigrejaportal`, contêiner `imagens`), não para o repositório do GitHub.
+- **Mídia**: fotos e PDFs enviados no Directus vão direto para o Azure Blob Storage (nome da conta
+  e do contêiner guardados só em `.env.local`, fora do Git), não para o repositório do GitHub.
 - **Limitação conhecida do plano gratuito ("Core") do Directus**: não permite regras de permissão
   com filtro condicional (ex.: "mostrar só o que não é rascunho"). Por isso, mensagens marcadas
   como rascunho (`draft: true`) são filtradas no próprio código do site
@@ -150,6 +150,13 @@ e-mail e senha criado para cada pessoa.
 - **Token de administrador da API**: usado só para configuração inicial das coleções (feita via
   script, não faz parte do dia a dia). Fica salvo no perfil do usuário administrador no Directus —
   pode ser revogado e gerado de novo a qualquer momento em Account Settings → Token.
+- **Acesso ao Azure (App Service, PostgreSQL, Storage Account)**: não é feito por login pessoal —
+  usa um service principal escopado só aos 3 recursos deste projeto (nunca a assinatura inteira),
+  criado via Cloud Shell (`az ad sp create-for-rbac ... --scopes <3 IDs>`). **As credenciais e os
+  nomes exatos dos recursos ficam só em `.env.local`** (nunca neste README, que é público) — se
+  `.env.local` não tiver essa seção, ela precisa ser recriada seguindo o mesmo processo (documentado
+  no histórico desta conversa/commits). Revogar quando não precisar mais: `az ad sp delete --id
+  <AZURE_CLIENT_ID>`.
 
 ## Azure Blob Storage (mídia)
 
@@ -159,7 +166,8 @@ Directus (driver `azure` de armazenamento, configurado como variáveis de ambien
 `STORAGE_LOCATIONS`, `STORAGE_AZURE_DRIVER`, `STORAGE_AZURE_CONTAINER_NAME`,
 `STORAGE_AZURE_ACCOUNT_NAME`, `STORAGE_AZURE_ACCOUNT_KEY`), sem nenhum código customizado nosso.
 
-**Configuração já feita, uma única vez, na conta de armazenamento `storageigrejaportal`:**
+**Configuração já feita, uma única vez, na conta de armazenamento** (nome guardado só em
+`.env.local`, fora do Git — ver seção "Acesso Azure" abaixo):
 
 1. CORS liberado no contêiner `imagens`.
 2. Acesso público de leitura no contêiner `imagens` (senão o upload funciona mas as fotos não
@@ -540,14 +548,14 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
 
   **Atualização — acesso ao Azure foi concedido nesta mesma conversa** (um service principal
   temporário, escopado só a 3 recursos: o App Service do Directus, o PostgreSQL Flexible Server e a
-  Storage Account `storageigrejaportal`, criado pelo próprio usuário e revogável a qualquer
-  momento). Com isso, o que antes só dava pra documentar como pendência virou trabalho concluído e
-  testado de verdade:
+  Storage Account do Directus — nomes e IDs exatos guardados só em `.env.local`, fora do Git, nunca
+  neste README público — criado pelo próprio usuário e revogável a qualquer momento). Com isso, o
+  que antes só dava pra documentar como pendência virou trabalho concluído e testado de verdade:
 
   - **Retenção de backup do PostgreSQL**: aumentada de 7 para **35 dias**, confirmado via API
     (`backupRetentionDays: 35`, servidor `Ready`).
   - **Teste real de restauração, feito de ponta a ponta**: restaurado um servidor novo e separado
-    (`ieadespa-directus-db-restoretest`, a partir de um ponto no tempo recente), conectado nele com
+    (nome descartável, apagado ao final — a partir de um ponto no tempo recente), conectado nele com
     um usuário `pg` temporário instalado só pra esse teste, e **conferido dado real** — as 54
     tabelas esperadas presentes, `congregacoes` com 41 linhas, `historia` com 21, `orgao_membros`
     com 4, `mensagens` com 15 (a primeira sendo "A graça que nos salva" — bate com o que já se sabia
