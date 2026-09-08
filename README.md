@@ -435,11 +435,48 @@ não foi construído.
   "Biografia a ser adicionada." em cada card de `/orgao/[slug]/` sem bio cadastrada, e duas caixas
   em `/sobre/` ("Vídeo a ser inserido aqui." e "Depoimento a ser inserido aqui.").
 
-- **Fase 5 — páginas inteiramente novas** (maior escopo cada uma, avaliar prioridade só depois das
-  fases anteriores): Crenças/O que Cremos, Ministérios, página de Kids dedicada, Ao vivo/Assista
-  online. Avaliadas e não recomendadas por ora: FAQ separada (melhor virar seção de
-  `/visitante/`), batismo (precisa de processo definido antes), servir/seja voluntário (precisa de
-  vagas reais primeiro), podcast/vagas de trabalho (perfil de igreja grande, ficaria vazio agora).
+- [x] **Fase 5 — páginas inteiramente novas.** Revisada com o usuário item por item; decisões:
+
+  **Construídas**: `/crencas/` — obrigatória segundo o usuário, não podia ser só uma cópia do
+  resumo que já existia em "O que cremos" (`/sobre/`) — é a mesma declaração de fé, mas expandida
+  com um parágrafo por ponto (Escrituras, Trindade, Cristo, salvação, batismo nas águas, batismo
+  com o Espírito Santo, missão da igreja, volta de Cristo). Conteúdo real, doutrina pública da
+  Convenção das Assembleias de Deus — não é fato inventado sobre esta igreja especificamente, é
+  a mesma categoria de conteúdo doutrinário que já existia. `/sobre/` agora só resume e linka pra
+  declaração completa, sem duplicar o texto. `/kids/` — ministério infantil, com a programação real
+  da sede e um aviso explícito de que faixa etária, check-in/check-out e política de segurança
+  ainda não estão confirmados (não dá pra fabricar isso — ver Fase 4 sobre o mesmo critério).
+  `/ao-vivo/` (Assista Online) — embed oficial do YouTube (`embed/live_stream?channel=`, mostra a
+  transmissão em andamento ou a tela de espera do próprio YouTube), com a programação da sede e um
+  aviso de que nem toda reunião listada é necessariamente transmitida. Também corrigido, de
+  passagem: `/mensagens/` já tem suporte a vídeo por mensagem (`videoUrl`, desde a Fase 2) — quando
+  a primeira mensagem tiver vídeo cadastrado, ela deve aparecer em destaque nesta página (hoje
+  nenhuma tem, então o espaço mostra um aviso honesto em vez de fabricar uma lista).
+
+  **Avaliada e considerada já resolvida**: página de "Ministérios" — o usuário achou a ideia boa,
+  mas o que ela pediria (nome, descrição, foto, liderança de cada ministério/departamento) é
+  exatamente o que `/orgaos/` já entrega desde a Fase 1, incluindo os que não são governança. Uma
+  página nova seria duplicar `/orgaos/` sob outro nome. De quebra, corrigido um link morto real que
+  já existia no índice de busca (`src/lib/search.ts` apontava pra `/ministerios/`, uma URL que
+  nunca existiu desde que a página virou `/orgaos/` na Fase 1 — agora aponta pro lugar certo).
+
+  **Confirmadas como já rejeitadas** (sem mudança): FAQ separada (`/visitante/` já cobre, desde a
+  Fase 3); servir/seja voluntário (ver "Ideias rejeitadas").
+
+  **Rejeitadas nesta revisão, com a razão do próprio usuário**: podcast — a intenção já é atendida
+  por `/ao-vivo/` apontando pro canal do YouTube da igreja, sem precisar de um formato/feed
+  separado; vagas de trabalho — a igreja não deve anunciar vaga pro público do site, contratação
+  tem que vir de dentro da própria igreja (confiança), então não faz sentido como funcionalidade
+  pública.
+
+  **Avaliada, registrada, mas não construída**: batismo. A dificuldade real, identificada pelo
+  próprio usuário: um evento de batismo não tem endereço fixo de congregação como os outros eventos
+  (pode ser num rio, numa piscina, num lugar diferente a cada vez), o que já quebra a suposição
+  atual do módulo de eventos. A ideia levantada — criar "tipos" de evento customizáveis (congresso
+  com inscrição limitada, curso/seminário com fluxo de inscrição próprio, batismo com local
+  variável) — é maior que um ajuste pontual e precisa de desenho próprio; **fica registrada para
+  avaliação futura, não para construir agora**, por instrução explícita do próprio usuário
+  ("tem que ser avaliado esse negócio, talvez nem compense").
 
 Depois destas 6 primeiras (0 a 5, todas página-por-página), o usuário pediu uma segunda rodada,
 bem mais ampla, cobrindo o que um "site de verdade" precisa além do conteúdo de cada página —

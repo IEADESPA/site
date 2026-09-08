@@ -117,6 +117,7 @@ export interface Configuracoes {
   tagline: string;
   about: string;
   sobre_corpo: string;
+  crencas_corpo: string;
   address_line: string;
   address_neighborhood: string;
   address_city: string;

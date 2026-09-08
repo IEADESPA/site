@@ -106,8 +106,9 @@ interface Evento {
  * pra qualquer canto do site, não só pra conteúdo. */
 const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
   { title: "Sobre", excerpt: "História, missão, visão e liderança da igreja.", href: "/sobre/" },
+  { title: "Crenças", excerpt: "Nossa declaração de fé completa.", href: "/crencas/" },
   { title: "Nossa História", excerpt: "A trajetória da igreja ao longo dos anos.", href: "/historia/" },
-  { title: "Ministérios", excerpt: "Ministérios e departamentos da igreja.", href: "/ministerios/" },
+  { title: "Órgãos", excerpt: "Ministérios, departamentos, secretarias e governança da igreja.", href: "/orgaos/" },
   { title: "Congregações", excerpt: "Congregações e pontos de pregação vinculados.", href: "/congregacoes/" },
   { title: "Eventos", excerpt: "Programação semanal e eventos especiais.", href: "/eventos/" },
   {
@@ -127,6 +128,8 @@ const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
   },
   { title: "Mensagens", excerpt: "Arquivo completo de mensagens.", href: "/mensagens/" },
   { title: "Notícias", excerpt: "Comunicados e novidades da igreja.", href: "/noticias/" },
+  { title: "Kids", excerpt: "O ministério infantil durante os cultos.", href: "/kids/" },
+  { title: "Assista ao vivo", excerpt: "Transmissão ao vivo dos cultos pelo YouTube.", href: "/ao-vivo/" },
   { title: "Doações", excerpt: "Dízimos, ofertas e chave Pix da igreja.", href: "/doacoes/" },
   { title: "Galeria", excerpt: "Fotos de cultos e eventos da igreja.", href: "/galeria/" },
   { title: "Transparência", excerpt: "Diretoria e prestação de contas.", href: "/transparencia/" },
