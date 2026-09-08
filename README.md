@@ -484,15 +484,75 @@ bem mais ampla, cobrindo o que um "site de verdade" precisa além do conteúdo d
 temas transversais que atingem o site inteiro de uma vez. São 5 fases novas, cada uma com achados
 concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mais abaixo:
 
-- **Fase 6 — segurança e resiliência técnica** (custo zero, maior parte é configuração, não
-  código — vale adiantar antes das fases de conteúdo, apesar do número): criar
-  `staticwebapp.config.json` com headers de segurança (hoje o site não define nenhum: sem CSP, sem
-  `X-Content-Type-Options`, sem `X-Frame-Options`, sem `Permissions-Policy`); criar
-  `.github/dependabot.yml` (hoje nenhuma dependência é auditada automaticamente); confirmar/
-  aumentar a retenção de backup do PostgreSQL Flexible Server (padrão é só 7 dias, grátis até 35) e
-  fazer um teste real de restauração pelo menos uma vez; ativar soft delete e versionamento no
-  container do Blob Storage (protege contra exclusão acidental de fotos/relatórios, sem custo
-  relevante); confirmar `SECRET` forte e rate limiter ativado no Directus.
+- **Fase 6 — segurança e resiliência técnica.** Status misto — cada item abaixo diz exatamente o
+  que foi feito, o que foi investigado e não deu certo, e o que só pode ser feito manualmente
+  (esta sessão só tem o token de administrador do Directus, sem acesso ao Azure CLI/Portal).
+
+  **Construído e testado**:
+  - `public/staticwebapp.config.json` (vira `dist/staticwebapp.config.json` no build — é onde o
+    Azure Static Web Apps espera encontrá-lo) — CSP, `X-Content-Type-Options: nosniff`,
+    `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` (câmera liberada só pra própria
+    origem, usada no scanner de QR do check-in; geolocalização/microfone/pagamento/USB bloqueados).
+    **Testado de verdade** com o emulador oficial (`@azure/static-web-apps-cli`, que aplica esse
+    arquivo do mesmo jeito que o Azure faz em produção — o `astro preview` comum ignora esse
+    arquivo por completo) servindo o build real, navegado com Playwright em 26 páginas reais do
+    site (incluindo mapa Leaflet/OSM, embed do Google Maps, embed do YouTube, os dois scripts de QR
+    via CDN, e o mural de oração). **Um bug real foi encontrado e corrigido nesse processo**: o
+    mural de oração abre um WebSocket (`wss://`) com o Directus pra atualização em tempo real, e o
+    CSP inicial só liberava `https://`, não `wss://` — o navegador bloqueava a conexão. Corrigido
+    adicionando o `wss://` do mesmo domínio em `connect-src`. Depois da correção, 0 violações nas 26
+    páginas. **Não testado**: check-in e QR de autoatendimento continuam sem nenhum evento aceitando
+    inscrição no momento, então essas páginas não têm build estático pra visitar agora — a política
+    de câmera/CDN que elas precisam está no arquivo e foi conferida por leitura, mas não por teste
+    real de ponta a ponta; vale re-testar quando houver um evento ativo.
+  - `.github/dependabot.yml` — audita `npm` (agrupando `astro`/`@astrojs/*` numa PR só, pra não
+    gerar uma PR por pacote toda semana) e `github-actions`, semanalmente.
+
+  **Investigado a fundo, e descartado por não ser possível hoje** — criptografia do telefone,
+  pedida explicitamente pelo usuário ("vai virar praticamente senha... tem que ser criptografado"):
+  a ideia certa seria trocar o telefone armazenado em texto puro por um hash de verdade (como se
+  fosse uma senha) — mas isso foi **testado ao vivo contra o próprio Directus da igreja, não só
+  suposto**, e travou em três pontos diferentes, todos confirmados por teste real (com uma coleção
+  e um flow descartáveis, apagados depois):
+  1. O utilitário `/utils/hash/generate` e `/utils/hash/verify`, que existe na documentação do
+     Directus, **não existe nesta instalação** (retorna `ROUTE_NOT_FOUND` — confirmado também que
+     não aparece na especificação OpenAPI do próprio servidor).
+  2. O campo especial `type: hash` existe e funciona pra *gravar* (gera hash Argon2 de verdade,
+     confirmado na prática), mas **não dá pra filtrar por ele** — a API recusa `_eq` num campo hash
+     ("hash field type does not contain the _eq filter operator"), então não tem como comparar um
+     telefone digitado contra o hash guardado usando só filtro.
+  3. O sandbox onde os Flows rodam código (`exec`/"Run Script", o mesmo mecanismo usado no endpoint
+     de verificação código+telefone já existente) **não tem `crypto`, não tem `fetch`, não tem
+     `require`, não tem nem `Buffer`** — confirmado rodando código de teste dentro dele. Não dá pra
+     calcular nem verificar hash nenhum ali dentro.
+
+  **Conclusão honesta**: com só o token de administrador da API do Directus (sem acesso pra instalar
+  uma extensão customizada no servidor, o que exigiria acesso de deploy/SSH ao App Service que esta
+  sessão não tem), não existe um jeito de implementar uma verificação de hash de verdade. Forçar
+  uma versão fraca (ex.: hash sem salt calculado na mão, reversível por força bruta já que telefone
+  tem só ~8 dígitos) daria falsa sensação de segurança, então **não foi construído** — o dado
+  continua em texto puro. **O que já protege esse dado hoje, e continua valendo**: o papel Público
+  nunca lê o campo `telefone` (só o Flow com acesso interno elevado lê, pra comparar), e o telefone é
+  apagado automaticamente quando o evento é encerrado (`painel-eventos`, função já existente). A
+  correção de verdade — extensão customizada no Directus com hash real, ou trocar pra um provedor
+  que exponha esses utilitários — fica registrada como pendência técnica, não como algo recusado por
+  design.
+
+  **Confirmado por teste real, mas só corrigível fora desta sessão (precisa de Azure Portal/CLI)**:
+  - **Rate limiter do Directus está desligado** — confirmado direto: `GET /server/info` retorna
+    `"rateLimit":false,"rateLimitGlobal":false`, e 10 tentativas de login errado em sequência
+    voltaram `401` sem nenhum bloqueio ou atraso. Ligar exige variáveis de ambiente no App Service
+    do Directus (`RATE_LIMITER_ENABLED=true`, mais `RATE_LIMITER_STORE`, `RATE_LIMITER_POINTS`,
+    `RATE_LIMITER_DURATION` — configuração de servidor, não dá pra fazer pela API REST).
+  - **Força do `SECRET`** — não dá pra verificar remotamente (o valor não é exposto pela API, e nem
+    deveria ser) nem trocar sem acesso às variáveis de ambiente do App Service do Directus no Azure.
+    Quem tem acesso ao Portal deve confirmar que é uma string longa e aleatória, não um valor de
+    exemplo/padrão.
+  - **Retenção de backup do PostgreSQL Flexible Server** e **teste real de restauração** — mudança e
+    teste feitos no Azure Portal (Backup and restore do recurso PostgreSQL), fora do alcance desta
+    sessão.
+  - **Soft delete e versionamento no container do Blob Storage** — mudança feita no Azure Portal
+    (Data protection do Storage Account), também fora do alcance desta sessão.
 
 - **Fase 7 — LGPD e privacidade** (a política de privacidade hoje é literalmente um rascunho —
   `privacidade.astro` ainda tem o comentário "Substitua pelo texto definitivo... antes de publicar
