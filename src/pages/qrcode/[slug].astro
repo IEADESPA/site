@@ -2,7 +2,7 @@
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
+import { VERIFICAR_INSCRICAO_URL, fetchItems } from "@/lib/directus";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 
 interface Evento {
@@ -38,7 +38,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         </p>
       </header>
 
-      <form class="mt-8 grid gap-4 max-w-sm" data-qrcode-form data-evento-id={event.id}>
+      <form class="mt-8 grid gap-4 max-w-sm" data-qrcode-form data-evento-id={event.id} data-verificar-url={VERIFICAR_INSCRICAO_URL}>
         <div class="grid gap-2">
           <label class="text-sm font-semibold" for="qrcode-codigo">Código de confirmação</label>
           <input
@@ -51,6 +51,10 @@ const allPosts = visiblePosts(await getAllMensagens());
             placeholder="A3F9K2"
           />
         </div>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="qrcode-telefone">Telefone usado na inscrição</label>
+          <input id="qrcode-telefone" type="tel" autocomplete="tel" class="field" placeholder="(00) 00000-0000" />
+        </div>
         <button type="submit" class="btn btn-solid">Gerar QR Code</button>
       </form>
 
@@ -59,6 +63,13 @@ const allPosts = visiblePosts(await getAllMensagens());
         <div class="mt-4 grid gap-3 max-w-sm">
           <input type="text" class="field" placeholder="Digite seu nome…" data-qrcode-busca-nome autocomplete="off" />
           <div class="grid gap-2" data-qrcode-resultados-nome></div>
+          <div class="grid gap-2" data-qrcode-confirmar-telefone hidden>
+            <label class="text-sm font-semibold" for="qrcode-telefone-confirmar">
+              Confirme o telefone usado na inscrição de <span data-qrcode-nome-escolhido></span>
+            </label>
+            <input id="qrcode-telefone-confirmar" type="tel" autocomplete="tel" class="field" placeholder="(00) 00000-0000" />
+            <button type="button" class="btn btn-outline" data-qrcode-confirmar-btn>Confirmar</button>
+          </div>
         </div>
       </details>
 
@@ -69,14 +80,17 @@ const allPosts = visiblePosts(await getAllMensagens());
   <SiteFooter />
 
   <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-  <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, eventoId: event.id }}>
+  <script is:inline define:vars={{ verificarUrl: VERIFICAR_INSCRICAO_URL, eventoId: event.id }}>
     (() => {
       const form = document.querySelector("[data-qrcode-form]");
       const resultado = document.querySelector("[data-qrcode-resultado]");
       const imagemEl = document.querySelector("[data-qrcode-imagem]");
       const buscaInput = document.querySelector("[data-qrcode-busca-nome]");
       const resultadosNome = document.querySelector("[data-qrcode-resultados-nome]");
-      let pessoas = null;
+      const confirmarTelefoneWrap = document.querySelector("[data-qrcode-confirmar-telefone]");
+      const nomeEscolhidoEl = document.querySelector("[data-qrcode-nome-escolhido]");
+      const telefoneConfirmarInput = document.getElementById("qrcode-telefone-confirmar");
+      const confirmarBtn = document.querySelector("[data-qrcode-confirmar-btn]");
 
       const escapeHtml = (value) =>
         String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -89,24 +103,32 @@ const allPosts = visiblePosts(await getAllMensagens());
         resultado.textContent = `✅ QR Code de ${nome} pronto — mostre pra portaria.`;
       }
 
-      async function buscarPorCodigo(codigo) {
-        const res = await fetch(
-          `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][codigo][_eq]=${encodeURIComponent(codigo)}`,
-        );
-        const json = await res.json();
-        return json.data?.[0] ?? null;
+      async function verificar(payload) {
+        const res = await fetch(verificarUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ evento: eventoId, ...payload }),
+        });
+        return res.json();
       }
 
       form?.addEventListener("submit", async (event) => {
         event.preventDefault();
         const codigo = document.getElementById("qrcode-codigo").value.trim().toUpperCase();
+        const telefone = document.getElementById("qrcode-telefone").value.trim();
         imagemEl.innerHTML = "";
+
+        if (!telefone) {
+          resultado.textContent = "Digite o telefone usado na inscrição.";
+          return;
+        }
+
         resultado.textContent = "Verificando…";
 
         try {
-          const pessoa = await buscarPorCodigo(codigo);
-          if (!pessoa) {
-            resultado.textContent = "Código não encontrado. Confira e tente de novo, ou busque pelo nome abaixo.";
+          const pessoa = await verificar({ modo: "codigo", codigo, telefone });
+          if (!pessoa?.encontrado) {
+            resultado.textContent = "Código ou telefone não conferem. Confira e tente de novo, ou busque pelo nome abaixo.";
             return;
           }
           gerarQrCode(pessoa.nome, pessoa.codigo);
@@ -115,42 +137,54 @@ const allPosts = visiblePosts(await getAllMensagens());
         }
       });
 
+      // Busca por nome: só lista candidatos (sem código nenhum) — o código
+      // só é devolvido depois de confirmar o telefone de quem foi escolhido,
+      // pra impedir que a busca por nome sozinha revele o código de outra
+      // pessoa.
       buscaInput?.addEventListener("input", async () => {
-        const termo = buscaInput.value.trim().toLowerCase();
+        const termo = buscaInput.value.trim();
+        confirmarTelefoneWrap.hidden = true;
         if (termo.length < 2) {
           resultadosNome.innerHTML = "";
           return;
         }
 
-        if (!pessoas) {
-          const res = await fetch(`${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=id,nome&limit=-1`);
-          const json = await res.json();
-          pessoas = json.data ?? [];
+        try {
+          const resposta = await verificar({ modo: "nome", nome: termo });
+          const candidatos = resposta?.candidatos ?? [];
+          resultadosNome.innerHTML = candidatos
+            .map((p) => `<button type="button" class="btn btn-outline" data-pessoa-id="${p.id}" data-pessoa-nome="${escapeHtml(p.nome)}">${escapeHtml(p.nome)}</button>`)
+            .join("");
+        } catch {
+          resultadosNome.innerHTML = "";
         }
-
-        const encontrados = pessoas.filter((p) => p.nome.toLowerCase().includes(termo)).slice(0, 8);
-        resultadosNome.innerHTML = encontrados
-          .map((p) => `<button type="button" class="btn btn-outline" data-pessoa-id="${p.id}">${escapeHtml(p.nome)}</button>`)
-          .join("");
       });
 
-      resultadosNome?.addEventListener("click", async (event) => {
+      let pessoaEscolhidaId = null;
+
+      resultadosNome?.addEventListener("click", (event) => {
         const button = event.target.closest("[data-pessoa-id]");
         if (!button) return;
+        pessoaEscolhidaId = button.dataset.pessoaId;
+        nomeEscolhidoEl.textContent = button.dataset.pessoaNome;
+        confirmarTelefoneWrap.hidden = false;
+        telefoneConfirmarInput.focus();
+      });
+
+      confirmarBtn?.addEventListener("click", async () => {
+        const telefone = telefoneConfirmarInput.value.trim();
+        if (!telefone || !pessoaEscolhidaId) return;
         imagemEl.innerHTML = "";
         resultado.textContent = "Gerando…";
         try {
-          const res = await fetch(
-            `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][id][_eq]=${button.dataset.pessoaId}`,
-          );
-          const json = await res.json();
-          const pessoa = json.data?.[0];
-          if (!pessoa) {
-            resultado.textContent = "Não foi possível encontrar essa inscrição.";
+          const pessoa = await verificar({ modo: "id", id: pessoaEscolhidaId, telefone });
+          if (!pessoa?.encontrado) {
+            resultado.textContent = "Telefone não confere com essa inscrição.";
             return;
           }
           gerarQrCode(pessoa.nome, pessoa.codigo);
           resultadosNome.innerHTML = "";
+          confirmarTelefoneWrap.hidden = true;
           buscaInput.value = "";
         } catch {
           resultado.textContent = "Não foi possível gerar agora. Tente novamente em instantes.";

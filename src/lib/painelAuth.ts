@@ -5,8 +5,10 @@
  */
 const TOKEN_KEY = "painel_eventos_token";
 
+/** Vai pro login, guardando a página atual pra voltar direto pra ela depois de entrar. */
 export function irParaLogin(): void {
-  window.location.href = "/painel-eventos/entrar/";
+  const voltar = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = `/painel-eventos/entrar/?voltar=${voltar}`;
 }
 
 /** Token em sessionStorage, ou renovado silenciosamente via cookie httpOnly. */

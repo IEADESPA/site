@@ -34,11 +34,27 @@ const allPosts = visiblePosts(await getAllMensagens());
 <BaseLayout title={`Check-in — ${event.title}`} description="Confirme sua presença no evento." noindex>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
-    <div class="canvas checkin-canvas">
+    <div
+      class="canvas checkin-canvas"
+      data-directus-url={DIRECTUS_URL}
+      data-evento-id={event.id}
+      data-evento-slug={event.slug}
+      data-event-date={event.event_date ?? ""}
+      data-event-time={event.time ?? ""}
+      data-minutos-antes={event.checkin_libera_minutos_antes ?? ""}
+      data-liberado-manualmente={event.checkin_liberado_manualmente ? "1" : ""}
+      data-vagas-limite={event.vagas_limite ?? ""}
+    >
       <header class="pagehead">
         <p class="eyebrow">Check-in</p>
-        <h1 class="pagehead-title">{event.title}</h1>
-        <p class="pagehead-description">Digite seu código de confirmação pra registrar sua presença.</p>
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 class="pagehead-title">{event.title}</h1>
+          <p class="text-sm text-muted-foreground" data-checkin-usuario-wrap hidden>
+            <span data-checkin-usuario></span> ·{" "}
+            <button type="button" class="link-sweep text-accent font-semibold" data-checkin-sair>Sair</button>
+          </p>
+        </div>
+        <p class="pagehead-description" data-checkin-verificando>Verificando sua sessão…</p>
       </header>
 
       <div hidden class="gallery-empty mt-8" data-checkin-fechado>
@@ -119,23 +135,61 @@ const allPosts = visiblePosts(await getAllMensagens());
   <SiteFooter />
 
   <script is:inline src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <script
-    is:inline
-    define:vars={{
-      directusUrl: DIRECTUS_URL,
-      eventoId: event.id,
-      eventoSlug: event.slug,
-      eventDate: event.event_date,
-      eventTime: event.time,
-      minutosAntes: event.checkin_libera_minutos_antes,
-      liberadoManualmente: event.checkin_liberado_manualmente,
-      vagasLimite: event.vagas_limite,
-    }}
-  >
-    (() => {
-      const fechadoEl = document.querySelector("[data-checkin-fechado]");
-      const fechadoTextoEl = document.querySelector("[data-checkin-fechado-texto]");
-      const abertoEl = document.querySelector("[data-checkin-aberto]");
+  <script>
+    import { exigirAutenticacao, sair } from "@/lib/painelAuth";
+
+    const container = document.querySelector<HTMLElement>("[data-directus-url]");
+    if (!container) throw new Error("contêiner do check-in ausente");
+
+    const directusUrl = container.dataset.directusUrl ?? "";
+    const eventoId = Number(container.dataset.eventoId);
+    const eventoSlug = container.dataset.eventoSlug ?? "";
+    const eventDate = container.dataset.eventDate || null;
+    const eventTime = container.dataset.eventTime || null;
+    const minutosAntes = container.dataset.minutosAntes ? Number(container.dataset.minutosAntes) : null;
+    const liberadoManualmente = container.dataset.liberadoManualmente === "1";
+    const vagasLimite = container.dataset.vagasLimite ? Number(container.dataset.vagasLimite) : null;
+
+    const verificandoEl = document.querySelector<HTMLElement>("[data-checkin-verificando]");
+    const usuarioWrap = document.querySelector<HTMLElement>("[data-checkin-usuario-wrap]");
+    const usuarioEl = document.querySelector<HTMLElement>("[data-checkin-usuario]");
+    const sairBtn = document.querySelector<HTMLButtonElement>("[data-checkin-sair]");
+    sairBtn?.addEventListener("click", () => sair(directusUrl));
+
+    let token = "";
+
+    async function iniciar() {
+      const t = await exigirAutenticacao(directusUrl);
+      if (!t) return; // exigirAutenticacao já redireciona pro login
+      token = t;
+
+      const res = await fetch(`${directusUrl}/users/me?fields=email`, { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (usuarioWrap) usuarioWrap.hidden = false;
+      if (usuarioEl) usuarioEl.textContent = json.data.email;
+      if (verificandoEl) verificandoEl.textContent = "Digite o código de confirmação pra registrar a presença.";
+
+      rodarCheckin();
+    }
+
+    interface Pessoa {
+      id: number | string;
+      nome: string;
+      codigo?: string;
+      pago: boolean;
+      presente: boolean;
+    }
+
+    interface Pendencia {
+      id: number | string;
+      local_checkin: string | null;
+      observacao_checkin: string | null;
+    }
+
+    function rodarCheckin() {
+      const fechadoEl = document.querySelector<HTMLElement>("[data-checkin-fechado]");
+      const fechadoTextoEl = document.querySelector<HTMLElement>("[data-checkin-fechado-texto]");
+      const abertoEl = document.querySelector<HTMLElement>("[data-checkin-aberto]");
 
       function checkinAberto() {
         if (liberadoManualmente) return true;
@@ -165,16 +219,16 @@ const allPosts = visiblePosts(await getAllMensagens());
       }
       if (abertoEl) abertoEl.hidden = false;
 
-      const form = document.querySelector("[data-checkin-form]");
-      const resultado = document.querySelector("[data-checkin-resultado]");
-      const buscaInput = document.querySelector("[data-checkin-busca-nome]");
-      const resultadosNome = document.querySelector("[data-checkin-resultados-nome]");
-      const localSelect = document.querySelector("[data-checkin-local-select]");
-      const contadorEl = document.querySelector("[data-checkin-contador]");
-      const syncStatusEl = document.querySelector("[data-checkin-sync-status]");
+      const form = document.querySelector<HTMLFormElement>("[data-checkin-form]")!;
+      const resultado = document.querySelector<HTMLElement>("[data-checkin-resultado]")!;
+      const buscaInput = document.querySelector<HTMLInputElement>("[data-checkin-busca-nome]")!;
+      const resultadosNome = document.querySelector<HTMLElement>("[data-checkin-resultados-nome]")!;
+      const localSelect = document.querySelector<HTMLSelectElement>("[data-checkin-local-select]");
+      const contadorEl = document.querySelector<HTMLElement>("[data-checkin-contador]")!;
+      const syncStatusEl = document.querySelector<HTMLElement>("[data-checkin-sync-status]")!;
 
-      const escapeHtml = (value) =>
-        String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      const escapeHtml = (value: unknown) =>
+        String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 
       // O local escolhido fica só no navegador deste aparelho, por evento —
       // um tablet reaproveitado noutro evento escolhe de novo.
@@ -197,9 +251,9 @@ const allPosts = visiblePosts(await getAllMensagens());
       // presença ao vivo, sem precisar abrir a tela de inscritos. ---
       const ROSTER_KEY = `ieadespa-checkin-roster-${eventoSlug}`;
       const PENDENCIAS_KEY = `ieadespa-checkin-pendencias-${eventoSlug}`;
-      let roster = [];
+      let roster: Pessoa[] = [];
 
-      function carregarRosterDoCache() {
+      function carregarRosterDoCache(): Pessoa[] {
         try {
           const salvo = localStorage.getItem(ROSTER_KEY);
           return salvo ? JSON.parse(salvo) : [];
@@ -214,7 +268,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         } catch {}
       }
 
-      function lerPendencias() {
+      function lerPendencias(): Pendencia[] {
         try {
           return JSON.parse(localStorage.getItem(PENDENCIAS_KEY) || "[]");
         } catch {
@@ -222,7 +276,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         }
       }
 
-      function salvarPendencias(pendencias) {
+      function salvarPendencias(pendencias: Pendencia[]) {
         try {
           localStorage.setItem(PENDENCIAS_KEY, JSON.stringify(pendencias));
         } catch {}
@@ -250,10 +304,11 @@ const allPosts = visiblePosts(await getAllMensagens());
         try {
           const res = await fetch(
             `${directusUrl}/items/inscricoes_eventos?filter[evento][_eq]=${eventoId}&fields=id,nome,codigo,pago,presente&limit=-1`,
+            { headers: { Authorization: `Bearer ${token}` } },
           );
           if (!res.ok) throw new Error("falha ao buscar lista");
           const json = await res.json();
-          const fresco = json.data ?? [];
+          const fresco: Pessoa[] = json.data ?? [];
           // Se este aparelho já confirmou alguém (otimista) e a atualização
           // ainda não chegou no servidor (PATCH lento, ou por sincronizar),
           // não deixa essa atualização periódica "desconfirmar" a pessoa na
@@ -279,7 +334,7 @@ const allPosts = visiblePosts(await getAllMensagens());
           try {
             const res = await fetch(`${directusUrl}/items/inscricoes_eventos/${pendencia.id}`, {
               method: "PATCH",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
               body: JSON.stringify({
                 presente: true,
                 local_checkin: pendencia.local_checkin,
@@ -304,7 +359,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       // não pode esperar; a gravação de verdade acontece em segundo plano,
       // e vira pendência se a rede falhar ou estiver offline, sincronizando
       // sozinha depois.
-      async function confirmarPresenca(id, nome, pago) {
+      async function confirmarPresenca(id: number | string, nome: string, pago: boolean) {
         const jaConfirmado = roster.find((p) => String(p.id) === String(id))?.presente;
         if (jaConfirmado) {
           resultado.textContent = `${nome} já estava confirmado — nada mudou.`;
@@ -337,7 +392,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         try {
           const res = await fetch(`${directusUrl}/items/inscricoes_eventos/${id}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ presente: true, local_checkin: localAtual, observacao_checkin: observacao || null }),
           });
           if (!res.ok) throw new Error("falha ao confirmar");
@@ -350,16 +405,17 @@ const allPosts = visiblePosts(await getAllMensagens());
         }
       }
 
-      function buscarNoRoster(codigo) {
+      function buscarNoRoster(codigo: string) {
         const alvo = codigo.trim().toUpperCase();
         return roster.find((p) => (p.codigo ?? "").toUpperCase() === alvo) ?? null;
       }
 
-      async function confirmarPorCodigo(codigo) {
+      async function confirmarPorCodigo(codigo: string) {
         resultado.textContent = "Verificando…";
         try {
           const res = await fetch(
             `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][codigo][_eq]=${encodeURIComponent(codigo)}`,
+            { headers: { Authorization: `Bearer ${token}` } },
           );
           if (!res.ok) throw new Error("falha na busca");
           const json = await res.json();
@@ -380,9 +436,9 @@ const allPosts = visiblePosts(await getAllMensagens());
         }
       }
 
-      form?.addEventListener("submit", async (event) => {
+      form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const codigo = document.getElementById("checkin-codigo").value.trim().toUpperCase();
+        const codigo = (document.getElementById("checkin-codigo") as HTMLInputElement).value.trim().toUpperCase();
         await confirmarPorCodigo(codigo);
         form.reset();
       });
@@ -391,13 +447,13 @@ const allPosts = visiblePosts(await getAllMensagens());
       // "eventoId:codigo"; decodificado, cai no mesmo fluxo de confirmação que
       // já existe pro código digitado. Só um jeito mais rápido de usar o
       // mesmo código, não muda nada da segurança do check-in.
-      const qrAbrirBtn = document.querySelector("[data-qr-abrir]");
-      const qrFecharBtn = document.querySelector("[data-qr-fechar]");
-      const qrLeitor = document.querySelector("[data-qr-leitor]");
-      const qrVideo = document.querySelector("[data-qr-video]");
-      const qrCanvas = document.querySelector("[data-qr-canvas]");
-      let qrStream = null;
-      let qrAnimId = null;
+      const qrAbrirBtn = document.querySelector<HTMLButtonElement>("[data-qr-abrir]");
+      const qrFecharBtn = document.querySelector<HTMLButtonElement>("[data-qr-fechar]");
+      const qrLeitor = document.querySelector<HTMLElement>("[data-qr-leitor]");
+      const qrVideo = document.querySelector<HTMLVideoElement>("[data-qr-video]");
+      const qrCanvas = document.querySelector<HTMLCanvasElement>("[data-qr-canvas]");
+      let qrStream: MediaStream | null = null;
+      let qrAnimId: number | null = null;
 
       function pararLeituraQr() {
         if (qrAnimId) cancelAnimationFrame(qrAnimId);
@@ -408,16 +464,17 @@ const allPosts = visiblePosts(await getAllMensagens());
       }
 
       function lerFrameQr() {
-        if (!qrVideo || qrVideo.readyState !== qrVideo.HAVE_ENOUGH_DATA) {
+        if (!qrVideo || !qrCanvas || qrVideo.readyState !== qrVideo.HAVE_ENOUGH_DATA) {
           qrAnimId = requestAnimationFrame(lerFrameQr);
           return;
         }
         const ctx = qrCanvas.getContext("2d");
+        if (!ctx) return;
         qrCanvas.width = qrVideo.videoWidth;
         qrCanvas.height = qrVideo.videoHeight;
         ctx.drawImage(qrVideo, 0, 0, qrCanvas.width, qrCanvas.height);
         const imageData = ctx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
-        const codigo = window.jsQR ? jsQR(imageData.data, imageData.width, imageData.height) : null;
+        const codigo = (window as any).jsQR ? (window as any).jsQR(imageData.data, imageData.width, imageData.height) : null;
 
         if (codigo) {
           const [eventoIdLido, codigoLido] = codigo.data.split(":");
@@ -436,8 +493,10 @@ const allPosts = visiblePosts(await getAllMensagens());
         if (qrLeitor) qrLeitor.hidden = false;
         try {
           qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-          qrVideo.srcObject = qrStream;
-          await qrVideo.play();
+          if (qrVideo) {
+            qrVideo.srcObject = qrStream;
+            await qrVideo.play();
+          }
           qrAnimId = requestAnimationFrame(lerFrameQr);
         } catch {
           resultado.textContent = "Não foi possível acessar a câmera. Digite o código manualmente.";
@@ -447,7 +506,7 @@ const allPosts = visiblePosts(await getAllMensagens());
 
       qrFecharBtn?.addEventListener("click", pararLeituraQr);
 
-      buscaInput?.addEventListener("input", () => {
+      buscaInput.addEventListener("input", () => {
         const termo = buscaInput.value.trim().toLowerCase();
         if (termo.length < 2) {
           resultadosNome.innerHTML = "";
@@ -463,19 +522,21 @@ const allPosts = visiblePosts(await getAllMensagens());
           .join("");
       });
 
-      resultadosNome?.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-pessoa-id]");
+      resultadosNome.addEventListener("click", async (event) => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-pessoa-id]");
         if (!button) return;
         resultado.textContent = "Confirmando…";
         try {
-          await confirmarPresenca(button.dataset.pessoaId, button.dataset.pessoaNome, button.dataset.pessoaPago === "true");
+          await confirmarPresenca(button.dataset.pessoaId!, button.dataset.pessoaNome!, button.dataset.pessoaPago === "true");
           resultadosNome.innerHTML = "";
           buscaInput.value = "";
         } catch {
           resultado.textContent = "Não foi possível confirmar agora. Tente novamente em instantes.";
         }
       });
-    })();
+    }
+
+    iniciar();
   </script>
 
   <style>

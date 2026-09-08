@@ -227,30 +227,42 @@ não foi construído.
     janela de 90 dias continuavam listáveis por completo por quem chamasse a API direto — e o
     `codigo` sozinho nunca foi páreo pra isso, porque justamente esse `codigo` também libera
     certificado/crachá/pesquisa de satisfação de qualquer pessoa, sem checar mais nada.
-    **Segunda camada de correção, feita em seguida a pedido do usuário**: certificado, crachá e
-    pesquisa de satisfação agora exigem **código E telefone combinados**, não só o código —
-    fechando de vez o furo real que o usuário identificou ("puxar o certificado de outra pessoa").
-    Como o telefone nunca esteve entre os campos de leitura pública do Directus, não dava pra
-    simplesmente acrescentar o filtro (o próprio Directus barra filtrar por um campo que a política
-    não permite ler — testado e confirmado). A solução foi um **Flow do Directus** (endpoint
-    `/flows/trigger/<id>`, rodando com `accountability: "all"`, ou seja, acesso interno elevado que
-    ignora a política Public): recebe `{evento, codigo, telefone}`, busca a inscrição por
-    evento+código com leitura irrestrita, compara os últimos 8 dígitos do telefone informado com o
-    cadastrado (tolerando formatação diferente — com DDI, traço, espaço), e só devolve
-    `{encontrado, id, nome, presente, pago}` se as duas coisas baterem — **o telefone em si nunca
-    sai do Directus, nem pro navegador de quem acertou**. As 3 páginas (`certificado/[slug].astro`,
-    `cracha/[slug].astro`, `pesquisa/[slug].astro`) ganharam um campo "Telefone usado na inscrição" e
-    passaram a chamar esse Flow em vez de consultar `inscricoes_eventos` direto. Testado de ponta a
-    ponta contra o Directus real (código certo + telefone certo/errado/ausente, código errado +
-    telefone certo — os 4 casos, com registro de teste criado e apagado em seguida) e com Playwright
-    interceptando a chamada de rede nas 3 páginas (sem telefone barra antes de chamar a rede;
-    telefone errado nega; telefone certo gera o certificado/crachá de verdade e libera a pesquisa).
-    **O que ainda fica de fora, por design**: o check-in por código feito por quem opera a portaria
-    (`/checkin/<slug>/`, incluindo o roster inteiro baixado pro funcionamento offline) continua sem
-    exigir telefone — é uso mediado por equipe da igreja, presencialmente, risco bem menor que uma
-    pessoa remota baixando o certificado de outra. Fechar esse último ponto por completo exigiria
-    autenticação de verdade pra quem opera o check-in (mudança de fluxo maior, registrada como
-    possível Fase futura se um dia for considerada necessária).
+    **Segunda camada de correção**: certificado, crachá e pesquisa de satisfação agora exigem
+    **código E telefone combinados**, não só o código — fechando o furo real que o usuário
+    identificou ("puxar o certificado de outra pessoa"). Como o telefone nunca esteve entre os
+    campos de leitura pública do Directus, não dava pra simplesmente acrescentar o filtro (o próprio
+    Directus barra filtrar por um campo que a política não permite ler — testado e confirmado). A
+    solução foi um **Flow do Directus** (endpoint `/flows/trigger/<id>`, rodando com
+    `accountability: "all"`, acesso interno elevado que ignora a política Public), com 3 modos:
+    `codigo` (código+telefone combinados — certificado/crachá/pesquisa/QR Code), `nome` (lista
+    candidatos por nome parcial, **sem nunca devolver código** — nome não é segredo, mas o código
+    sim) e `id` (depois de escolher um nome da lista, confirma telefone e só então devolve o
+    código). O telefone em si nunca sai do Directus, nem pro navegador de quem acertou.
+    **Terceira camada, achada auditando o resto do site pelo mesmo critério**: `/qrcode/<slug>/`
+    (onde a pessoa gera o próprio QR Code na fila) tinha uma busca por nome que devolvia o código de
+    **qualquer inscrito** direto, sem checar absolutamente nada além do nome — pior que o furo
+    original, porque nem exigia saber o código de antemão. Corrigido com o mesmo Flow (modo `nome`
+    pra listar, modo `id`+telefone pra só então liberar o código).
+    **Quarta camada, a pedido do usuário**: o check-in feito pela equipe na portaria
+    (`/checkin/<slug>/`) não pedia login nenhum — qualquer um com o link operava o check-in e via o
+    roster completo (nome/código/pagamento/presença de todo mundo), o que o usuário apontou
+    corretamente como uma falha grave por si só, independente do resto. Agora exige login real do
+    Directus (mesma conta usada em `/painel-eventos/`, reaproveitando `exigirAutenticacao`) antes de
+    liberar qualquer coisa — inclusive com redirecionamento de volta pra página certa depois de
+    entrar (parâmetro `?voltar=`), e um link "Fazer check-in" direto da tela de gestão do evento.
+    **Com o check-in autenticado, a permissão pública de leitura/atualização de
+    `inscricoes_eventos` foi enxugada ao mínimo possível** (confirmado com teste real, sem token):
+    leitura pública agora só devolve `id`/`evento`/`aguardando_vaga`/`presente` (usados só pra
+    contadores agregados — "vagas restantes" na inscrição, presença ao vivo no telão —, nunca linha
+    por linha com nome/código/telefone); atualização pública só aceita os campos de inscrição push
+    (`push_endpoint`/`push_p256dh`/`push_auth`, usados pela própria pessoa logo após se inscrever);
+    tentar ler `nome`/`codigo` ou atualizar `presente` sem estar autenticado agora dá 403 — testado
+    e confirmado direto no Directus. **Isto fecha o vazamento original por completo**, não só
+    reduz — a janela de 90 dias da primeira correção virou uma segunda camada de proteção, não mais
+    a única. Tudo testado de ponta a ponta: os 3 modos do Flow contra o Directus real, Playwright
+    simulando login/redirecionamento no check-in (sem usar credencial de verdade) e o fluxo completo
+    de busca por nome + confirmação de telefone no QR Code, além de testes diretos com curl
+    confirmando que os campos sensíveis agora dão 403 pra quem não está autenticado.
   - **Labels quebrados no formulário de pesquisa de satisfação** — cada campo (`pesquisa/[slug].astro`)
     agora recebe um `id` único e o `<label>` correspondente aponta pra ele via `for`; pro campo de
     seleção múltipla (que não é um único controle), o rótulo virou um `<p id>` referenciado via

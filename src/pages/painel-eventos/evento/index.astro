@@ -44,9 +44,14 @@ const tipoPerguntaOpcoes = [
         <p class="eyebrow"><a href="/painel-eventos/" class="text-accent">← Gestão de eventos</a></p>
         <div class="flex flex-wrap items-baseline justify-between gap-3">
           <h1 class="pagehead-title" data-painel-titulo>Evento</h1>
-          <a href="/painel-eventos/evento/inscritos/" class="btn btn-outline" data-link-inscritos hidden>
-            Ver inscritos
-          </a>
+          <div class="flex flex-wrap gap-3">
+            <a href="/painel-eventos/evento/inscritos/" class="btn btn-outline" data-link-inscritos hidden>
+              Ver inscritos
+            </a>
+            <a href="/checkin/" class="btn btn-solid" data-link-checkin hidden>
+              Fazer check-in
+            </a>
+          </div>
         </div>
         <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
       </header>
@@ -962,6 +967,12 @@ const tipoPerguntaOpcoes = [
       if (linkInscritos) {
         linkInscritos.href = `/painel-eventos/evento/inscritos/?id=${eventoId}`;
         linkInscritos.hidden = false;
+      }
+
+      const linkCheckin = document.querySelector<HTMLAnchorElement>("[data-link-checkin]");
+      if (linkCheckin && evento.slug) {
+        linkCheckin.href = `/checkin/${evento.slug}/`;
+        linkCheckin.hidden = false;
       }
 
       // Não faz sentido um evento se vincular a si mesmo.

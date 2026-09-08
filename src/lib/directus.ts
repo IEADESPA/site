@@ -10,12 +10,20 @@ export const DIRECTUS_ADMIN_URL = `${DIRECTUS_URL}/admin`;
 
 /**
  * Endpoint do Flow "Verificar inscrição (código + telefone)" — usado por
- * certificado, crachá e pesquisa de satisfação em vez de consultar
- * `inscricoes_eventos` direto. Exige código E telefone combinados (não só o
- * código), pra impedir que alguém gere o certificado/crachá de outra pessoa
- * só por ter visto/adivinhado o código dela — o telefone nunca é legível
- * publicamente via API, o Flow roda com acesso interno elevado só pra
- * conferir a combinação e devolve os dados sem o telefone.
+ * certificado, crachá, pesquisa de satisfação e o gerador de QR Code, em vez
+ * de consultar `inscricoes_eventos` direto (que não tem mais leitura pública
+ * de nome/código/telefone). O Flow roda com acesso interno elevado
+ * (`accountability: "all"`) e nunca devolve o telefone pra fora — três modos,
+ * todos exigindo `{ evento, modo, ... }` no corpo da requisição:
+ * - `modo: "codigo"` — `{ codigo, telefone }`: confirma os dois combinados,
+ *   devolve os dados (incluindo o próprio código, útil pro QR Code).
+ * - `modo: "nome"` — `{ nome }`: lista candidatos por nome parcial, sem
+ *   telefone nem código (nome não é segredo, mas o código nunca aparece
+ *   aqui) — usado pra montar uma lista de "foi você?" pra quem esqueceu o
+ *   código.
+ * - `modo: "id"` — `{ id, telefone }`: depois de escolher um candidato da
+ *   lista acima, confirma o telefone pra só então devolver o código —
+ *   impede que a busca por nome sozinha revele o código de outra pessoa.
  */
 export const VERIFICAR_INSCRICAO_URL = `${DIRECTUS_URL}/flows/trigger/5a43eb73-9011-4676-a69d-13cfd550fe76`;
 

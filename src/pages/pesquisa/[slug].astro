@@ -188,7 +188,7 @@ const dataReferencia = event.end_date || event.event_date;
           const res = await fetch(verificarUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ evento: eventoId, codigo, telefone }),
+            body: JSON.stringify({ evento: eventoId, modo: "codigo", codigo, telefone }),
           });
           const pessoa = await res.json();
 
