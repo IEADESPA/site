@@ -119,6 +119,16 @@ const secoesSobre = await Promise.all(
         <a href="/historia/" class="link-sweep font-semibold text-accent">Conheça nossa história completa &rarr;</a>
       </p>
 
+      <div class="sobre-pendente" aria-label="Vídeo de boas-vindas (a ser adicionado)">
+        <p class="sobre-pendente-rotulo">Vídeo de boas-vindas</p>
+        <p class="sobre-pendente-texto">Vídeo a ser inserido aqui.</p>
+      </div>
+
+      <div class="sobre-pendente" aria-label="Depoimento de membro (a ser adicionado)">
+        <p class="sobre-pendente-rotulo">O que a nossa igreja diz</p>
+        <p class="sobre-pendente-texto">Depoimento a ser inserido aqui.</p>
+      </div>
+
       <div class="prose mt-16">
         <h2>Liderança</h2>
         <p>
@@ -162,6 +172,31 @@ const secoesSobre = await Promise.all(
   .sobre-secao {
     border-left: 3px solid var(--accent);
     padding-left: 1.25rem;
+  }
+
+  /* Visualmente distinto de propósito (borda tracejada, itálico) — sinaliza
+     que é um espaço reservado esperando conteúdo real, não conteúdo de
+     verdade ainda incompleto. */
+  .sobre-pendente {
+    margin-top: 1.5rem;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+  }
+
+  .sobre-pendente-rotulo {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .sobre-pendente-texto {
+    margin-top: 0.35rem;
+    font-style: italic;
+    color: var(--muted-foreground);
   }
 
   .sobre-estatisticas {

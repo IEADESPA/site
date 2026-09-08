@@ -422,12 +422,18 @@ não foi construído.
   — porque aqui a natureza do dado é diferente: não é texto genérico de preenchimento, é uma
   afirmação de fato específica atribuída a uma pessoa real e identificável, ou uma imagem/vídeo que
   pretende retratar esta igreja especificamente. Publicar isso fabricado seria diferente de um
-  texto placeholder — seria uma mentira sobre uma pessoa ou sobre a própria igreja, no ar. Ficam
-  para quando a igreja fornecer o dado real: fotos reais de culto/comunidade (hero da home, Sobre,
-  Congregações, Ministérios); os nomes reais de vice-presidente/secretário(a)/tesoureiro(a) da
-  diretoria (hoje "A definir" em `orgao_membros` — mesma pendência já listada no topo deste
-  README); bios dos membros de cada órgão; vídeo de boas-vindas; depoimento de membro. Este é o
-  mesmo critério já usado para não inventar coordenada de GPS na Fase 3.
+  texto placeholder — seria uma mentira sobre uma pessoa ou sobre a própria igreja, no ar. Este é o
+  mesmo critério já usado para não inventar coordenada de GPS na Fase 3. Ficam para quando a igreja
+  fornecer o dado real: fotos reais de culto/comunidade (hero da home, Sobre, Congregações,
+  Ministérios); os nomes reais de vice-presidente/secretário(a)/tesoureiro(a) da diretoria (hoje
+  "A definir" em `orgao_membros` — mesma pendência já listada no topo deste README); bios dos
+  membros de cada órgão; vídeo de boas-vindas; depoimento de membro.
+
+  Em vez de inventar, esses pontos ganharam um aviso honesto de "a ser inserido" — visualmente
+  diferente de conteúdo real (itálico, opacidade reduzida, borda tracejada no caso das seções da
+  home/Sobre), pra não passar a impressão de que já é definitivo nem de que é fato inventado:
+  "Biografia a ser adicionada." em cada card de `/orgao/[slug]/` sem bio cadastrada, e duas caixas
+  em `/sobre/` ("Vídeo a ser inserido aqui." e "Depoimento a ser inserido aqui.").
 
 - **Fase 5 — páginas inteiramente novas** (maior escopo cada uma, avaliar prioridade só depois das
   fases anteriores): Crenças/O que Cremos, Ministérios, página de Kids dedicada, Ao vivo/Assista

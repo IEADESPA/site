@@ -127,7 +127,11 @@ const linhaDoTempo = [...membros, ...historico]
                   )}
                 </p>
               )}
-              {membros[0].bio && <p class="mt-2 text-sm leading-relaxed">{membros[0].bio}</p>}
+              {membros[0].bio ? (
+                <p class="mt-2 text-sm leading-relaxed">{membros[0].bio}</p>
+              ) : (
+                <p class="mt-2 text-sm leading-relaxed text-muted-foreground placeholder-text">Biografia a ser adicionada.</p>
+              )}
             </div>
           </div>
         )
@@ -162,7 +166,11 @@ const linhaDoTempo = [...membros, ...historico]
                       {(anosNoCargo(membro.since) ?? 0) >= 10 && <span class="tenure-badge">longa trajetória</span>}
                     </span>
                   )}
-                  {membro.bio && <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{membro.bio}</p>}
+                  {membro.bio ? (
+                    <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{membro.bio}</p>
+                  ) : (
+                    <p class="mt-2 text-sm leading-relaxed text-muted-foreground placeholder-text">Biografia a ser adicionada.</p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -246,6 +254,11 @@ const linhaDoTempo = [...membros, ...historico]
 </BaseLayout>
 
 <style>
+  .placeholder-text {
+    font-style: italic;
+    opacity: 0.7;
+  }
+
   .leader-card {
     display: flex;
     align-items: center;
