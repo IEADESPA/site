@@ -15,15 +15,17 @@ interface Orgao {
   name: string;
   description: string;
   category: "governanca" | "departamentos" | "secretarias" | "servicos";
-  leader_name: string | null;
-  leader_role: string | null;
-  leader_photo: string | null;
   body: string | null;
 }
 
-interface MembroDiretoria {
-  role: string;
+interface MembroOrgao {
+  id: number;
   name: string;
+  role: string;
+  photo: string | null;
+  bio: string | null;
+  since: string | null;
+  term_end: string | null;
 }
 
 const CATEGORY_LABEL: Record<Orgao["category"], string> = {
@@ -32,6 +34,11 @@ const CATEGORY_LABEL: Record<Orgao["category"], string> = {
   secretarias: "Secretarias",
   servicos: "Serviços",
 };
+
+// Órgãos deliberativos/eleitos (conselho, assembleia, diretoria) chegam à
+// composição por eleição/indicação formal — diferente de um departamento,
+// que qualquer pessoa pode procurar pra servir como voluntária.
+const isGovernanca = (categoria: Orgao["category"]) => categoria === "governanca";
 
 export async function getStaticPaths() {
   const orgaos = await fetchItems<Orgao>("ministerios");
@@ -45,8 +52,10 @@ interface Props {
 const { orgao } = Astro.props;
 const allPosts = visiblePosts(await getAllMensagens());
 const bodyHtml = orgao.body ? await marked.parse(orgao.body) : null;
-const isDiretoria = orgao.slug === "diretoria-executiva";
-const board = isDiretoria ? await fetchItems<MembroDiretoria>("diretoria", "sort[]=sort") : [];
+const membros = await fetchItems<MembroOrgao>(
+  "orgao_membros",
+  `filter[orgao][_eq]=${orgao.id}&filter[current][_eq]=true&sort[]=sort`,
+);
 const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
   (noticia) => noticia.data.orgaoRelacionado === orgao.id,
 );
@@ -64,18 +73,26 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
       </header>
 
       {
-        orgao.leader_name && (
+        membros.length === 1 && (
           <div class="leader-card">
-            {orgao.leader_photo && (
+            {membros[0].photo && (
               <img
-                src={directusAssetUrl(orgao.leader_photo, { width: 200, height: 200, fit: "cover", quality: 80, format: "webp" })}
-                alt={orgao.leader_name}
+                src={directusAssetUrl(membros[0].photo, { width: 200, height: 200, fit: "cover", quality: 80, format: "webp" })}
+                alt={membros[0].name}
                 class="leader-photo"
               />
             )}
             <div>
-              <p class="text-lg font-semibold tracking-tight">{orgao.leader_name}</p>
-              {orgao.leader_role && <p class="text-sm text-muted-foreground">{orgao.leader_role}</p>}
+              <p class="text-lg font-semibold tracking-tight">{membros[0].name}</p>
+              <p class="text-sm text-muted-foreground">{membros[0].role}</p>
+              {(membros[0].since || membros[0].term_end) && (
+                <p class="text-xs text-muted-foreground mt-0.5">
+                  {membros[0].since && `Desde ${membros[0].since}`}
+                  {membros[0].since && membros[0].term_end && " · "}
+                  {membros[0].term_end && `Mandato até ${membros[0].term_end}`}
+                </p>
+              )}
+              {membros[0].bio && <p class="mt-2 text-sm leading-relaxed">{membros[0].bio}</p>}
             </div>
           </div>
         )
@@ -84,14 +101,31 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
       {bodyHtml && <div class="prose mt-10" set:html={bodyHtml} />}
 
       {
-        isDiretoria && board.length > 0 && (
+        membros.length > 1 && (
           <section class="mt-12" aria-labelledby="board-heading">
-            <h2 id="board-heading" class="section-title">Diretores</h2>
+            <h2 id="board-heading" class="section-title">
+              {isGovernanca(orgao.category) ? "Composição atual" : "Equipe"}
+            </h2>
             <ul class="mt-5 grid gap-4 sm:grid-cols-2">
-              {board.map((member) => (
+              {membros.map((membro) => (
                 <li class="board-card">
-                  <span class="block text-xs font-semibold tracking-wide text-accent uppercase">{member.role}</span>
-                  <span class="mt-1 block text-lg font-semibold tracking-tight">{member.name}</span>
+                  {membro.photo && (
+                    <img
+                      src={directusAssetUrl(membro.photo, { width: 160, height: 160, fit: "cover", quality: 80, format: "webp" })}
+                      alt={membro.name}
+                      class="board-photo"
+                    />
+                  )}
+                  <span class="block text-xs font-semibold tracking-wide text-accent uppercase">{membro.role}</span>
+                  <span class="mt-1 block text-lg font-semibold tracking-tight">{membro.name}</span>
+                  {(membro.since || membro.term_end) && (
+                    <span class="mt-0.5 block text-xs text-muted-foreground">
+                      {membro.since && `Desde ${membro.since}`}
+                      {membro.since && membro.term_end && " · "}
+                      {membro.term_end && `Mandato até ${membro.term_end}`}
+                    </span>
+                  )}
+                  {membro.bio && <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{membro.bio}</p>}
                 </li>
               ))}
             </ul>
@@ -111,11 +145,27 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
       }
 
       <div class="prose mt-16">
-        <h2>Quer participar?</h2>
-        <p>
-          Fale com a liderança em um dos nossos cultos ou entre em contato pela{" "}
-          <a href="/contato/">página de contato</a>.
-        </p>
+        {
+          isGovernanca(orgao.category) ? (
+            <>
+              <h2>Como participar</h2>
+              <p>
+                A composição deste órgão é definida por eleição/indicação em assembleia, conforme o
+                estatuto da igreja — não é uma vaga de voluntariado aberta. Dúvidas sobre como
+                funciona, fale pela{" "}
+                <a href="/contato/">página de contato</a>.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2>Quer servir aqui?</h2>
+              <p>
+                Fale com a liderança em um dos nossos cultos ou entre em contato pela{" "}
+                <a href="/contato/">página de contato</a> pra saber como se envolver.
+              </p>
+            </>
+          )
+        }
         <p><a href="/orgaos/">&larr; Voltar para Órgãos</a></p>
       </div>
     </div>
@@ -142,5 +192,13 @@ const relatedNoticias = visibleNoticias(await getAllNoticias()).filter(
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1.25rem 1.4rem;
+  }
+
+  .board-photo {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    margin-bottom: 0.75rem;
   }
 </style>

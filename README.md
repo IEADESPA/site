@@ -270,11 +270,27 @@ não foi construído.
     verificação isolada da lógica de template cobrindo os 6 tipos de campo existentes — todos com
     associação correta.
 
-- **Fase 1 — mudança de modelo de dado que o resto depende**: hoje só existe campo pra **um**
+- [x] **Fase 1 — mudança de modelo de dado que o resto depende**: antes só existia campo pra **um**
   líder por órgão (`leader_name`/`leader_role`/`leader_photo`), mais um caso especial fixo só pra
-  "diretoria executiva" sem foto/bio. Órgãos colegiados (assembleia, conselho fiscal) não têm como
-  listar vários membros — isso precisa ser resolvido no Directus antes de melhorar a exibição de
-  Órgãos (fases seguintes dependem disso).
+  "diretoria executiva" (coleção `diretoria` separada, hardcoded por slug) sem foto/bio/mandato.
+  Órgãos colegiados (assembleia, conselho fiscal) não tinham como listar vários membros.
+  **Resolvido com uma coleção nova e genérica, `orgao_membros`** (M2O pra `ministerios`, de 0 a N
+  membros por órgão): `name`, `role` (cargo dentro do órgão), `photo` (opcional), `bio` (opcional),
+  `since`/`term_end` (texto livre — "desde quando"/"mandato até", sem forçar data exata que
+  ninguém sabe de cor), `current` (mantém histórico no banco sem aparecer na página pública — dá
+  pra montar uma seção de "diretorias anteriores" em `/transparencia/` no futuro só com uma
+  consulta, sem mudar schema) e `sort`. Isto substitui de vez os três campos soltos e a coleção
+  `diretoria` — removidos e migrados (as 4 pessoas da diretoria já viraram registros de
+  `orgao_membros`, sem perda de dado; os demais órgãos já estavam com o campo de líder vazio, sem
+  nada a migrar). `orgao/[slug].astro` decide o layout pela **contagem de membros vinculados**, sem
+  precisar de campo novo pra isso: 1 membro → card de responsável (como já existia antes, agora
+  também mostrando bio/mandato quando cadastrados); 2+ membros → grade em peso visual igual (sem
+  "herói"), correto pra colegiado onde a decisão é do colegiado, não de uma pessoa. O CTA final
+  também mudou por categoria: em `governanca`, "Como participar" explica que a composição vem de
+  eleição/indicação em assembleia (não é vaga de voluntariado); nas demais categorias, mantém o
+  convite de "Quer servir aqui?". Testado com build real e conferência do HTML gerado: a página da
+  diretoria mostra os 4 membros migrados corretamente, e uma página de departamento sem membro
+  cadastrado ainda mostra o CTA certo sem quebrar.
 
 - **Fase 2 — reaproveita dado que já existe, zero conteúdo novo necessário da igreja** (a fase com
   mais itens, e a mais rápida de entregar):
