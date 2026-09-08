@@ -39,6 +39,7 @@ const pontosMapa = [
     .filter((c) => c.lat != null && c.lng != null)
     .map((c) => ({ name: c.name, lat: c.lat as number, lng: c.lng as number, href: `/congregacao/${c.slug}/` })),
 ];
+const congregacoesSemLocalizacao = congregacoes.filter((c) => c.lat == null || c.lng == null);
 ---
 
 <BaseLayout
@@ -63,6 +64,14 @@ const pontosMapa = [
             <p class="mt-2 text-xs text-muted-foreground">
               Mostra só as congregações com localização já cadastrada — a lista vai crescendo com o tempo.
             </p>
+            {
+              congregacoesSemLocalizacao.length > 0 && (
+                <p class="mt-1 text-xs text-muted-foreground localizacao-pendente">
+                  Localização em cadastro (ainda não aparecem no mapa acima): {" "}
+                  {congregacoesSemLocalizacao.map((c) => c.name).join(", ")}.
+                </p>
+              )
+            }
           </div>
         )
       }

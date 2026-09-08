@@ -10,7 +10,30 @@ import { fetchConfiguracoes } from "@/lib/directus";
 const allPosts = visiblePosts(await getAllMensagens());
 const authors = getAllAuthors(allPosts);
 const config = await fetchConfiguracoes();
-const sobreHtml = await marked.parse(config.sobre_corpo);
+
+/**
+ * Quebra o texto único de `sobre_corpo` em seções fixas, usando os títulos
+ * `##` que o próprio texto já usa ("Quem somos", "Nossa missão"...) — sem
+ * precisar de campo novo no Directus nem mudar o conteúdo. Se um dia o
+ * texto vier sem nenhum `##` (reescrito num bloco corrido), cai de volta
+ * pra um bloco só, sem quebrar a página.
+ */
+function quebrarEmSecoes(markdown: string): { titulo: string; corpo: string }[] {
+  const partes = markdown.split(/^##\s+(.+)$/m);
+  if (partes.length < 3) return [{ titulo: "", corpo: markdown }];
+  const secoes: { titulo: string; corpo: string }[] = [];
+  for (let i = 1; i < partes.length; i += 2) {
+    secoes.push({ titulo: partes[i].trim(), corpo: partes[i + 1]?.trim() ?? "" });
+  }
+  return secoes;
+}
+
+const secoesSobre = await Promise.all(
+  quebrarEmSecoes(config.sobre_corpo).map(async (secao) => ({
+    ...secao,
+    html: await marked.parse(secao.corpo),
+  })),
+);
 ---
 
 <BaseLayout
@@ -26,7 +49,20 @@ const sobreHtml = await marked.parse(config.sobre_corpo);
         <p class="pagehead-description">{config.about}</p>
       </header>
 
-      <div class="prose" set:html={sobreHtml} />
+      <div class="grid gap-8 mt-2">
+        {
+          secoesSobre.map((secao) =>
+            secao.titulo ? (
+              <section class="sobre-secao" aria-labelledby={`sobre-${secao.titulo}`}>
+                <h2 id={`sobre-${secao.titulo}`} class="section-title">{secao.titulo}</h2>
+                <div class="prose mt-3" set:html={secao.html} />
+              </section>
+            ) : (
+              <div class="prose" set:html={secao.html} />
+            ),
+          )
+        }
+      </div>
 
       <p class="mt-8">
         <a href="/historia/" class="link-sweep font-semibold text-accent">Conheça nossa história completa &rarr;</a>
@@ -70,3 +106,10 @@ const sobreHtml = await marked.parse(config.sobre_corpo);
   </main>
   <SiteFooter />
 </BaseLayout>
+
+<style>
+  .sobre-secao {
+    border-left: 3px solid var(--accent);
+    padding-left: 1.25rem;
+  }
+</style>

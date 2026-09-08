@@ -351,21 +351,59 @@ não foi construído.
   apagadas em seguida), lightbox da galeria (com 1 foto de teste), `VideoObject` (com 1 mensagem de
   teste), fallback de busca e navegação por teclado — tudo revertido ao estado original depois.
 
-- **Fase 3 — melhorias de UX que exigem mais decisão de desenho, ainda sem conteúdo novo**:
-  - Órgãos: separar visualmente Governança de Departamentos/Serviços; CTA diferente pra órgão
-    deliberativo/eleito vs. equipe de voluntariado.
-  - Congregações: unificar a tecnologia de mapa (hoje a listagem usa Leaflet, Contato usa Google
-    Maps — dois sistemas diferentes); estado "localização em cadastro" pra quem não tem lat/lng,
-    em vez de simplesmente sumir do mapa.
-  - Galeria: agrupamento por evento/álbum, imagem responsiva (`srcset`), paginação.
-  - Mural de oração: proteção básica contra spam (honeypot), caminho "confidencial" separado do
-    público, prazo de moderação no aviso pós-envio.
-  - Visitante: horário/endereço logo no topo (não só nos "próximos passos"); FAQ revisado pra
-    cobrir dúvidas específicas de quem nunca foi a um culto pentecostal.
-  - Sobre: quebrar o texto único (`configuracoes.sobre_corpo`) em seções fixas (história curta →
-    missão/valores → liderança → próximos passos), em vez de um bloco corrido.
-  - Mensagens: combinar filtro por tema + pregador na mesma tela de listagem; conceito de "série
-    de mensagens" (esse exige campo novo no Directus, não só front-end).
+- [x] **Fase 3 — melhorias de UX que exigem mais decisão de desenho** — os 7 itens construídos e
+  testados:
+  - **Órgãos**: a listagem (`orgaos.astro`) agora destaca Governança visualmente (borda de
+    destaque, selo "Deliberativo/eleito") diferente de Departamentos/Secretarias/Serviços; o CTA
+    também muda por categoria — "Ver composição" pra Governança, "Saiba mais" pras demais (a
+    diferenciação de texto na página individual já tinha sido feita no refinamento da Fase 1).
+  - **Congregações**: ⚠️ **achado real ao investigar** — nenhuma das 41 congregações tem `lat`/`lng`
+    cadastrado (só a sede tem), então a listagem hoje mostra só 1 pino no mapa. Unificar a
+    tecnologia de mapa de verdade (só Leaflet em tudo) faria a página de cada congregação
+    **perder** o mapa que já funciona hoje (o embed do Google usa busca por endereço em texto, não
+    precisa de coordenada) — seria regressão, não melhoria, então a unificação completa fica
+    registrada como não recomendada por ora (ver "Ideias rejeitadas"). O que foi construído, que é
+    o que a fase realmente pede pra esse caso: a listagem agora mostra "Localização em cadastro"
+    com o nome de cada congregação sem coordenada, em vez de simplesmente sumir do mapa sem
+    explicação.
+  - **Galeria**: agrupamento por álbum (campo novo `album` em `galeria`, opcional — sem álbum vai
+    pra "Outras fotos"), `srcset` responsivo (4 larguras — mobile não baixa a imagem pensada pra
+    desktop) e paginação por álbum ("Ver mais fotos deste álbum", 12 por vez).
+  - **Mural de oração**: honeypot (campo escondido por CSS que só bot preenche — se vier
+    preenchido, finge sucesso sem gravar nada) contra spam; caminho "confidencial" (campo `confidencial`
+    novo, filtrado na própria permissão de leitura pública do Directus — testado que nunca aparece
+    no mural mesmo aprovado); prazo de moderação ("em até 2 dias úteis") no aviso pós-envio.
+  - **Visitante**: horário da semana + endereço logo depois do cabeçalho (antes só apareciam nos
+    "Próximos passos", no fim da página); FAQ ampliado com 3 perguntas específicas de quem nunca
+    foi a um culto pentecostal (manifestações na adoração, chamada ao altar, levantar as mãos) —
+    conteúdo real adicionado à coleção `visitantes`, não texto de rascunho.
+  - **Sobre**: o texto de `sobre_corpo` já usava títulos `##` ("Quem somos", "Nossa missão", "Nossa
+    visão", "O que cremos") — sem precisar de campo novo nem reescrever nada, a página agora quebra
+    esse texto nesses títulos como seções visuais distintas, cada uma com destaque de borda, em vez
+    de um bloco de texto corrido.
+  - **Mensagens**: filtro por tema e por pregador combinados na mesma tela (`/mensagens/`) —
+    enquanto nenhum filtro está ativo, mantém a paginação normal; ao filtrar, troca pra uma lista
+    client-side com o arquivo inteiro (não só a página atual de 10). Conceito de "série de
+    mensagens" implementado com 2 campos novos (`serie`, `serie_ordem`) — em vez de inventar
+    mensagem nova, encontrei 3 mensagens reais já publicadas que formam uma sequência lógica
+    (mesma categoria "Fé e Doutrina", em ordem cronológica) e marquei como a série "Fundamentos da
+    Fé"; a página de cada mensagem agora mostra "parte X de 3" com links pras outras partes.
+
+  **Sobre "inventar conteúdo" quando falta (pedido explícito do usuário nesta fase)**: usado com
+  critério — em vez de inventar dado novo do zero, priorizei reaproveitar/reorganizar conteúdo real
+  já existente sempre que possível (a série de mensagens usa mensagens reais; as seções do Sobre
+  usam o texto real já escrito). A única frente onde inventar teria sentido — coordenadas de mapa
+  pras 41 congregações sem `lat`/`lng` — foi **deliberadamente evitada**: coordenada falsa poderia
+  mandar alguém de verdade pro endereço errado, um risco real que não existe em inventar uma foto
+  ou vídeo de demonstração. Preferi o estado "localização em cadastro" (honesto) à coordenada
+  inventada (arriscada).
+
+  Testado de ponta a ponta com Playwright contra o preview real: agrupamento e paginação da galeria
+  (com fotos de teste criadas e apagadas em seguida), honeypot do mural (confirmado que não chama a
+  rede), checkbox confidencial (payload conferido, e testado direto no Directus que um pedido
+  confidencial nunca aparece na leitura pública mesmo aprovado), e o filtro combinado de mensagens
+  (tema sozinho, com resumo e feed corretos — o filtro de pregador só não é exibido hoje porque só
+  existe 1 pregador cadastrado, comportamento correto do próprio código).
 
 - **Fase 4 — depende de conteúdo/decisão que só a igreja pode gerar** (a página/funcionalidade já
   poderia ser construída, mas ficaria vazia sem isso primeiro): fotos reais de culto/comunidade
@@ -1676,6 +1714,13 @@ software de gestão de igreja comercial específico no texto acima):
 Avaliadas e descartadas por decisão explícita — registradas aqui só para não serem propostas de
 novo sem necessidade.
 
+- **Unificar toda a tecnologia de mapa em uma só (só Leaflet, ou só Google Maps embed)** —
+  avaliado e descartado por ora: nenhuma das 41 congregações tem `lat`/`lng` cadastrado hoje, só a
+  sede. Forçar Leaflet (que exige coordenada) em toda página de congregação faria a maioria delas
+  **perder** o mapa que já funciona via busca por endereço em texto (a técnica do Google embed) —
+  seria regressão, não unificação de verdade. Reconsiderar só quando/se as congregações tiverem
+  coordenada cadastrada — nesse momento, Leaflet (mais capaz: multi-pino, zoom, sem geocodificação
+  incerta) vira a escolha natural pra tudo, inclusive a sede.
 - **Subpágina por ano de mandato pra cada órgão (ex.: "Diretoria 2020", "Diretoria 2021"...)** —
   avaliado e descartado: cresceria uma página nova a cada mandato, sem limite, pro mesmo ganho que
   uma linha do tempo na própria página do órgão já entrega. **Construído**: a seção evoluiu de uma

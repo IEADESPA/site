@@ -20,6 +20,8 @@ interface DirectusMensagem {
   featured: boolean;
   draft: boolean;
   body: string;
+  serie: string | null;
+  serie_ordem: number | null;
 }
 
 export interface PostData {
@@ -33,6 +35,8 @@ export interface PostData {
   videoUrl?: string;
   featured: boolean;
   draft: boolean;
+  serie?: string;
+  serieOrdem?: number;
 }
 
 /** Continua com a forma `{ id, data, body }` do Astro Content Collections de
@@ -61,9 +65,20 @@ function toPost(m: DirectusMensagem): Post {
       videoUrl: m.video_url ?? undefined,
       featured: m.featured,
       draft: m.draft,
+      serie: m.serie ?? undefined,
+      serieOrdem: m.serie_ordem ?? undefined,
     },
   };
 }
+
+/** Outras mensagens da mesma série, em ordem — usado na página da mensagem
+ * pra navegar entre as partes ("parte 2 de 3", com link pras demais). */
+export const getSerie = (posts: Post[], post: Post) => {
+  if (!post.data.serie) return [];
+  return posts
+    .filter((p) => p.data.serie === post.data.serie)
+    .sort((a, b) => (a.data.serieOrdem ?? 0) - (b.data.serieOrdem ?? 0));
+};
 
 /** Busca todas as mensagens do Directus. Roda em tempo de build. */
 export async function getAllMensagens(): Promise<Post[]> {

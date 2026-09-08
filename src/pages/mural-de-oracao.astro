@@ -41,12 +41,30 @@ const allPosts = visiblePosts(await getAllMensagens());
           <label class="text-sm font-semibold" for="mural-nome">Seu nome (opcional)</label>
           <input id="mural-nome" name="nome" type="text" maxlength="80" class="field" placeholder="Deixe em branco para publicar como anônimo" />
         </div>
+
+        <label class="mural-confidencial-toggle">
+          <input type="checkbox" id="mural-confidencial" name="confidencial" />
+          <span>
+            <strong>Enviar de forma confidencial</strong> — só a equipe pastoral vê, nunca aparece
+            publicado aqui no mural.
+          </span>
+        </label>
+
+        <!-- Honeypot: campo escondido de gente de verdade (CSS oculta), que
+             bot de spam costuma preencher automaticamente. Se vier
+             preenchido, a gente finge que deu certo e não manda pra frente. -->
+        <div class="mural-honeypot" aria-hidden="true">
+          <label for="mural-site">Deixe este campo em branco</label>
+          <input type="text" id="mural-site" name="site" tabindex="-1" autocomplete="off" />
+        </div>
+
         <button type="submit" class="btn btn-solid">Enviar pedido</button>
         <p class="text-sm" data-mural-status role="status" aria-live="polite"></p>
         <p class="text-xs leading-relaxed text-muted-foreground">
           Não serão publicados: mensagens ofensivas, discurso de ódio, conteúdo político-partidário,
           propaganda comercial, spam, ou dados sensíveis de terceiros (endereço, telefone, valores).
-          A equipe se reserva o direito de não publicar pedidos fora desse propósito.
+          A equipe se reserva o direito de não publicar pedidos fora desse propósito. Pedidos
+          públicos normalmente são revisados e publicados em até 2 dias úteis.
         </p>
       </form>
 
@@ -177,18 +195,30 @@ const allPosts = visiblePosts(await getAllMensagens());
         event.preventDefault();
         const texto = document.getElementById("mural-texto").value.trim();
         const nome = document.getElementById("mural-nome").value.trim();
+        const confidencial = document.getElementById("mural-confidencial").checked;
+        const honeypot = document.getElementById("mural-site").value;
         if (!texto) return;
+
+        // Bot preencheu o campo escondido — finge sucesso sem mandar nada
+        // pro Directus, sem dar nenhuma pista pro bot de que foi barrado.
+        if (honeypot) {
+          form.reset();
+          status.textContent = "Recebido! Seu pedido será revisado em breve.";
+          return;
+        }
 
         status.textContent = "Enviando…";
         try {
           const res = await fetch(`${directusUrl}/items/mural_oracao`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ texto, nome: nome || null }),
+            body: JSON.stringify({ texto, nome: nome || null, confidencial }),
           });
           if (!res.ok) throw new Error("falha ao enviar");
           form.reset();
-          status.textContent = "Recebido! Seu pedido será revisado e publicado em breve.";
+          status.textContent = confidencial
+            ? "Recebido! Seu pedido confidencial vai direto pra equipe pastoral, sem ser publicado."
+            : "Recebido! Seu pedido será revisado e publicado em até 2 dias úteis.";
         } catch {
           status.textContent = "Não foi possível enviar agora. Tente novamente em instantes.";
         }
@@ -274,6 +304,39 @@ const allPosts = visiblePosts(await getAllMensagens());
   <style>
     .mural-canvas {
       max-width: 44rem;
+    }
+
+    .mural-confidencial-toggle {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      border-left: 3px solid var(--accent);
+      background: var(--muted);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      color: var(--muted-foreground);
+      cursor: pointer;
+    }
+
+    .mural-confidencial-toggle input {
+      margin-top: 0.2rem;
+      accent-color: var(--accent);
+    }
+
+    /* Escondido pra gente de verdade (some visualmente e do layout), mas
+       ainda presente no HTML e preenchível por bot que não roda CSS. */
+    .mural-honeypot {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .mural-card {

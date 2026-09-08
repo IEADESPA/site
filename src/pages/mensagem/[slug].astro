@@ -15,6 +15,7 @@ import {
   getAdjacent,
   getAllMensagens,
   getRelated,
+  getSerie,
   postHref,
   postSlug,
   readingLabel,
@@ -39,6 +40,7 @@ const { post, allPosts } = Astro.props;
 const bodyHtml = await marked.parse(post.body);
 const data = post.data;
 const related = getRelated(allPosts, post);
+const serie = getSerie(allPosts, post);
 const { newer, older } = getAdjacent(allPosts, post);
 const authorHref = `/pregador/${authorSlug(data.author.name)}/`;
 const articleUrl = new URL(postHref(post), siteConfig.siteUrl).toString();
@@ -115,6 +117,27 @@ const structuredData = [
               Assistir à pregação
             </a>
           </p>
+        )}
+
+        {serie.length > 1 && (
+          <div class="mt-6 serie-nav">
+            <p class="text-xs font-semibold uppercase tracking-wide text-accent">
+              Série: {data.serie} · parte {data.serieOrdem} de {serie.length}
+            </p>
+            <ol class="mt-2 grid gap-1.5 text-sm">
+              {serie.map((item) => (
+                <li>
+                  {item.id === post.id ? (
+                    <span class="font-semibold">{item.data.serieOrdem}. {item.data.title} (esta mensagem)</span>
+                  ) : (
+                    <a href={postHref(item)} class="text-accent underline underline-offset-2">
+                      {item.data.serieOrdem}. {item.data.title}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
         )}
 
         <div class="mt-8 border-t border-border pt-6">
@@ -213,6 +236,18 @@ const structuredData = [
   </script>
 
   <style>
+    .serie-nav {
+      border-left: 3px solid var(--accent);
+      background: var(--muted);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1.1rem;
+    }
+
+    .serie-nav ol {
+      list-style: none;
+      padding: 0;
+    }
+
     .post-meta {
       column-gap: 0.55rem;
     }
