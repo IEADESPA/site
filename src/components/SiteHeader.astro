@@ -149,10 +149,10 @@ const isCurrentPath = (href: string) =>
       </div>
 
       <div class="search-filters" data-search-filters role="tablist" aria-label="Filtrar por tipo">
-        <button type="button" class="search-filter is-active" data-filter="" role="tab" aria-selected="true">Tudo</button>
+        <button type="button" class="search-filter is-active" data-filter="" role="tab" aria-selected="true" tabindex="0">Tudo</button>
         {
           SEARCH_GROUPS.map((group) => (
-            <button type="button" class="search-filter" data-filter={group} role="tab" aria-selected="false">
+            <button type="button" class="search-filter" data-filter={group} role="tab" aria-selected="false" tabindex="-1">
               {GROUP_LABEL_PLURAL[group]}
             </button>
           ))
@@ -227,6 +227,7 @@ const isCurrentPath = (href: string) =>
     const summary = dialog?.querySelector("[data-search-summary]");
     const panel = dialog?.querySelector("[data-search-panel]");
     const filters = dialog?.querySelectorAll("[data-filter]");
+    const filtersContainer = dialog?.querySelector("[data-search-filters]");
     const fallback = JSON.parse(document.getElementById("site-search-fallback")?.textContent || "[]");
     let index = [];
     let indexPromise;
@@ -349,17 +350,44 @@ const isCurrentPath = (href: string) =>
       if (dialog?.open) dialog.close();
     };
 
-    filters?.forEach((button) => {
-      button.addEventListener("click", () => {
-        activeGroup = button.dataset.filter || "";
-        filters.forEach((other) => {
-          const isActive = other === button;
-          other.classList.toggle("is-active", isActive);
-          other.setAttribute("aria-selected", String(isActive));
-        });
-        void render();
-        input?.focus();
+    const filterButtons = filters ? Array.from(filters) : [];
+
+    function selecionarFiltro(button, { moveFocusToInput = false } = {}) {
+      activeGroup = button.dataset.filter || "";
+      filterButtons.forEach((other) => {
+        const isActive = other === button;
+        other.classList.toggle("is-active", isActive);
+        other.setAttribute("aria-selected", String(isActive));
+        // Roving tabindex: só a aba selecionada fica no Tab normal da
+        // página — as outras só são alcançáveis pelas setas, como o padrão
+        // ARIA de abas exige (senão o Tab pularia por todas, uma a uma).
+        other.setAttribute("tabindex", isActive ? "0" : "-1");
       });
+      void render();
+      if (moveFocusToInput) input?.focus();
+    }
+
+    filterButtons.forEach((button) => {
+      button.addEventListener("click", () => selecionarFiltro(button, { moveFocusToInput: true }));
+    });
+
+    /* Padrão ARIA de tabs: seta esquerda/direita move e já ativa o filtro
+       vizinho (ativação automática), Home/End pulam pro primeiro/último. */
+    filtersContainer?.addEventListener("keydown", (event) => {
+      const currentIndex = filterButtons.indexOf(document.activeElement);
+      if (currentIndex === -1) return;
+
+      let nextIndex = null;
+      if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % filterButtons.length;
+      else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + filterButtons.length) % filterButtons.length;
+      else if (event.key === "Home") nextIndex = 0;
+      else if (event.key === "End") nextIndex = filterButtons.length - 1;
+      else return;
+
+      event.preventDefault();
+      const nextButton = filterButtons[nextIndex];
+      selecionarFiltro(nextButton);
+      nextButton.focus();
     });
 
     toggle?.addEventListener("click", (event) => {

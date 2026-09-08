@@ -156,7 +156,7 @@ const allPosts = visiblePosts(await getAllMensagens());
               ${jaOrou ? "disabled" : ""}
               aria-pressed="${jaOrou ? "true" : "false"}"
             >
-              🙏 ${jaOrou ? "Você orou por este pedido" : "Orando por você"} <span data-orar-count>(${item.orando_count})</span>
+              🙏 ${jaOrou ? "Você orou por este pedido" : "Orando por você"} <span data-orar-count role="status" aria-live="polite">(${item.orando_count})</span>
             </button>
           </footer>
         </article>
@@ -253,7 +253,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         btn.disabled = true;
         btn.setAttribute("aria-pressed", "true");
         const novoCount = Number(btn.dataset.count) + 1;
-        btn.innerHTML = `🙏 Você orou por este pedido <span data-orar-count>(${novoCount})</span>`;
+        btn.innerHTML = `🙏 Você orou por este pedido <span data-orar-count role="status" aria-live="polite">(${novoCount})</span>`;
         btn.dataset.count = String(novoCount);
         try {
           await fetch(`${directusUrl}/items/mural_oracao/${id}`, {

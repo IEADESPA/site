@@ -255,8 +255,10 @@ const linhaDoTempo = [...membros, ...historico]
 
 <style>
   .placeholder-text {
+    /* Só itálico, sem reduzir opacidade — opacidade em cima de
+       text-muted-foreground caiu pra 3.08:1 de contraste (confirmado com
+       axe-core), abaixo do 4.5:1 exigido pelo WCAG AA pra texto normal. */
     font-style: italic;
-    opacity: 0.7;
   }
 
   .leader-card {

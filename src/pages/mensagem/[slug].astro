@@ -121,7 +121,7 @@ const structuredData = [
 
         {serie.length > 1 && (
           <div class="mt-6 serie-nav">
-            <p class="text-xs font-semibold uppercase tracking-wide text-accent">
+            <p class="text-xs font-semibold uppercase tracking-wide serie-nav-eyebrow">
               Série: {data.serie} · parte {data.serieOrdem} de {serie.length}
             </p>
             <ol class="mt-2 grid gap-1.5 text-sm">
@@ -130,7 +130,7 @@ const structuredData = [
                   {item.id === post.id ? (
                     <span class="font-semibold">{item.data.serieOrdem}. {item.data.title} (esta mensagem)</span>
                   ) : (
-                    <a href={postHref(item)} class="text-accent underline underline-offset-2">
+                    <a href={postHref(item)} class="serie-nav-link underline underline-offset-2">
                       {item.data.serieOrdem}. {item.data.title}
                     </a>
                   )}
@@ -246,6 +246,18 @@ const structuredData = [
     .serie-nav ol {
       list-style: none;
       padding: 0;
+    }
+
+    /* var(--accent) sobre o fundo var(--muted) desta caixa dava 4,27:1
+       (confirmado com axe-core), abaixo do 4.5:1 do WCAG AA — mesmo ajuste
+       já usado no filtro de busca do cabeçalho (--accent-strong chega a
+       5.97:1 nesse mesmo fundo). */
+    .serie-nav-eyebrow {
+      color: var(--accent-strong);
+    }
+
+    .serie-nav-link {
+      color: var(--accent-strong);
     }
 
     .post-meta {

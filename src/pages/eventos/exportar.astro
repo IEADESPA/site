@@ -89,6 +89,7 @@ const categorias = [
 
   <script>
     import { jsPDF } from "jspdf";
+    import { configurarAcessibilidadePdf } from "@/lib/pdf";
 
     interface EventoExport {
       title: string;
@@ -248,6 +249,7 @@ const categorias = [
       const inicioTitulo = logo ? margem + 34 : margem;
 
       const tituloPersonalizado = tituloInput?.value.trim();
+      configurarAcessibilidadePdf(doc, tituloPersonalizado || "Programação de eventos");
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
       doc.setTextColor(...COR_ACCENT_ESCURO);

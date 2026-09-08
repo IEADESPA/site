@@ -277,7 +277,7 @@ const structuredData = startDate
                 event.vagas_limite && (
                   <li>
                     <strong class="text-foreground">Vagas limitadas:</strong> {event.vagas_limite}{" "}
-                    <span data-vagas-restantes></span>
+                    <span data-vagas-restantes role="status" aria-live="polite"></span>
                   </li>
                 )
               }
@@ -337,7 +337,7 @@ const structuredData = startDate
                   </button>
                   <div class="grid gap-2 mt-2" data-cupom-campo hidden>
                     <input type="text" class="field" placeholder="Código do cupom" data-cupom-input autocapitalize="characters" />
-                    <p class="text-xs text-muted-foreground" data-cupom-status></p>
+                    <p class="text-xs text-muted-foreground" data-cupom-status role="status" aria-live="polite"></p>
                   </div>
                 </div>
 

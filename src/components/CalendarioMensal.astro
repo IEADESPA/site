@@ -114,9 +114,20 @@ const { events } = Astro.props;
         const cell = document.createElement("button");
         cell.type = "button";
         cell.className = "calendario-day";
-        if (key === todayKey) cell.classList.add("is-today");
+        const isToday = key === todayKey;
+        if (isToday) {
+          cell.classList.add("is-today");
+          cell.setAttribute("aria-current", "date");
+        }
         if (dayEvents) cell.classList.add("has-event");
-        cell.textContent = String(day);
+
+        // A cor nunca é o único jeito de saber "hoje"/"tem evento" — quem
+        // não distingue bem cor (ou usa leitor de tela) ainda tem essa
+        // informação por texto, mesmo que oculto visualmente.
+        const sufixo = [isToday && "hoje", dayEvents && "tem evento"].filter(Boolean).join(", ");
+        cell.innerHTML = sufixo
+          ? `${day}<span class="sr-only"> (${sufixo})</span>`
+          : String(day);
 
         if (dayEvents) {
           cell.addEventListener("click", () => {
@@ -213,14 +224,31 @@ const { events } = Astro.props;
   }
 
   .calendario-day.is-today {
+    border-width: 2px;
+    border-style: dashed;
     border-color: var(--border-strong);
   }
 
   .calendario-day.has-event {
+    position: relative;
     cursor: pointer;
     background: color-mix(in srgb, var(--accent) 15%, transparent);
     color: var(--accent);
     font-weight: 700;
+  }
+
+  /* Ponto abaixo do número: sinal de forma, não só de cor, pra quem tem
+     dificuldade de distinguir cor mas ainda enxerga forma/posição. */
+  .calendario-day.has-event::after {
+    content: "";
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    transform: translateX(-50%);
   }
 
   .calendario-day.has-event:hover {

@@ -672,15 +672,49 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
   esses continuam candidatos a uma rotina de arquivamento/exclusão periódica, a ser documentada como
   processo manual quando essa fase for priorizada.
 
-- **Fase 8 — acessibilidade (WCAG)**: no PDF de certificado/crachá (`jsPDF`), nenhuma biblioteca
-  gratuita gera tagging completo — o realista é definir idioma do documento e aceitar que o
-  check-in físico já cobre a necessidade prática; o ponto que dá pra corrigir de verdade é o QR
-  code do check-in, que não tem `alt` nem alternativa textual pensada para quem não consegue
-  escanear sozinho; atualizações dinâmicas sem `aria-live` (vagas restantes, status de cupom,
-  contador do mural de oração — inconsistente com o resto do site, que já faz isso certo em vários
-  outros lugares); `role="tab"` nos filtros de busca sem o padrão de teclado que essa role promete
-  (pior que não ter role nenhuma); calendário mensal marcando "hoje"/"tem evento" só por cor, sem
-  texto acessível.
+- [x] **Fase 8 — acessibilidade (WCAG).** Pedida pelo usuário pra ir além do mínimo ("ser o
+  exemplo"). Todos os 5 pontos já identificados foram corrigidos, e a correção foi verificada com
+  uma ferramenta de verdade (`axe-core`, o motor de regras usado por auditorias profissionais de
+  acessibilidade), não só por leitura de código:
+
+  - **Idioma nos PDFs gerados** (`jsPDF` não faz tagging completo — nenhuma biblioteca gratuita
+    faz — mas declarar idioma do documento é suportado e muda a pronúncia do leitor de tela): novo
+    helper `src/lib/pdf.ts` (`configurarAcessibilidadePdf`), aplicado nos **6 pontos do site que
+    geram PDF** — certificado, crachá, PDF de programação de eventos, relatório de encerramento, e
+    os dois downloads em lote (crachás/certificados de todos os confirmados) — não só nos 2
+    originalmente citados.
+  - **QR Code com alternativa textual**: `alt` no QR de check-in (`qrcode-generator` suporta um
+    3º parâmetro em `createImgTag` pra isso) explicando que o operador também aceita o código
+    digitado manualmente — e, de propósito, também no QR Pix de `/doacoes/`, que tinha o mesmo
+    problema sem estar na lista original.
+  - **`aria-live` nas 3 atualizações dinâmicas** citadas (vagas restantes, status de cupom,
+    contador "orando por você" do mural) — agora consistentes com o resto do site.
+  - **Padrão de teclado de verdade nas abas de busca** (`role="tab"` sem teclado é pior que nenhuma
+    role): implementado o padrão ARIA completo — seta esquerda/direita move e ativa a aba vizinha,
+    Home/End pulam pro primeiro/último, *roving tabindex* (só a aba ativa fica no `Tab` normal da
+    página). **Um bug real foi pego testando isso de verdade com Playwright**: o listener de teclado
+    tinha sido preso a um `NodeList` (`querySelectorAll`), que não tem `addEventListener` — o erro
+    lançado no meio do script travava *todo o resto* dele, o que teria quebrado silenciosamente o
+    botão de instalar o PWA, o menu mobile e o tema junto (tudo registrado depois daquela linha no
+    mesmo arquivo). Corrigido antes de qualquer deploy.
+  - **Calendário mensal**: "hoje" agora também tem `aria-current="date"` e borda tracejada (forma,
+    não só cor); dias com evento ganham um ponto sob o número (forma) além da cor; os dois ganham
+    texto oculto pra leitor de tela (`(hoje, tem evento)`).
+
+  **Ido além do que foi pedido** — auditoria automatizada com `axe-core` (regras WCAG 2.0/2.1 A e
+  AA) rodada contra **28 páginas reais do site** (não só as 5 áreas citadas), que **encontrou 2
+  problemas reais que ninguém tinha listado**:
+  - O texto placeholder "Biografia a ser adicionada." (criado na própria Fase 4 desta sessão) tinha
+    contraste de só 3,08:1 — a opacidade reduzida (`opacity: 0.7`) aplicada sobre um texto já
+    "muted" caiu abaixo do 4.5:1 exigido. Corrigido removendo a opacidade (o itálico sozinho já
+    diferencia visualmente, sem prejudicar quem precisa de mais contraste).
+  - A caixa "Série" de `/mensagem/[slug]/` (Fase 3) tinha texto na cor de destaque (`--accent`)
+    sobre o fundo `--muted` da própria caixa, medindo 4,27:1 — abaixo do 4.5:1. Corrigido trocando
+    para `--accent-strong` (mesmo ajuste que o filtro de busca do cabeçalho já usava, por motivo
+    idêntico, então virou consistente com um padrão que já existia).
+
+  Depois das duas correções, **nova rodada do `axe-core` nas mesmas 28 páginas voltou com 0
+  violações.**
 
 - **Fase 9 — performance e Core Web Vitals**: `fetchpriority="high"` nas imagens de capa de
   evento/mensagem/notícia (já usam `loading="eager"` certo, só falta esse atributo — maior retorno
@@ -1011,7 +1045,7 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   aceita, quem pode fixar/desafixar da home, quantos itens fixados ao mesmo tempo) — por isso ficam
   só como intenção registrada, não como escopo fechado igual às Fases 21 e 22.
 
-**Fases 0 a 7 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 8 a 23,
+**Fases 0 a 8 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 9 a 23,
 nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia antes
 mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em

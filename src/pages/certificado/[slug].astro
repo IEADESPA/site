@@ -94,6 +94,7 @@ const periodoEvento = event.event_date
   <script>
     import { jsPDF } from "jspdf";
     import { carregarLogoCertificado, desenharCertificado } from "@/lib/certificado";
+    import { configurarAcessibilidadePdf } from "@/lib/pdf";
 
     const form = document.querySelector<HTMLFormElement>("[data-certificado-form]");
     if (!form) throw new Error("formulário de certificado ausente");
@@ -109,6 +110,7 @@ const periodoEvento = event.event_date
     async function gerarCertificado(nome: string) {
       const logo = await carregarLogoCertificado();
       const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+      configurarAcessibilidadePdf(doc, `Certificado — ${nome} — ${eventoTitulo}`);
       desenharCertificado(doc, { nome, eventoTitulo, eventoPeriodo, logo });
       doc.save(`certificado-${nome.toLowerCase().replace(/\s+/g, "-")}.pdf`);
     }

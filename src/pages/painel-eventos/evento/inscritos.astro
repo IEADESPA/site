@@ -128,6 +128,7 @@ const allPosts = visiblePosts(await getAllMensagens());
 
   <script>
     import { jsPDF } from "jspdf";
+    import { configurarAcessibilidadePdf } from "@/lib/pdf";
     import { carregarLogoCertificado, desenharCertificado } from "@/lib/certificado";
     import { desenharCracha } from "@/lib/cracha";
     import { contarRespostas, graficoBarrasSvg } from "@/lib/graficos";
@@ -736,6 +737,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         try {
           const logo = await carregarLogoCertificado();
           const doc = new jsPDF({ unit: "pt", format: "a4" });
+          configurarAcessibilidadePdf(doc, `Crachás — ${eventoTitulo}`);
           const margem = 24;
           const largura = doc.internal.pageSize.getWidth();
           const altura = doc.internal.pageSize.getHeight();
@@ -781,6 +783,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         try {
           const logo = await carregarLogoCertificado();
           const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+          configurarAcessibilidadePdf(doc, `Certificados — ${eventoTitulo}`);
           presentes.forEach((pessoa, index) => {
             if (index > 0) doc.addPage();
             desenharCertificado(doc, { nome: pessoa.nome, eventoTitulo, eventoPeriodo, logo });

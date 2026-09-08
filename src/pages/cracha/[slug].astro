@@ -86,6 +86,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     import { jsPDF } from "jspdf";
     import { carregarLogoCertificado } from "@/lib/certificado";
     import { desenharCracha } from "@/lib/cracha";
+    import { configurarAcessibilidadePdf } from "@/lib/pdf";
 
     const form = document.querySelector<HTMLFormElement>("[data-cracha-form]");
     if (!form) throw new Error("formulário de crachá ausente");
@@ -101,6 +102,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     async function gerarCracha(nome: string) {
       const logo = await carregarLogoCertificado();
       const doc = new jsPDF({ unit: "pt", format: "a4" });
+      configurarAcessibilidadePdf(doc, `Crachá — ${nome} — ${eventoTitulo}`);
       const largura = 260;
       const altura = 340;
       const x = (doc.internal.pageSize.getWidth() - largura) / 2;

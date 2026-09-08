@@ -99,7 +99,11 @@ const allPosts = visiblePosts(await getAllMensagens());
         const qr = qrcode(0, "M");
         qr.addData(`${eventoId}:${codigo}`);
         qr.make();
-        imagemEl.innerHTML = qr.createImgTag(8, 8);
+        imagemEl.innerHTML = qr.createImgTag(
+          8,
+          8,
+          `QR Code de check-in de ${nome}. Se não conseguir escanear, o operador também aceita o código ${codigo} digitado manualmente.`,
+        );
         resultado.textContent = `✅ QR Code de ${nome} pronto — mostre pra portaria.`;
       }
 

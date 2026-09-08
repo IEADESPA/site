@@ -121,7 +121,11 @@ const pixPayload = buildPixPayload({
       const qr = qrcode(0, "M");
       qr.addData(qrEl.dataset.pixPayload);
       qr.make();
-      qrEl.innerHTML = qr.createImgTag(6, 8);
+      qrEl.innerHTML = qr.createImgTag(
+        6,
+        8,
+        "QR Code Pix para doação. Se preferir, use o botão abaixo para copiar o código Pix e colar no aplicativo do seu banco.",
+      );
     }
 
     const copiarBtn = document.querySelector("[data-pix-copiar]");

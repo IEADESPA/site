@@ -426,6 +426,7 @@ const tipoPerguntaOpcoes = [
 
   <script>
     import { jsPDF } from "jspdf";
+    import { configurarAcessibilidadePdf } from "@/lib/pdf";
     import { contarRespostas, desenharGraficoBarrasPDF, graficoBarrasSvg } from "@/lib/graficos";
     import { exigirAutenticacao } from "@/lib/painelAuth";
 
@@ -1057,6 +1058,7 @@ const tipoPerguntaOpcoes = [
 
           // --- PDF: resumo + fechamento de caixa ---
           const doc = new jsPDF({ unit: "pt", format: "a4" });
+          configurarAcessibilidadePdf(doc, `Relatório de encerramento — ${evento.title}`);
           const margem = 56;
           let y = margem;
 
