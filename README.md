@@ -623,11 +623,13 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
     site + Function juntos exatamente como em produção): inscrição real por navegador (Playwright)
     até o Directus, QR Code real gerado com o telefone certo, rejeitado com o telefone errado,
     limite de tentativas confirmado bloqueando. Zero linhas de dado de teste deixadas no Directus.
-  - **Pendente**: as Application Settings do Static Web App (`DIRECTUS_URL`,
-    `DIRECTUS_ADMIN_TOKEN`) precisam ser configuradas por quem tem acesso ao recurso (fora do
-    escopo do service principal desta sessão, que só cobre os 3 recursos do Directus) — comando
-    exato deixado combinado na conversa. O Flow antigo do Directus (`Verificar inscricao (codigo +
-    telefone)`) fica desativado, não apagado, até essa configuração ser confirmada em produção.
+  - **Confirmado em produção**: as Application Settings do Static Web App (`DIRECTUS_URL`,
+    `DIRECTUS_ADMIN_TOKEN`) foram configuradas pelo usuário (fora do escopo do service principal
+    desta sessão, que só cobre os 3 recursos do Directus, não o Static Web App). Testado de novo
+    direto em `www.ieadespa.org.br` depois da configuração — inscrição real, verificação com
+    telefone certo e errado, tudo respondendo certo — e o dado de teste apagado em seguida. O Flow
+    antigo do Directus (`Verificar inscricao (codigo + telefone)`) foi **apagado** (não só
+    desativado) depois dessa confirmação.
 
 - **Fase 7 — LGPD e privacidade** (a política de privacidade hoje é literalmente um rascunho —
   `privacidade.astro` ainda tem o comentário "Substitua pelo texto definitivo... antes de publicar
