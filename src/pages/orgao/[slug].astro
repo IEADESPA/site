@@ -74,6 +74,22 @@ function anosNoCargo(desde: string | null): number | null {
   const anos = new Date().getFullYear() - ano;
   return anos >= 0 ? anos : null;
 }
+
+function extrairAno(texto: string | null): number | null {
+  if (!texto) return null;
+  const match = /\b(19|20)\d{2}\b/.exec(texto);
+  return match ? Number(match[0]) : null;
+}
+
+// Linha do tempo: membros atuais e anteriores juntos, em ordem
+// cronológica — assim dá pra ver a sucessão completa (quem esteve em cada
+// período), não só "quem está agora" separado de "quem já passou". Só
+// aparece quando existe pelo menos um registro histórico; com só membros
+// atuais, o card/grade lá em cima já cobre a necessidade.
+const idsAtuais = new Set(membros.map((m) => m.id));
+const linhaDoTempo = [...membros, ...historico]
+  .sort((a, b) => (extrairAno(a.since) ?? 9999) - (extrairAno(b.since) ?? 9999))
+  .map((membro) => ({ ...membro, atual: idsAtuais.has(membro.id) }));
 ---
 
 <BaseLayout title={orgao.name} description={orgao.description}>
@@ -156,26 +172,36 @@ function anosNoCargo(desde: string | null): number | null {
 
       {
         historico.length > 0 && (
-          <details class="mt-12 historico-details">
-            <summary class="cursor-pointer text-sm font-semibold text-accent">
-              Ver quem já compôs este órgão ({historico.length})
-            </summary>
-            <ul class="mt-5 grid gap-4 sm:grid-cols-2">
-              {historico.map((membro) => (
-                <li class="board-card">
-                  <span class="block text-xs font-semibold tracking-wide text-muted-foreground uppercase">{membro.role}</span>
-                  <span class="mt-1 block text-lg font-semibold tracking-tight">{membro.name}</span>
-                  {(membro.since || membro.term_end) && (
-                    <span class="mt-0.5 block text-xs text-muted-foreground">
-                      {membro.since && `Desde ${membro.since}`}
-                      {membro.since && membro.term_end && " · "}
-                      {membro.term_end && `Até ${membro.term_end}`}
-                    </span>
-                  )}
+          <section class="mt-16" aria-labelledby="timeline-heading">
+            <h2 id="timeline-heading" class="section-title">Linha do tempo</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Quem já compôs este órgão ao longo do tempo, do mais antigo ao atual.
+            </p>
+            <ol class="mt-6 timeline">
+              {linhaDoTempo.map((membro) => (
+                <li class={`timeline-item ${membro.atual ? "is-atual" : ""}`}>
+                  <span class="timeline-dot" aria-hidden="true" />
+                  <div class="timeline-card">
+                    {membro.photo && (
+                      <img
+                        src={directusAssetUrl(membro.photo, { width: 120, height: 120, fit: "cover", quality: 80, format: "webp" })}
+                        alt={membro.name}
+                        class="timeline-photo"
+                      />
+                    )}
+                    <div>
+                      <span class="timeline-periodo">
+                        {membro.since || "?"} — {membro.atual ? "atual" : membro.term_end || "?"}
+                        {anosNoCargo(membro.since) !== null && membro.atual && ` (há ${anosNoCargo(membro.since)} anos)`}
+                      </span>
+                      <p class="mt-0.5 text-lg font-semibold tracking-tight">{membro.name}</p>
+                      <p class="text-sm text-muted-foreground">{membro.role}</p>
+                    </div>
+                  </div>
                 </li>
               ))}
-            </ul>
-          </details>
+            </ol>
+          </section>
         )
       }
 
@@ -261,7 +287,71 @@ function anosNoCargo(desde: string | null): number | null {
     letter-spacing: 0.02em;
   }
 
-  .historico-details ul {
-    opacity: 0.9;
+  .timeline {
+    position: relative;
+    display: grid;
+    gap: 1.75rem;
+    list-style: none;
+    padding-left: 1.75rem;
+    margin: 0;
+  }
+
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 0.3rem;
+    top: 0.4rem;
+    bottom: 0.4rem;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .timeline-item {
+    position: relative;
+  }
+
+  .timeline-dot {
+    position: absolute;
+    left: -1.75rem;
+    top: 0.35rem;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: var(--radius-full);
+    background: var(--muted-foreground);
+  }
+
+  .timeline-item.is-atual .timeline-dot {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  .timeline-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+  }
+
+  .timeline-item.is-atual .timeline-card {
+    border-color: var(--accent);
+  }
+
+  .timeline-photo {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .timeline-periodo {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 </style>

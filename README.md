@@ -464,18 +464,14 @@ pesquisa transversal mais abaixo:
   Ponto de atenção de LGPD (liga com a Fase 7): confirmar que o número cadastrado é uma linha
   institucional, não o celular pessoal de um líder específico.
 
-- **Fase 15 — comunidade (pequenos grupos e voluntariado)**: "servir/seja voluntário" já havia sido
-  avaliado e rejeitado (Fase 5) por precisar de vagas reais primeiro — a pesquisa aprofunda o
-  motivo: o formato "lista de vagas abertas" tem uma causa estrutural de ficar desatualizado numa
-  operação pequena e voluntária, e isso não desaparece só porque surgem vagas reais no futuro,
-  precisa trocar de formato. Alternativa de baixíssimo risco e esforço mínimo: uma opção "Quero
-  servir" dentro de `/contato/`, no mesmo molde já construído e testado do "Pedido de oração" —
-  formulário de interesse que a liderança direciona manualmente, sem lista pública de vagas que
-  possa envelhecer. Pequenos grupos/células: modelo de dado existiria (nome/tema, líder, dia,
-  bairro aproximado — não endereço exato, por privacidade), mas **depende de confirmar com a
-  liderança se existe de fato um programa formal de grupos pequenos** (a estrutura visível hoje é
-  por congregação/ponto de pregação, não célula doméstica) — sem essa confirmação, não construir,
-  pelo mesmo motivo que já levou a não inventar dado na Fase 4 (história).
+- **Fase 15 — comunidade (pequenos grupos)**: pequenos grupos/células teriam modelo de dado simples
+  (nome/tema, líder, dia, bairro aproximado — não endereço exato, por privacidade), mas **depende de
+  confirmar com a liderança se existe de fato um programa formal de grupos pequenos** (a estrutura
+  visível hoje é por congregação/ponto de pregação, não célula doméstica) — sem essa confirmação,
+  não construir, pelo mesmo motivo que já levou a não inventar dado na Fase 4 (história). O item
+  "servir/seja voluntário" (incluindo a variante mais leve "Quero servir" dentro de `/contato/`,
+  proposta numa rodada de pesquisa anterior) foi **definitivamente descartado** — ver justificativa
+  do usuário em "Ideias rejeitadas".
 
 Última leva pedida pelo usuário, focada em painéis/sistemas de **gestão interna** (não página
 pública). Depois de revisar essa leva, o usuário esclareceu um limite importante que vale registrar
@@ -549,7 +545,30 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   pesquisados e **descartados** (ver "Ideias rejeitadas") — o "versículo do dia" já existente
   cumpre esse papel sem risco de abandono.
 
-**Nada deste plano foi construído ainda** (fases 1 a 19), com duas exceções: o app instalável da
+- **Fase 20 — acervo histórico ampliado**: pedida pelo usuário depois de ver a linha do tempo visual
+  construída pra histórico de liderança de órgão (Fase 1) — a mesma ideia, só que pro acervo da
+  igreja inteira. **A estrutura técnica já existe**: `/historia/` já é uma timeline visual completa
+  (navegação por ano, foto, texto), com 21 marcos cadastrados (2006 a 2026). **O problema não é
+  técnico, é de conteúdo**: boa parte desses marcos tem título genérico ("Segunda congregação",
+  "Ministério de comunicação e mídia") sem foto nem relato de verdade — os últimos ~20 anos de
+  história da igreja não foram documentados/reunidos ainda, e recuperar isso agora depende de
+  encontrar pessoas que guardam fotos e lembranças de época, não de escrever código. Mesmo padrão
+  já registrado na Fase 4 (conteúdo que só a igreja pode gerar) — **não é pra construir nada agora**,
+  é pra registrar a intenção e o que fica pronto assim que o conteúdo chegar:
+  - Hoje cada marco só aceita **uma foto**; caberia um campo de galeria (múltiplas fotos por
+    marco/era), já que um evento histórico de verdade raramente tem só um registro fotográfico.
+  - **Preservação de qualidade já está coberta pela arquitetura atual, vale confirmar isso ao
+    usuário em vez de tratar como pendência**: o Directus nunca sobrescreve o arquivo original
+    enviado — os parâmetros de largura/qualidade (`directusAssetUrl(..., { width, quality })`)
+    geram só uma versão derivada pra exibição no site, o arquivo em alta resolução enviado continua
+    guardado integralmente no Blob Storage. O cuidado real fica do lado de quem digitaliza uma foto
+    física antiga: escanear na maior resolução possível antes de enviar, já que o site preserva
+    fielmente o que for enviado, não consegue "recuperar" qualidade que a digitalização não captou.
+  - Sem tráfego pago em hipótese nenhuma — o "achado de pessoas com fotos antigas" citado pelo
+    usuário é trabalho humano de pedir/reunir material, fora do escopo de qualquer coisa que o site
+    resolva sozinho.
+
+**Nada deste plano foi construído ainda** (fases 1 a 20), com duas exceções: o app instalável da
 Fase 13 (que já existia) e a **Fase 0, construída e testada** (correção do contador do mural de
 oração, redução do vazamento de inscritos e conserto dos labels da pesquisa de satisfação — ver
 detalhe na própria Fase 0, acima). O detalhe completo de cada achado (com a
@@ -1640,10 +1659,19 @@ novo sem necessidade.
 
 - **Subpágina por ano de mandato pra cada órgão (ex.: "Diretoria 2020", "Diretoria 2021"...)** —
   avaliado e descartado: cresceria uma página nova a cada mandato, sem limite, pro mesmo ganho que
-  uma seção de histórico recolhida (`<details>`) já entrega na própria página do órgão. O campo
-  `current = false` em `orgao_membros` já preserva o dado de quem passou por ali; se um dia quiserem
-  algo mais elaborado (linha do tempo visual, por exemplo), dá pra construir sobre esse mesmo dado
-  sem mudar schema.
+  uma linha do tempo na própria página do órgão já entrega. **Construído**: a seção evoluiu de uma
+  lista recolhida (`<details>`) pra uma linha do tempo visual de verdade — membros atuais e
+  anteriores juntos, em ordem cronológica, com foto, período (`desde`–`até`) e "há X anos" pra quem
+  está há mais tempo — usando o mesmo dado de `orgao_membros`, sem precisar de schema novo nem de
+  subpágina nenhuma.
+- **"Servir/seja voluntário" (incluindo a variante leve "Quero servir" em `/contato/`)** —
+  definitivamente descartado, com justificativa do próprio usuário: não faz sentido pra uma igreja
+  tradicional como esta. Faria sentido se a igreja funcionasse como associação/clube de associados
+  (que dependem de recrutar gente ativamente) ou se houvesse um projeto social que ultrapassasse os
+  limites da própria igreja (que precisaria captar voluntário de fora) — não é o caso aqui: membro
+  fala pessoalmente com a liderança, e quem é de fora não teria como servir em área sensível (ex.
+  creche) sem processo de confiança prévio, então um formulário público de "quero servir" ficaria
+  desconectado da realidade prática.
 - **"Ao vivo agora" automático** — aviso que aparece sozinho quando há transmissão ao vivo. As
   duas formas possíveis de fazer isso (interruptor manual no painel, ou checagem automática via
   API) foram descartadas: a primeira tem um fluxo ruim pra quem está no evento, a segunda tem
