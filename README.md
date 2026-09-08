@@ -223,13 +223,34 @@ não foi construído.
     continua funcionando normalmente, depois apaguei os dois registros de teste). **Trade-off aceito
     conscientemente**: check-in, crachá e certificado de um evento páram de funcionar 90 dias depois
     dele — dado o risco de expor a base inteira de inscritos pra sempre, vale mais que a alternativa.
-    **Isto reduz drasticamente o problema, mas não fecha 100%**: eventos dentro dessa janela de 90
-    dias continuam listáveis por completo por quem chamar a API direto (é a mesma limitação de fundo
-    que já torna o `codigo` um "modelo de senha por posse", aceito no restante do site) — o fechamento
-    completo exigiria mover a consulta de lista (usada pelo check-in offline) para trás de login,
-    diferente da consulta de código único (usada por certificado/crachá/check-in online), que já é seguro
-    por natureza. Registrado como possível Fase futura se o risco residual for considerado alto
-    demais.
+    **Isto reduz drasticamente o problema, mas não fechava 100% sozinho**: eventos dentro dessa
+    janela de 90 dias continuavam listáveis por completo por quem chamasse a API direto — e o
+    `codigo` sozinho nunca foi páreo pra isso, porque justamente esse `codigo` também libera
+    certificado/crachá/pesquisa de satisfação de qualquer pessoa, sem checar mais nada.
+    **Segunda camada de correção, feita em seguida a pedido do usuário**: certificado, crachá e
+    pesquisa de satisfação agora exigem **código E telefone combinados**, não só o código —
+    fechando de vez o furo real que o usuário identificou ("puxar o certificado de outra pessoa").
+    Como o telefone nunca esteve entre os campos de leitura pública do Directus, não dava pra
+    simplesmente acrescentar o filtro (o próprio Directus barra filtrar por um campo que a política
+    não permite ler — testado e confirmado). A solução foi um **Flow do Directus** (endpoint
+    `/flows/trigger/<id>`, rodando com `accountability: "all"`, ou seja, acesso interno elevado que
+    ignora a política Public): recebe `{evento, codigo, telefone}`, busca a inscrição por
+    evento+código com leitura irrestrita, compara os últimos 8 dígitos do telefone informado com o
+    cadastrado (tolerando formatação diferente — com DDI, traço, espaço), e só devolve
+    `{encontrado, id, nome, presente, pago}` se as duas coisas baterem — **o telefone em si nunca
+    sai do Directus, nem pro navegador de quem acertou**. As 3 páginas (`certificado/[slug].astro`,
+    `cracha/[slug].astro`, `pesquisa/[slug].astro`) ganharam um campo "Telefone usado na inscrição" e
+    passaram a chamar esse Flow em vez de consultar `inscricoes_eventos` direto. Testado de ponta a
+    ponta contra o Directus real (código certo + telefone certo/errado/ausente, código errado +
+    telefone certo — os 4 casos, com registro de teste criado e apagado em seguida) e com Playwright
+    interceptando a chamada de rede nas 3 páginas (sem telefone barra antes de chamar a rede;
+    telefone errado nega; telefone certo gera o certificado/crachá de verdade e libera a pesquisa).
+    **O que ainda fica de fora, por design**: o check-in por código feito por quem opera a portaria
+    (`/checkin/<slug>/`, incluindo o roster inteiro baixado pro funcionamento offline) continua sem
+    exigir telefone — é uso mediado por equipe da igreja, presencialmente, risco bem menor que uma
+    pessoa remota baixando o certificado de outra. Fechar esse último ponto por completo exigiria
+    autenticação de verdade pra quem opera o check-in (mudança de fluxo maior, registrada como
+    possível Fase futura se um dia for considerada necessária).
   - **Labels quebrados no formulário de pesquisa de satisfação** — cada campo (`pesquisa/[slug].astro`)
     agora recebe um `id` único e o `<label>` correspondente aponta pra ele via `for`; pro campo de
     seleção múltipla (que não é um único controle), o rótulo virou um `<p id>` referenciado via

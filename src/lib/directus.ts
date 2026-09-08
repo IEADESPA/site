@@ -9,6 +9,17 @@ export const DIRECTUS_URL = "https://ieadespa-directus-gae4hfarf4a4ffcf.brazilso
 export const DIRECTUS_ADMIN_URL = `${DIRECTUS_URL}/admin`;
 
 /**
+ * Endpoint do Flow "Verificar inscrição (código + telefone)" — usado por
+ * certificado, crachá e pesquisa de satisfação em vez de consultar
+ * `inscricoes_eventos` direto. Exige código E telefone combinados (não só o
+ * código), pra impedir que alguém gere o certificado/crachá de outra pessoa
+ * só por ter visto/adivinhado o código dela — o telefone nunca é legível
+ * publicamente via API, o Flow roda com acesso interno elevado só pra
+ * conferir a combinação e devolve os dados sem o telefone.
+ */
+export const VERIFICAR_INSCRICAO_URL = `${DIRECTUS_URL}/flows/trigger/5a43eb73-9011-4676-a69d-13cfd550fe76`;
+
+/**
  * Busca uma URL do Directus com tentativas automáticas em caso de erro
  * transitório (5xx ou falha de rede) — o Directus no plano gratuito
  * ocasionalmente fica "sob pressão" por alguns segundos, e sem isso um

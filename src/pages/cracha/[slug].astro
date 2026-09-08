@@ -2,7 +2,7 @@
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
+import { VERIFICAR_INSCRICAO_URL, fetchItems } from "@/lib/directus";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 
 interface Evento {
@@ -45,7 +45,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         data-evento-id={event.id}
         data-evento-titulo={event.title}
         data-evento-tema={event.description ?? ""}
-        data-directus-url={DIRECTUS_URL}
+        data-verificar-url={VERIFICAR_INSCRICAO_URL}
       >
         <div class="grid gap-2">
           <label class="text-sm font-semibold" for="cracha-codigo">Código de confirmação</label>
@@ -59,6 +59,20 @@ const allPosts = visiblePosts(await getAllMensagens());
             class="field cracha-codigo-input"
             placeholder="A3F9K2"
           />
+        </div>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="cracha-telefone">Telefone usado na inscrição</label>
+          <input
+            id="cracha-telefone"
+            name="telefone"
+            type="tel"
+            autocomplete="tel"
+            class="field"
+            placeholder="(00) 00000-0000"
+          />
+          <p class="text-xs text-muted-foreground">
+            Confere que o crachá é mesmo seu — evita que alguém baixe usando só o código.
+          </p>
         </div>
         <button type="submit" class="btn btn-solid">Buscar crachá</button>
       </form>
@@ -79,9 +93,10 @@ const allPosts = visiblePosts(await getAllMensagens());
     const eventoId = form.dataset.eventoId;
     const eventoTitulo = form.dataset.eventoTitulo ?? "";
     const eventoTema = form.dataset.eventoTema ?? "";
-    const directusUrl = form.dataset.directusUrl ?? "";
+    const verificarUrl = form.dataset.verificarUrl ?? "";
     const resultado = document.querySelector<HTMLElement>("[data-cracha-resultado]");
     const codigoInput = document.getElementById("cracha-codigo") as HTMLInputElement;
+    const telefoneInput = document.getElementById("cracha-telefone") as HTMLInputElement;
 
     async function gerarCracha(nome: string) {
       const logo = await carregarLogoCertificado();
@@ -97,18 +112,26 @@ const allPosts = visiblePosts(await getAllMensagens());
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const codigo = codigoInput.value.trim().toUpperCase();
+      const telefone = telefoneInput.value.trim();
       if (!resultado) return;
+
+      if (!telefone) {
+        resultado.textContent = "Digite o telefone usado na inscrição.";
+        return;
+      }
+
       resultado.textContent = "Verificando…";
 
       try {
-        const res = await fetch(
-          `${directusUrl}/items/inscricoes_eventos?filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][codigo][_eq]=${encodeURIComponent(codigo)}`,
-        );
-        const json = await res.json();
-        const pessoa = json.data?.[0];
+        const res = await fetch(verificarUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ evento: eventoId, codigo, telefone }),
+        });
+        const pessoa = await res.json();
 
-        if (!pessoa) {
-          resultado.textContent = "Código não encontrado. Confira e tente de novo.";
+        if (!pessoa?.encontrado) {
+          resultado.textContent = "Código ou telefone não conferem. Confira e tente de novo.";
           return;
         }
 
