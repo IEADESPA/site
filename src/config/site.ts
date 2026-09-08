@@ -12,6 +12,9 @@ export const siteConfig = {
   siteUrl: "https://www.ieadespa.org.br",
   authorName: "IEADESPA",
   email: "seta@ieadespa.org",
+  /** Mesmo CNPJ usado como chave Pix em /doacoes/ — centralizado aqui pra
+   * também aparecer em /transparencia/, sem duplicar o literal. */
+  cnpj: "10.743.586/0001-38",
   language: "pt-BR",
   dateLocale: "pt-BR",
   locale: "pt_BR",

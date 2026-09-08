@@ -45,18 +45,35 @@ const articleUrl = new URL(postHref(post), siteConfig.siteUrl).toString();
 const socialImage = data.cover
   ? new URL(data.cover, siteConfig.siteUrl).toString()
   : new URL(siteConfig.socialImage, siteConfig.siteUrl).toString();
-const structuredData = {
-  "@context": "https://schema.org",
-  "@type": "Article",
-  headline: data.title,
-  description: data.excerpt,
-  image: socialImage,
-  datePublished: data.date.toISOString(),
-  dateModified: (data.updatedDate ?? data.date).toISOString(),
-  author: { "@type": "Person", name: data.author.name },
-  publisher: { "@type": "Organization", name: siteConfig.authorName, logo: { "@type": "ImageObject", url: `${siteConfig.siteUrl}/logo.png` } },
-  mainEntityOfPage: articleUrl,
-};
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: data.title,
+    description: data.excerpt,
+    image: socialImage,
+    datePublished: data.date.toISOString(),
+    dateModified: (data.updatedDate ?? data.date).toISOString(),
+    author: { "@type": "Person", name: data.author.name },
+    publisher: { "@type": "Organization", name: siteConfig.authorName, logo: { "@type": "ImageObject", url: `${siteConfig.siteUrl}/logo.png` } },
+    mainEntityOfPage: articleUrl,
+  },
+  // Só entra quando já existe um vídeo cadastrado — não dá pra reivindicar
+  // rich result de vídeo pra mensagem que não tem nenhum.
+  ...(data.videoUrl
+    ? [
+        {
+          "@context": "https://schema.org",
+          "@type": "VideoObject",
+          name: data.title,
+          description: data.excerpt,
+          thumbnailUrl: socialImage,
+          uploadDate: data.date.toISOString(),
+          embedUrl: data.videoUrl,
+        },
+      ]
+    : []),
+];
 ---
 
 <BaseLayout

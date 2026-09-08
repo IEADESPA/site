@@ -311,26 +311,45 @@ não foi construído.
   real de teste (categoria nova, órgão de teste, membro atual com 14 anos de mandato e um membro
   histórico) antes de apagar tudo.
 
-- **Fase 2 — reaproveita dado que já existe, zero conteúdo novo necessário da igreja** (a fase com
-  mais itens, e a mais rápida de entregar):
-  - Congregações: mapa embutido em cada página individual (mesma técnica grátis já usada em
-    Contato — só falta reaproveitar).
-  - Início: botão "Assista ao vivo" (o link já existe no código, só não aparece em lugar nenhum);
-    endereço mais perto do topo; reduzir os 8 itens de "Acesso rápido" pra 3-4 essenciais.
-  - Notícias: filtro por categoria na listagem; "mais notícias" relacionado por categoria (hoje é
-    só cronológico).
-  - Doações: QR code Pix gerado a partir da chave já cadastrada (mesmo princípio dos QR codes do
-    check-in de eventos); avisos de segurança em texto (conferir nome do recebedor, sugerir
-    finalidade na descrição do Pix).
-  - Transparência: CNPJ também nesta página; resumo de "último relatório publicado" no topo.
-  - Busca: fallback de "0 resultados" com sugestões/links úteis; navegação por teclado igual ao
-    atalho Ctrl+K.
-  - Galeria: lightbox (clique pra ampliar a foto).
-  - Mensagens: marcação `VideoObject` nos itens que já têm `videoUrl` cadastrado (rich result de
-    vídeo na busca — só funciona pros itens que já têm essa informação).
-  - Sobre: linkar explicitamente pra `/orgaos/` (hoje "Liderança" mistura pregador com governança
-    e não linka pra lá), pra `/visitante/` (próximo passo natural) e pra `/transparencia/`
-    (hoje só linka pra `/historia/`) — três links novos, zero conteúdo novo.
+- [x] **Fase 2 — reaproveita dado que já existe, zero conteúdo novo necessário da igreja** — os
+  9 itens construídos e testados:
+  - **Congregações**: mapa embutido (`congregacao/[slug].astro`) em cada página individual, mesma
+    técnica sem chave de API já usada em Contato (`congregacaoMapsQuery` novo em `directus.ts`).
+  - **Início**: botão "Assista ao vivo" (`siteConfig.youtubeLiveUrl`, já existia no código mas não
+    aparecia em lugar nenhum) ao lado dos outros botões do hero; endereço com link "Ver rota" logo
+    abaixo dos botões (antes só no rodapé da barra lateral, longe do topo em mobile); "Acesso
+    rápido" reduzido de 8 pra 4 itens (Primeira vez aqui, Doações, Galeria, Mural de oração) —
+    Notícias/Órgãos/Congregações/Eventos saíram por já terem destaque próprio no menu principal.
+  - **Notícias**: filtro por categoria na listagem (mesmo padrão visual do filtro de tipo em
+    `/busca/`); "mais notícias" no artigo agora prioriza a mesma categoria antes de completar com
+    as mais recentes de qualquer categoria (antes era só cronológico).
+  - **Doações**: QR code Pix de verdade — não é só "texto virar imagem", é um payload real no
+    padrão BR Code/EMV do Banco Central (`src/lib/pix.ts`, com CRC16 implementado e validado contra
+    o vetor de teste público da variante CCITT-FALSE), estático e sem valor fixo (a pessoa digita o
+    valor no próprio app do banco). Também ganhou botão "Copiar código Pix" e os avisos de
+    segurança em texto (conferir o nome do recebedor exibido, sugerir finalidade na descrição).
+  - **Transparência**: CNPJ (centralizado em `siteConfig.cnpj`, reaproveitado também em Doações
+    em vez de duplicar o literal) e resumo do último relatório publicado no topo da página.
+  - **Busca**: fallback de "0 resultados" com atalhos úteis (mensagens, notícias, eventos,
+    contato) em vez de só a mensagem vazia; navegação por teclado (seta pra baixo/cima) idêntica à
+    do atalho rápido Ctrl+K, incluindo voltar pro campo de busca ao subir a partir do primeiro
+    resultado.
+  - **Galeria**: lightbox — clique na foto abre um `<dialog>` nativo com a imagem em resolução
+    maior (1600px em vez dos 640px da grade) e a legenda, fecha por botão, clique fora ou Escape
+    (comportamento nativo do `<dialog>`).
+  - **Mensagens**: `VideoObject` no dado estruturado quando `videoUrl` está cadastrado (nome,
+    descrição, `thumbnailUrl`, `uploadDate`, `embedUrl`) — só entra pros itens que já têm vídeo, sem
+    reivindicar rich result pra quem não tem.
+  - **Sobre**: três links novos — `/orgaos/` (explicando que "Liderança" aqui é só quem já pregou
+    mensagens, e que governança/departamentos/secretarias estão em Órgãos), `/visitante/` (próximo
+    passo natural) e `/transparencia/` (antes só linkava pra `/historia/`).
+
+  Testado de ponta a ponta: o payload Pix foi verificado matematicamente (CRC16 contra vetor de
+  teste conhecido, parsing campo a campo do BR Code, e o próprio QR gerado foi decodificado de
+  volta via `jsQR` no navegador, confirmando que bate exatamente com o payload original) e com
+  Playwright contra o preview real — filtro de notícias (com 2 notícias de teste criadas e
+  apagadas em seguida), lightbox da galeria (com 1 foto de teste), `VideoObject` (com 1 mensagem de
+  teste), fallback de busca e navegação por teclado — tudo revertido ao estado original depois.
 
 - **Fase 3 — melhorias de UX que exigem mais decisão de desenho, ainda sem conteúdo novo**:
   - Órgãos: separar visualmente Governança de Departamentos/Serviços; CTA diferente pra órgão

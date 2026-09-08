@@ -6,7 +6,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { fetchItems } from "@/lib/directus";
+import { congregacaoMapsQuery, fetchItems } from "@/lib/directus";
 
 interface Congregacao {
   slug: string;
@@ -37,6 +37,8 @@ interface Props {
 const { congregacao } = Astro.props;
 const allPosts = visiblePosts(await getAllMensagens());
 const historiaHtml = congregacao.historia ? await marked.parse(congregacao.historia) : null;
+const mapaQuery = congregacaoMapsQuery(congregacao);
+const mapsEmbedSrc = mapaQuery ? `https://www.google.com/maps?q=${encodeURIComponent(mapaQuery)}&output=embed` : null;
 ---
 
 <BaseLayout
@@ -83,6 +85,20 @@ const historiaHtml = congregacao.historia ? await marked.parse(congregacao.histo
         <a href={congregacao.maps_url} target="_blank" rel="noreferrer" class="mt-4 inline-block link-sweep text-sm font-semibold text-accent">
           Ver rota no Google Maps
         </a>
+      )}
+
+      {mapsEmbedSrc && (
+        <div class="mt-4 overflow-hidden rounded-[var(--radius-md)] border border-border">
+          <iframe
+            title={`Mapa com a localização da ${congregacao.name}`}
+            src={mapsEmbedSrc}
+            width="100%"
+            height="280"
+            style="border:0"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
+        </div>
       )}
 
       {congregacao.pastor_name && (

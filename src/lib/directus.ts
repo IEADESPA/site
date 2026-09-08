@@ -159,3 +159,7 @@ export const congregacaoEndereco = (c: CongregacaoEndereco) => {
   const neighborhood = c.neighborhood_new || c.neighborhood;
   return [line, neighborhood, c.city && c.state ? `${c.city} – ${c.state}` : null].filter(Boolean).join(", ");
 };
+
+/** String de busca pro Google Maps de uma congregação — mesma técnica sem
+ * chave de API já usada pra sede em `/contato/` (embed via `?q=&output=embed`). */
+export const congregacaoMapsQuery = (c: CongregacaoEndereco) => congregacaoEndereco(c);

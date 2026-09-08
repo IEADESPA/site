@@ -46,7 +46,12 @@ const allPosts = visiblePosts(await getAllMensagens());
 const bodyHtml = await marked.parse(noticia.body);
 const data = noticia.data;
 const orgaoRelacionado = orgaos.find((orgao) => orgao.id === data.orgaoRelacionado);
-const others = allNoticias.filter((item) => item.id !== noticia.id).sort(byNewest).slice(0, 3);
+// Prioriza notícias da mesma categoria (como mensagens já fazem por tema);
+// completa com as mais recentes de qualquer categoria só se não houver
+// 3 da mesma categoria.
+const outras = allNoticias.filter((item) => item.id !== noticia.id).sort(byNewest);
+const mesmaCategoria = outras.filter((item) => item.data.category === data.category);
+const others = [...mesmaCategoria, ...outras.filter((item) => item.data.category !== data.category)].slice(0, 3);
 const articleUrl = new URL(noticiaHref(noticia), siteConfig.siteUrl).toString();
 const socialImage = data.cover
   ? new URL(data.cover, siteConfig.siteUrl).toString()

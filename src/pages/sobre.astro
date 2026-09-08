@@ -34,6 +34,11 @@ const sobreHtml = await marked.parse(config.sobre_corpo);
 
       <div class="prose mt-16">
         <h2>Liderança</h2>
+        <p>
+          Aqui embaixo estão só quem já pregou mensagens publicadas no site. Pra conhecer a
+          governança, os departamentos e as secretarias da igreja, veja a página de{" "}
+          <a href="/orgaos/">Órgãos</a>.
+        </p>
         <ul>
           {
             authors.map((author) => (
@@ -43,6 +48,13 @@ const sobreHtml = await marked.parse(config.sobre_corpo);
             ))
           }
         </ul>
+
+        <h2>Próximos passos</h2>
+        <p>
+          Primeira vez na igreja? Veja a página do <a href="/visitante/">visitante</a> pra saber o
+          que esperar do culto e como chegar. Pra conhecer a prestação de contas da igreja, veja a
+          página de <a href="/transparencia/">transparência</a>.
+        </p>
 
         <h2>Fale conosco</h2>
         <p>

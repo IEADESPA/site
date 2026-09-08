@@ -7,7 +7,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { categoryHref, getCategoryList, getFeatured, getAllMensagens, visiblePosts } from "@/lib/posts";
-import { enderecoCompleto, fetchConfiguracoes } from "@/lib/directus";
+import { enderecoCompleto, fetchConfiguracoes, mapsHref } from "@/lib/directus";
 import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
 import { churchStructuredData, getAllProgramacao, sedeProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
 import { readFileSync } from "node:fs";
@@ -82,31 +82,14 @@ const structuredData = [
   ),
 ];
 
+// Reduzido de 8 pra 4 (Fase 2 do README) — os que já têm destaque próprio
+// no menu principal (Notícias, Órgãos, Congregações, Eventos) saíram daqui
+// pra não duplicar; ficaram só os itens que não têm outro lugar de peso.
 const quickLinks = [
   {
     label: "Primeira vez aqui?",
     description: "Informações para quem vai nos visitar pela primeira vez.",
     href: "/visitante/",
-  },
-  {
-    label: "Notícias",
-    description: "Comunicados e novidades da igreja.",
-    href: "/noticias/",
-  },
-  {
-    label: "Órgãos",
-    description: "Conselhos, departamentos e secretarias da igreja.",
-    href: "/orgaos/",
-  },
-  {
-    label: "Congregações",
-    description: "Encontre a congregação mais próxima de você.",
-    href: "/congregacoes/",
-  },
-  {
-    label: "Eventos",
-    description: "Programação de cultos especiais e atividades.",
-    href: "/eventos/",
   },
   {
     label: "Doações",
@@ -137,10 +120,17 @@ const quickLinks = [
 
         <div class="mt-8 flex flex-wrap items-center gap-3">
           <a href="/visitante/" class="btn btn-solid">Primeira vez aqui?</a>
+          <a href={siteConfig.youtubeLiveUrl} target="_blank" rel="noreferrer" class="btn btn-outline">Assista ao vivo</a>
           <a href="/mensagens/" class="btn btn-outline">Ouvir mensagens</a>
           <a href="/contato/" class="btn btn-outline">Como chegar</a>
           <a href="https://app.ieadespa.org.br" target="_blank" rel="noreferrer" class="btn btn-outline">Portal do Membro</a>
         </div>
+
+        <p class="mt-4 text-sm text-muted-foreground">
+          <a href={mapsHref(config)} target="_blank" rel="noreferrer" class="link-sweep text-accent font-semibold">
+            📍 {enderecoCompleto(config)}
+          </a>
+        </p>
 
         <ul class="hero-services mt-10 grid gap-4 sm:grid-cols-3">
           {

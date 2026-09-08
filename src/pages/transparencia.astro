@@ -88,6 +88,16 @@ const maxCrescimento = crescimentoPorAno ? Math.max(...crescimentoPorAno.map((p)
           Relatórios de prestação de contas à congregação. Para conhecer os diretores executivos,
           veja o órgão <a href="/orgao/diretoria-executiva/">Diretoria Executiva</a>.
         </p>
+        <p class="mt-2 text-sm text-muted-foreground">
+          CNPJ: <span class="font-semibold">{siteConfig.cnpj}</span>
+        </p>
+        {
+          reports.length > 0 && (
+            <p class="mt-1 text-sm text-muted-foreground">
+              Último relatório publicado: <strong>{reports[0].title}</strong> ({reports[0].period})
+            </p>
+          )
+        }
       </header>
 
       <section class="pb-[var(--space-section)]" aria-labelledby="numeros-heading">

@@ -112,6 +112,24 @@ const searchItems = await buildSearchIndex();
             ? `${found.length} ${found.length === 1 ? "item" : "itens"}${groupLabel}.`
             : "";
 
+        if (query && found.length === 0) {
+          results.innerHTML = `
+            <div class="search-page-empty">
+              <p class="text-sm leading-relaxed text-muted-foreground">
+                Nenhum resultado pra “${escapeHtml(raw)}”${escapeHtml(groupLabel)}. Confira a ortografia,
+                tente um termo mais simples, ou veja alguns atalhos:
+              </p>
+              <ul class="mt-3 grid gap-2 text-sm">
+                <li><a href="/mensagens/" class="text-accent underline underline-offset-2">Todas as mensagens</a></li>
+                <li><a href="/noticias/" class="text-accent underline underline-offset-2">Notícias</a></li>
+                <li><a href="/eventos/" class="text-accent underline underline-offset-2">Eventos</a></li>
+                <li><a href="/contato/" class="text-accent underline underline-offset-2">Fale conosco</a></li>
+              </ul>
+            </div>
+          `;
+          return;
+        }
+
         results.innerHTML = found
           .map(
             (item) => `
@@ -130,12 +148,42 @@ const searchItems = await buildSearchIndex();
       input.value = new URLSearchParams(window.location.search).get("q") || "";
       render();
       input.addEventListener("input", render);
+
+      // Mesma navegação por teclado do atalho rápido (Ctrl+K): setinha pra
+      // baixo a partir do campo vai pro primeiro resultado, e dentro dos
+      // resultados as setas navegam entre eles.
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowDown") return;
+        const first = results.querySelector("a");
+        if (!first) return;
+        event.preventDefault();
+        first.focus();
+      });
+
+      results.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+
+        const links = Array.from(results.querySelectorAll("a"));
+        const current = links.indexOf(document.activeElement);
+        if (current === -1) return;
+
+        event.preventDefault();
+        if (event.key === "ArrowDown") (links[current + 1] || links[0])?.focus();
+        else if (current === 0) input.focus();
+        else links[current - 1]?.focus();
+      });
     })();
   </script>
 
   <style is:global>
     .search-page-summary:empty {
       display: none;
+    }
+
+    .search-page-empty {
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: 1.5rem 1.75rem;
     }
 
     .search-page-filters {

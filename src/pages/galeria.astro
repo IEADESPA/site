@@ -15,6 +15,7 @@ interface GaleriaItem {
 const allPosts = visiblePosts(await getAllMensagens());
 const photos = (await fetchItems<GaleriaItem>("galeria", "sort[]=sort")).map((item) => ({
   src: directusAssetUrl(item.photo, { width: 640, quality: 72, format: "webp", fit: "cover" }),
+  large: directusAssetUrl(item.photo, { width: 1600, quality: 82, format: "webp" }),
   alt: item.alt,
   caption: item.caption,
 }));
@@ -35,9 +36,11 @@ const photos = (await fetchItems<GaleriaItem>("galeria", "sort[]=sort")).map((it
       {
         photos.length > 0 ? (
           <ul class="gallery-grid">
-            {photos.map((photo) => (
+            {photos.map((photo, index) => (
               <li class="gallery-item">
-                <img src={photo.src} alt={photo.alt} loading="lazy" />
+                <button type="button" class="gallery-open" data-gallery-open data-index={index} aria-label={`Ampliar foto: ${photo.alt}`}>
+                  <img src={photo.src} alt={photo.alt} loading="lazy" />
+                </button>
                 {photo.caption && <p class="gallery-caption">{photo.caption}</p>}
               </li>
             ))}
@@ -51,10 +54,60 @@ const photos = (await fetchItems<GaleriaItem>("galeria", "sort[]=sort")).map((it
           </div>
         )
       }
+
+      {
+        photos.length > 0 && (
+          <dialog class="gallery-lightbox" data-gallery-lightbox aria-label="Foto ampliada">
+            <button type="button" class="gallery-lightbox-close" data-gallery-close aria-label="Fechar">✕</button>
+            <img data-gallery-lightbox-img alt="" />
+            <p class="gallery-lightbox-caption" data-gallery-lightbox-caption></p>
+          </dialog>
+        )
+      }
     </div>
   </main>
   <SiteFooter />
 </BaseLayout>
+
+{
+  photos.length > 0 && (
+    <script is:inline type="application/json" id="gallery-data" set:html={JSON.stringify(photos)} />
+  )
+}
+<script is:inline>
+  (() => {
+    const dialog = document.querySelector("[data-gallery-lightbox]");
+    const img = document.querySelector("[data-gallery-lightbox-img]");
+    const captionEl = document.querySelector("[data-gallery-lightbox-caption]");
+    const closeBtn = document.querySelector("[data-gallery-close]");
+    const openButtons = document.querySelectorAll("[data-gallery-open]");
+    const dataEl = document.getElementById("gallery-data");
+    if (!dialog || !img || !closeBtn || !dataEl) return;
+
+    const photos = JSON.parse(dataEl.textContent || "[]");
+
+    const abrir = (index) => {
+      const photo = photos[index];
+      if (!photo) return;
+      img.src = photo.large;
+      img.alt = photo.alt;
+      if (captionEl) captionEl.textContent = photo.caption || "";
+      dialog.showModal();
+    };
+
+    openButtons.forEach((button) => {
+      button.addEventListener("click", () => abrir(Number(button.dataset.index)));
+    });
+
+    closeBtn.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener("close", () => {
+      img.src = "";
+    });
+  })();
+</script>
 
 <style>
   .gallery-grid {
@@ -75,10 +128,66 @@ const photos = (await fetchItems<GaleriaItem>("galeria", "sort[]=sort")).map((it
     border-radius: var(--radius-md);
   }
 
+  .gallery-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+  }
+
   .gallery-item img {
     aspect-ratio: 4 / 3;
     width: 100%;
     object-fit: cover;
+  }
+
+  .gallery-lightbox {
+    max-width: min(90vw, 60rem);
+    max-height: 90vh;
+    border: 0;
+    border-radius: var(--radius-md);
+    padding: 0;
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  .gallery-lightbox::backdrop {
+    background: rgb(0 0 0 / 0.75);
+  }
+
+  .gallery-lightbox img {
+    display: block;
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+  }
+
+  .gallery-lightbox-close {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 1rem;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .gallery-lightbox-caption {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+  }
+
+  .gallery-lightbox-caption:empty {
+    display: none;
   }
 
   .gallery-caption {

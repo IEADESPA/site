@@ -5,10 +5,11 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { getAllNoticias, visibleNoticias } from "@/lib/noticias";
+import { categoryLabel, getAllNoticias, visibleNoticias } from "@/lib/noticias";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const noticias = visibleNoticias(await getAllNoticias());
+const categorias = [...new Set(noticias.map((noticia) => noticia.data.category))];
 ---
 
 <BaseLayout
@@ -27,10 +28,27 @@ const noticias = visibleNoticias(await getAllNoticias());
       </header>
 
       {
+        noticias.length > 1 && (
+          <div class="noticias-filtros" data-noticias-filtros role="tablist" aria-label="Filtrar por categoria">
+            <button type="button" class="noticias-filtro is-active" data-filter="" role="tab" aria-selected="true">Todas</button>
+            {
+              categorias.map((categoria) => (
+                <button type="button" class="noticias-filtro" data-filter={categoria} role="tab" aria-selected="false">
+                  {categoryLabel(categoria)}
+                </button>
+              ))
+            }
+          </div>
+        )
+      }
+
+      {
         noticias.length > 0 ? (
-          <div class="noticias-grid">
+          <div class="noticias-grid" data-noticias-grid>
             {noticias.map((noticia, index) => (
-              <NoticiaCard noticia={noticia} variant={index === 0 ? "lead" : "feed"} />
+              <div data-noticia-categoria={noticia.data.category}>
+                <NoticiaCard noticia={noticia} variant={index === 0 ? "lead" : "feed"} />
+              </div>
             ))}
           </div>
         ) : (
@@ -44,10 +62,69 @@ const noticias = visibleNoticias(await getAllNoticias());
   <SiteFooter />
 </BaseLayout>
 
+<script is:inline>
+  (() => {
+    const buttons = document.querySelectorAll("[data-noticias-filtros] [data-filter]");
+    const items = document.querySelectorAll("[data-noticias-grid] > [data-noticia-categoria]");
+    if (!buttons.length) return;
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const filtro = button.getAttribute("data-filter") || "";
+        buttons.forEach((other) => {
+          const isActive = other === button;
+          other.classList.toggle("is-active", isActive);
+          other.setAttribute("aria-selected", String(isActive));
+        });
+        items.forEach((item) => {
+          item.hidden = Boolean(filtro) && item.getAttribute("data-noticia-categoria") !== filtro;
+        });
+      });
+    });
+  })();
+</script>
+
 <style>
+  .noticias-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .noticias-filtro {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted-foreground);
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .noticias-filtro:hover {
+    border-color: var(--border-strong);
+    color: var(--foreground);
+  }
+
+  .noticias-filtro.is-active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent-strong);
+  }
+
   .noticias-grid {
     display: grid;
     gap: 3rem;
+  }
+
+  .noticias-grid > [hidden] {
+    display: none;
   }
 
   .noticias-grid > :not(:first-child) {
