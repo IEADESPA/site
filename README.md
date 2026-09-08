@@ -476,7 +476,8 @@ não foi construído.
   com inscrição limitada, curso/seminário com fluxo de inscrição próprio, batismo com local
   variável) — é maior que um ajuste pontual e precisa de desenho próprio; **fica registrada para
   avaliação futura, não para construir agora**, por instrução explícita do próprio usuário
-  ("tem que ser avaliado esse negócio, talvez nem compense").
+  ("tem que ser avaliado esse negócio, talvez nem compense"). Escopo completo formalizado na
+  **Fase 21**, mais abaixo.
 
 Depois destas 6 primeiras (0 a 5, todas página-por-página), o usuário pediu uma segunda rodada,
 bem mais ampla, cobrindo o que um "site de verdade" precisa além do conteúdo de cada página —
@@ -685,10 +686,43 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     usuário é trabalho humano de pedir/reunir material, fora do escopo de qualquer coisa que o site
     resolva sozinho.
 
-**Nada deste plano foi construído ainda** (fases 1 a 20), com duas exceções: o app instalável da
-Fase 13 (que já existia) e a **Fase 0, construída e testada** (correção do contador do mural de
-oração, redução do vazamento de inscritos e conserto dos labels da pesquisa de satisfação — ver
-detalhe na própria Fase 0, acima). O detalhe completo de cada achado (com a
+- **Fase 21 — eventos customizáveis por tipo (batismo e além)**: registrada a partir da própria
+  análise do usuário na revisão da Fase 5 — **não é pra construir agora, é só escopo e
+  planejamento**, esperando uma análise de caso futura que decida se compensa ou não.
+
+  **O problema de origem**: batismo não encaixa no módulo de eventos como ele existe hoje, porque
+  todo evento assume implicitamente uma congregação com endereço fixo — um batismo pode acontecer
+  num rio, numa piscina, num lugar diferente a cada vez, sem vínculo com nenhuma congregação
+  cadastrada. Ao investigar esse caso, apareceram outros que têm a mesma raiz — um evento "genérico"
+  não serve igualmente bem pra todo tipo de programação da igreja:
+  - **Congresso**: precisaria de inscrições limitadas por vaga (o sistema atual já tem
+    `aguardando_vaga`, mas não um limite numérico rígido que fecha inscrição sozinho).
+  - **Curso/escola**: precisaria de um fluxo de inscrição com critério de aceite (hoje toda
+    inscrição é aceita automaticamente; um curso pode precisar de pré-requisito ou aprovação
+    manual antes de confirmar vaga).
+  - **Batismo**: precisaria de local variável por edição do evento, em vez de herdar o endereço de
+    uma congregação cadastrada.
+
+  **O que a análise de caso futura precisa decidir**: se vale a pena introduzir um campo "tipo de
+  evento" com comportamento condicional (endereço obrigatório vs. opcional, vaga limitada vs.
+  aberta, aprovação manual vs. automática) — ganho real de flexibilidade — contra o custo de
+  complexidade que isso adiciona ao módulo de eventos inteiro (mais estados possíveis, mais lugar
+  pra bug, formulário de cadastro de evento fica mais confuso pra quem edita no Directus). A
+  alternativa mais simples — tratar o batismo como evento comum e só preencher o campo de local
+  como texto livre em vez de vínculo com congregação — também precisa entrar na comparação, porque
+  pode resolver o essencial sem nenhuma mudança estrutural.
+
+  **Pedido explícito do usuário para essa análise futura**: comparar como esse módulo de eventos
+  (inscrição, fila de espera, cupom de desconto, e principalmente a situação financeira — hoje
+  `pago` é só uma marcação manual feita por quem faz o check-in, não existe processamento de
+  pagamento online nenhum, nem Pix nem cartão integrado ao fluxo de inscrição) se compara a
+  gerenciadores de eventos existentes no mercado, tanto nacionais (ex.: Sympla, Even3) quanto
+  estrangeiros (ex.: Eventbrite) — pra informar a decisão com o que já é padrão de mercado, não só
+  com o que a igreja pediu até agora.
+
+**Fases 0 a 5 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 6 a 21,
+nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia antes
+mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
 fontes consultadas.
