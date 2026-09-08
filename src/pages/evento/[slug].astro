@@ -6,7 +6,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { congregacaoEndereco, DIRECTUS_URL, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { congregacaoEndereco, DIRECTUS_URL, TELEFONE_HASH_URL, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
 import { hasEventPage } from "@/lib/eventos";
 
 interface Congregacao {
@@ -423,6 +423,7 @@ const structuredData = startDate
         is:inline
         define:vars={{
           directusUrl: DIRECTUS_URL,
+          telefoneHashUrl: TELEFONE_HASH_URL,
           vagasLimite: event.vagas_limite,
           vapidPublicKey: "BHjTzvfXIx0DAkcCgfJDNQO5N09SmO0jIPuTP8L6rxnEaITMn95fQH6kHFnbrEJE-Fdroim5bNnaKp5wwowXdak",
         }}
@@ -624,6 +625,20 @@ const structuredData = startDate
               // grupo grande, os usos já aplicados às pessoas já criadas com
               // sucesso não ficam "esquecidos" sem contar no limite do cupom.
               let usosAtuaisCupom = cupom?.usos ?? 0;
+
+              // O telefone nunca é gravado em texto puro — vira hash (scrypt,
+              // ver api/src/lib/telefone.js) antes de chegar no Directus, pra
+              // impedir que qualquer leitura da tabela revele telefones de
+              // verdade (ver README, Fase 6). Um grupo inteiro compartilha o
+              // mesmo telefone nesta tela, então o hash é calculado uma vez só.
+              const hashRes = await fetch(telefoneHashUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ telefone: data.get("telefone") }),
+              });
+              if (!hashRes.ok) throw new Error("falha ao proteger telefone");
+              const telefoneHash = (await hashRes.json()).valor;
+
               for (const nome of nomes) {
                 const codigo = gerarCodigo();
                 let aguardandoVaga = false;
@@ -650,7 +665,7 @@ const structuredData = startDate
                   body: JSON.stringify({
                     evento: eventoId,
                     nome,
-                    telefone: data.get("telefone"),
+                    telefone: telefoneHash,
                     codigo,
                     valor: valorFinal,
                     cupom_usado: cupomAplicado,

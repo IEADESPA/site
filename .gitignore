@@ -16,6 +16,7 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+api/local.settings.json
 
 # Internal release/workflow notes
 AGENTS.md

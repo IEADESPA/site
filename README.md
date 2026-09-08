@@ -584,13 +584,50 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
 
   **Descoberto durante o processo — como o Directus roda de verdade**: é um container da imagem
   oficial `directus/directus:12.3.1` (Docker Hub), publicado via o recurso mais novo "Site
-  Containers" do Azure App Service, **sem nenhum volume montado ainda**. Isso é uma boa notícia pro
-  problema da criptografia do telefone (Fase 6, item anterior) e do próprio rate limiter: dá pra
-  montar um volume de arquivos (Azure Files) em `/directus/extensions` e instalar uma extensão
-  customizada com acesso real a `crypto`/`fetch` — diferente do sandbox do Flow, uma extensão de
-  verdade roda em Node.js completo — sem precisar reconstruir nem trocar a imagem oficial. **Isso
-  ainda não foi construído** — é o próximo passo natural, que resolveria ao mesmo tempo o hash real
-  do telefone e o bloqueio de força bruta que o rate limiter do Directus deveria fazer e não faz.
+  Containers" do Azure App Service, sem nenhum volume montado. Avaliado montar um volume de
+  arquivos (Azure Files) nele pra instalar uma extensão customizada — **descartado**: o formato do
+  campo `data` do volume nessa API ("Site Containers") é novo e mal documentado, e experimentar às
+  cegas num container de produção que a igreja inteira depende (mensagens, eventos, tudo) era risco
+  demais pra um formato que nem a documentação oficial da Microsoft explica direito.
+
+  **Solução construída, testada de ponta a ponta e no ar: uma Azure Function dentro do próprio
+  Static Web App** (o mesmo recurso que já hospeda o site, gratuito, sem infraestrutura nova) —
+  caminho bem mais simples e documentado do que mexer no container do Directus:
+  - `api/src/lib/telefone.js`: gera e confere hash com `crypto.scrypt` — **nativo do Node.js, zero
+    dependência externa**. Chegou a ser testada a biblioteca `argon2` (a mesma que o Directus usa
+    por baixo) primeiro, mas ela exige compilação nativa (C++) e **falhou ao instalar localmente**
+    por falta de Visual Studio Build Tools — risco real demais de falhar também no build do Azure
+    pra apostar nisso. `scrypt` é igualmente robusto (KDF reconhecida, recomendada pelo
+    OWASP) e não tem esse risco. Comparação em tempo constante
+    (`crypto.timingSafeEqual`), pra não vazar informação por diferença de tempo de resposta.
+  - `api/src/functions/verificar-inscricao.js`: substitui o Flow do Directus — mesmo formato de
+    entrada/saída (nenhuma página teve que mudar nada além da URL), mas roda em Node.js completo,
+    então consegue de fato comparar o telefone contra um hash (o Flow não conseguia — sandbox sem
+    `crypto`, ver acima).
+  - `api/src/functions/telefone-hash.js`: utilitário que recebe um telefone em texto (só na
+    chamada, nunca fica guardado) e devolve o valor já hashado, pronto pra salvar. Usado tanto pela
+    inscrição pública (`/evento/[slug]/`) quanto pela edição manual da equipe
+    (`/painel-eventos/.../inscritos/`) — os dois pontos que gravam telefone.
+  - **Limitador de tentativas de verdade, embutido na própria Function** (`api/src/lib/
+    rateLimit.js`) — 20 tentativas por 5 minutos por IP, testado e confirmado bloqueando com
+    `429`. É melhor esforço (contador em memória, zera se a instância reiniciar), mas já é
+    infinitamente mais eficaz do que o rate limiter do Directus, que está confirmadamente sem
+    nenhum efeito (ver item anterior). **Não resolve** o problema do rate limiter do `/auth/login`
+    do próprio Directus (login de administrador/equipe) — essa Function só protege os próprios
+    endpoints dela, não o que roda dentro do container do Directus.
+  - Efeito colateral aceito conscientemente: a busca por telefone em
+    `/painel-eventos/.../inscritos/` deixou de funcionar (não dá pra buscar por um valor que virou
+    hash) — a interface foi ajustada pra deixar isso claro ("Buscar por nome…", campo de telefone
+    mostra "(definido — deixe em branco pra manter)" em vez do valor).
+  - **Testado de ponta a ponta com o emulador oficial** (`@azure/static-web-apps-cli`, que roda
+    site + Function juntos exatamente como em produção): inscrição real por navegador (Playwright)
+    até o Directus, QR Code real gerado com o telefone certo, rejeitado com o telefone errado,
+    limite de tentativas confirmado bloqueando. Zero linhas de dado de teste deixadas no Directus.
+  - **Pendente**: as Application Settings do Static Web App (`DIRECTUS_URL`,
+    `DIRECTUS_ADMIN_TOKEN`) precisam ser configuradas por quem tem acesso ao recurso (fora do
+    escopo do service principal desta sessão, que só cobre os 3 recursos do Directus) — comando
+    exato deixado combinado na conversa. O Flow antigo do Directus (`Verificar inscricao (codigo +
+    telefone)`) fica desativado, não apagado, até essa configuração ser confirmada em produção.
 
 - **Fase 7 — LGPD e privacidade** (a política de privacidade hoje é literalmente um rascunho —
   `privacidade.astro` ainda tem o comentário "Substitua pelo texto definitivo... antes de publicar

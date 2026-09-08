@@ -9,12 +9,13 @@ export const DIRECTUS_URL = "https://ieadespa-directus-gae4hfarf4a4ffcf.brazilso
 export const DIRECTUS_ADMIN_URL = `${DIRECTUS_URL}/admin`;
 
 /**
- * Endpoint do Flow "Verificar inscrição (código + telefone)" — usado por
- * certificado, crachá, pesquisa de satisfação e o gerador de QR Code, em vez
- * de consultar `inscricoes_eventos` direto (que não tem mais leitura pública
- * de nome/código/telefone). O Flow roda com acesso interno elevado
- * (`accountability: "all"`) e nunca devolve o telefone pra fora — três modos,
- * todos exigindo `{ evento, modo, ... }` no corpo da requisição:
+ * Endpoint próprio (Azure Function do próprio site, `/api/verificar-inscricao`
+ * — ver `api/src/functions/verificarInscricao.js`) que substituiu o Flow do
+ * Directus "Verificar inscrição (código + telefone)". Usado por certificado,
+ * crachá, pesquisa de satisfação e o gerador de QR Code, em vez de consultar
+ * `inscricoes_eventos` direto (que não tem leitura pública de nome/código/
+ * telefone). Mesmo formato de entrada/saída de antes — três modos, todos
+ * exigindo `{ evento, modo, ... }` no corpo da requisição:
  * - `modo: "codigo"` — `{ codigo, telefone }`: confirma os dois combinados,
  *   devolve os dados (incluindo o próprio código, útil pro QR Code).
  * - `modo: "nome"` — `{ nome }`: lista candidatos por nome parcial, sem
@@ -24,8 +25,24 @@ export const DIRECTUS_ADMIN_URL = `${DIRECTUS_URL}/admin`;
  * - `modo: "id"` — `{ id, telefone }`: depois de escolher um candidato da
  *   lista acima, confirma o telefone pra só então devolver o código —
  *   impede que a busca por nome sozinha revele o código de outra pessoa.
+ *
+ * Diferente do Flow (sandbox sem `crypto`, incapaz de verificar hash de
+ * verdade — ver README, Fase 6), a Function roda em Node.js completo: o
+ * telefone é comparado contra um hash real (`scrypt`, ver `api/src/lib/
+ * telefone.js`), nunca contra texto puro.
  */
-export const VERIFICAR_INSCRICAO_URL = `${DIRECTUS_URL}/flows/trigger/5a43eb73-9011-4676-a69d-13cfd550fe76`;
+export const VERIFICAR_INSCRICAO_URL = "/api/verificar-inscricao";
+
+/**
+ * Mesma Function, endpoint separado (`/api/telefone-hash`) — recebe um
+ * telefone em texto (só nesta chamada, nunca fica guardado em lugar nenhum)
+ * e devolve o valor já hashado, pronto pra ser salvo no campo `telefone`.
+ * Usado no momento de gravar (inscrição pública em `/evento/[slug]/` e edição
+ * manual da equipe em `/painel-eventos/`) — quem grava continua sendo quem já
+ * gravava antes (o navegador do inscrito ou a equipe autenticada), só que
+ * agora envia o valor hashado em vez do telefone puro.
+ */
+export const TELEFONE_HASH_URL = "/api/telefone-hash";
 
 /**
  * Busca uma URL do Directus com tentativas automáticas em caso de erro
