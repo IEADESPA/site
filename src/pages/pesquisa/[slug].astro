@@ -113,7 +113,8 @@ const dataReferencia = event.end_date || event.event_date;
         String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
       function campoHtml(pergunta) {
-        const attrs = `data-pergunta-id="${pergunta.id}" data-pergunta-tipo="${pergunta.tipo}"`;
+        const campoId = `pergunta-${pergunta.id}`;
+        const attrs = `id="${campoId}" data-pergunta-id="${pergunta.id}" data-pergunta-tipo="${pergunta.tipo}"`;
         if (pergunta.tipo === "texto_longo") return `<textarea class="field" rows="3" ${attrs}></textarea>`;
         if (pergunta.tipo === "numero") return `<input type="number" class="field" ${attrs} />`;
         if (pergunta.tipo === "data") return `<input type="date" class="field" ${attrs} />`;
@@ -124,13 +125,27 @@ const dataReferencia = event.end_date || event.event_date;
           </select>`;
         }
         if (pergunta.tipo === "selecao_multipla") {
-          return `<div class="grid gap-1.5" ${attrs}>
+          // Grupo de opções, não um único campo — não faz sentido um <label
+          // for> apontando pra um <div>; cada opção já tem seu próprio
+          // <label> envolvendo o checkbox, e o grupo inteiro é identificado
+          // via aria-labelledby na pergunta (montado em campoBlocoHtml).
+          return `<div class="grid gap-1.5" role="group" aria-labelledby="${campoId}-label" data-pergunta-id="${pergunta.id}" data-pergunta-tipo="${pergunta.tipo}">
             ${(pergunta.opcoes ?? [])
               .map((o) => `<label class="contact-checkbox"><input type="checkbox" value="${escapeHtml(o)}" /> ${escapeHtml(o)}</label>`)
               .join("")}
           </div>`;
         }
         return `<input type="text" class="field" ${attrs} />`;
+      }
+
+      function campoBlocoHtml(pergunta) {
+        const campoId = `pergunta-${pergunta.id}`;
+        const rotulo = `${escapeHtml(pergunta.label)}${pergunta.obrigatoria ? " *" : ""}`;
+        const rotuloHtml =
+          pergunta.tipo === "selecao_multipla"
+            ? `<p class="text-sm font-semibold" id="${campoId}-label">${rotulo}</p>`
+            : `<label class="text-sm font-semibold" for="${campoId}">${rotulo}</label>`;
+        return `<div class="grid gap-2">${rotuloHtml}${campoHtml(pergunta)}</div>`;
       }
 
       function lerCampo(campoEl) {
@@ -177,16 +192,7 @@ const dataReferencia = event.end_date || event.event_date;
           }
 
           inscricaoId = pessoa.id;
-          perguntasEl.innerHTML = perguntas
-            .map(
-              (p) => `
-                <div class="grid gap-2">
-                  <label class="text-sm font-semibold">${escapeHtml(p.label)}${p.obrigatoria ? " *" : ""}</label>
-                  ${campoHtml(p)}
-                </div>
-              `,
-            )
-            .join("");
+          perguntasEl.innerHTML = perguntas.map(campoBlocoHtml).join("");
 
           buscaForm.hidden = true;
           perguntasForm.hidden = false;

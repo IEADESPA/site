@@ -89,17 +89,47 @@ const allPosts = visiblePosts(await getAllMensagens());
         return `há ${dias} dia${dias === 1 ? "" : "s"}`;
       };
 
-      const cardHtml = (item) => `
+      // Guarda por quais pedidos esta pessoa já clicou "orando por você" —
+      // persiste entre visitas (não só durante a sessão atual), então o
+      // mesmo navegador não consegue inflar o contador de um pedido clicando
+      // várias vezes ao longo do tempo.
+      const ORADOS_KEY = "ieadespa-mural-orados";
+      const lerOrados = () => {
+        try {
+          return new Set(JSON.parse(localStorage.getItem(ORADOS_KEY) || "[]"));
+        } catch {
+          return new Set();
+        }
+      };
+      const orados = lerOrados();
+      const marcarOrado = (id) => {
+        orados.add(String(id));
+        try {
+          localStorage.setItem(ORADOS_KEY, JSON.stringify([...orados]));
+        } catch {}
+      };
+
+      const cardHtml = (item) => {
+        const jaOrou = orados.has(String(item.id));
+        return `
         <article class="mural-card" data-mural-card data-id="${item.id}">
           <p class="mural-card-texto">${escapeHtml(item.texto)}</p>
           <footer class="mural-card-footer">
             <span>${escapeHtml(item.nome?.trim() || "Anônimo")} · <span data-tempo>${tempoRelativo(item.date_created)}</span></span>
-            <button type="button" class="mural-orar-btn" data-orar-btn data-count="${item.orando_count}">
-              🙏 Orando por você <span data-orar-count>(${item.orando_count})</span>
+            <button
+              type="button"
+              class="mural-orar-btn"
+              data-orar-btn
+              data-count="${item.orando_count}"
+              ${jaOrou ? "disabled" : ""}
+              aria-pressed="${jaOrou ? "true" : "false"}"
+            >
+              🙏 ${jaOrou ? "Você orou por este pedido" : "Orando por você"} <span data-orar-count>(${item.orando_count})</span>
             </button>
           </footer>
         </article>
       `;
+      };
 
       const prependCard = (item) => {
         if (idsRenderizados.has(item.id)) return;
@@ -166,12 +196,20 @@ const allPosts = visiblePosts(await getAllMensagens());
 
       lista?.addEventListener("click", async (event) => {
         const btn = event.target.closest("[data-orar-btn]");
-        if (!btn) return;
+        if (!btn || btn.disabled) return;
         const card = btn.closest("[data-mural-card]");
         const id = card.dataset.id;
-        const novoCount = Number(btn.dataset.count) + 1;
-        atualizarContador(id, novoCount);
+        if (orados.has(String(id))) return; // já orou por este pedido antes, em outra visita
+
+        // Trava assim que clica (não só durante a chamada de rede) — marca
+        // como "já orou" permanentemente neste navegador, então um clique
+        // duplo ou voltar depois na mesma página não conta de novo.
+        marcarOrado(id);
         btn.disabled = true;
+        btn.setAttribute("aria-pressed", "true");
+        const novoCount = Number(btn.dataset.count) + 1;
+        btn.innerHTML = `🙏 Você orou por este pedido <span data-orar-count>(${novoCount})</span>`;
+        btn.dataset.count = String(novoCount);
         try {
           await fetch(`${directusUrl}/items/mural_oracao/${id}`, {
             method: "PATCH",
@@ -180,8 +218,6 @@ const allPosts = visiblePosts(await getAllMensagens());
           });
         } catch {
           // silencioso: o contador local já refletiu o clique, tenta de novo depois via tempo real
-        } finally {
-          btn.disabled = false;
         }
       });
 
@@ -280,6 +316,16 @@ const allPosts = visiblePosts(await getAllMensagens());
     .mural-orar-btn:hover {
       background: var(--accent);
       color: var(--accent-foreground, var(--background));
+    }
+
+    .mural-orar-btn:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    .mural-orar-btn:disabled:hover {
+      background: var(--background);
+      color: var(--foreground);
     }
   </style>
 </BaseLayout>

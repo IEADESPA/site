@@ -200,27 +200,42 @@ Depois de concluída a aba de eventos, o usuário pediu uma pesquisa ampla (9 ro
 todas as páginas do site) e um plano em fases pra adaptar o site com base nela. O detalhe de cada
 achado está nas seções de pesquisa logo abaixo ("Mais personalizações pesquisadas", pesquisa de
 SEO, pesquisa de melhorias página por página) — isto aqui é só o resumo organizado em ordem de
-execução. **Nada deste plano foi construído ainda.**
+execução. **Fase 0 já foi construída e testada** (ver detalhe abaixo); o restante do plano ainda
+não foi construído.
 
-- **Fase 0 — bugs reais encontrados durante as pesquisas (fazer antes de qualquer coisa)**, os
-  três sem depender do resto do plano:
-  - O contador "orando por você" do Mural de oração pode ser manipulado (incrementa um número
-    calculado no próprio navegador de quem clica, sem trava nenhuma do lado do servidor, e nada
-    impede clique repetido na mesma visita).
-  - ⚠️ **O mais grave dos três, achado pela pesquisa de LGPD**: a página pública de check-in
-    (`/checkin/<slug>/`) busca a lista de inscritos direto no Directus sem autenticação nenhuma
-    (`items/inscricoes_eventos?...&fields=id,nome,codigo,pago,presente`) — qualquer pessoa pode
-    chamar essa mesma URL manualmente e baixar nome completo, status de pagamento e o `codigo` de
-    check-in de todos os inscritos de um evento, sem precisar da página. Esse `codigo` é o mesmo
-    usado depois para emitir crachá/certificado, então vazá-lo publicamente derruba a única
-    barreira desses dois fluxos. Precisa verificar direto no Directus (Configurações → Papéis e
-    permissões → Public) se a permissão está restrita a esses 5 campos ou se a coleção inteira
-    (incluindo `telefone`) está exposta, e mover essa consulta para trás de autenticação ou de uma
-    rota server-side.
-  - Achado pela pesquisa de acessibilidade: os campos do formulário de pesquisa de satisfação
-    (`pesquisa/[slug].astro`, função `campoHtml`) são criados sem `id`, e o `<label>` correspondente
-    não tem `for` — a associação entre rótulo e campo está quebrada, uma regressão real em relação
-    ao formulário de inscrição de evento, que já faz isso certo.
+- [x] **Fase 0 — bugs reais encontrados durante as pesquisas** — os três resolvidos:
+  - **Contador "orando por você" manipulável** — o clique agora trava permanentemente por
+    navegador (`localStorage`, chave `ieadespa-mural-orados`), não só durante a própria requisição:
+    depois de orar por um pedido, o botão fica desabilitado (`🙏 Você orou por este pedido`) e
+    continua desabilitado mesmo voltando à página depois — testado de ponta a ponta com Playwright
+    contra o preview real (clique único, botão trava, estado persiste após `reload()`).
+  - ⚠️ **O mais grave dos três, achado pela pesquisa de LGPD — mitigado, não eliminado por
+    completo**: confirmado direto no Directus (via API de administração) que a permissão pública de
+    leitura de `inscricoes_eventos` realmente não tinha filtro nenhum (`{}`) — qualquer pessoa podia
+    chamar a API do Directus diretamente (sem nunca abrir o site) e baixar `id`, `nome`, `codigo`,
+    `presente`, `aguardando_vaga` e `pago` de **todos os inscritos de todos os eventos desde
+    sempre**. Boa notícia confirmada: `telefone` nunca esteve nesses campos públicos. Correção
+    aplicada nas permissões de leitura **e** de atualização dessa coleção: agora só ficam visíveis/
+    editáveis publicamente as inscrições de eventos com `event_date` dentro dos últimos 90 dias (ou
+    sem data cadastrada) — mesmo prazo já usado pro mural de oração. Testado de ponta a ponta contra
+    o Directus real (criei uma inscrição de teste num evento de janeiro/2026 e outra num evento de
+    hoje, confirmei sem token que a antiga não aparece mais nem por busca exata de código, e a atual
+    continua funcionando normalmente, depois apaguei os dois registros de teste). **Trade-off aceito
+    conscientemente**: check-in, crachá e certificado de um evento páram de funcionar 90 dias depois
+    dele — dado o risco de expor a base inteira de inscritos pra sempre, vale mais que a alternativa.
+    **Isto reduz drasticamente o problema, mas não fecha 100%**: eventos dentro dessa janela de 90
+    dias continuam listáveis por completo por quem chamar a API direto (é a mesma limitação de fundo
+    que já torna o `codigo` um "modelo de senha por posse", aceito no restante do site) — o fechamento
+    completo exigiria mover a consulta de lista (usada pelo check-in offline) para trás de login,
+    diferente da consulta de código único (usada por certificado/crachá/check-in online), que já é seguro
+    por natureza. Registrado como possível Fase futura se o risco residual for considerado alto
+    demais.
+  - **Labels quebrados no formulário de pesquisa de satisfação** — cada campo (`pesquisa/[slug].astro`)
+    agora recebe um `id` único e o `<label>` correspondente aponta pra ele via `for`; pro campo de
+    seleção múltipla (que não é um único controle), o rótulo virou um `<p id>` referenciado via
+    `aria-labelledby` no grupo (`role="group"`), sem usar `<label for>` incorretamente. Testado com
+    verificação isolada da lógica de template cobrindo os 6 tipos de campo existentes — todos com
+    associação correta.
 
 - **Fase 1 — mudança de modelo de dado que o resto depende**: hoje só existe campo pra **um**
   líder por órgão (`leader_name`/`leader_role`/`leader_photo`), mais um caso especial fixo só pra
@@ -466,8 +481,10 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   pesquisados e **descartados** (ver "Ideias rejeitadas") — o "versículo do dia" já existente
   cumpre esse papel sem risco de abandono.
 
-**Nada deste plano foi construído ainda** (fases 0 a 19, exceto o app instalável da Fase 13, que já
-existia). O detalhe completo de cada achado (com a
+**Nada deste plano foi construído ainda** (fases 1 a 19), com duas exceções: o app instalável da
+Fase 13 (que já existia) e a **Fase 0, construída e testada** (correção do contador do mural de
+oração, redução do vazamento de inscritos e conserto dos labels da pesquisa de satisfação — ver
+detalhe na própria Fase 0, acima). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
 fontes consultadas.
