@@ -720,6 +720,70 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   estrangeiros (ex.: Eventbrite) — pra informar a decisão com o que já é padrão de mercado, não só
   com o que a igreja pediu até agora.
 
+  **Comparação feita** (pesquisa real em Sympla, Even3 e Eventbrite — fontes ao final), **excluindo
+  de propósito todo o lado de processamento de pagamento** por instrução do usuário: comparar isso
+  seria injusto e sem utilidade, já que o nosso sistema não processa pagamento nenhum (`pago` é só
+  uma marcação manual). A comparação de pagamento continua de fora, reservada pra quando/se esse
+  recurso existir.
+
+  **Onde o nosso módulo de eventos já está à frente ou empatado**, sem precisar de nada a mais:
+  - Certificado e crachá em PDF gerados automaticamente — recurso que só a Even3 replica entre as
+    três, e o nosso fica no próprio domínio da igreja, sem marca de terceiro.
+  - Check-in que funciona offline — a Even3 destaca isso como diferencial ("aplicativo de
+    credenciamento offline elimina filas"); o nosso PWA instalável cobre o mesmo caso sem precisar
+    de app de loja (Fase 13, já testado).
+  - Autoinscrição/autocredenciamento pelo próprio participante (Even3 usa "totens"; o nosso QR
+    autoatendimento com nome+telefone cobre o mesmo caso, e com uma verificação de identidade mais
+    forte que a Even3 documenta — nome sozinho não confirma quem é a pessoa).
+  - Pesquisa de satisfação pós-evento, PDF exportável da programação, `.ics` de calendário e imagem
+    compartilhável de story — nenhuma das três plataformas pesquisadas tem os quatro juntos como
+    recurso citado; são diferenciais nossos, não do mercado.
+  - Todo o fluxo é 100% na marca/domínio da igreja — nenhuma das três é assim: as três são
+    plataformas de terceiro, com a marca delas aparecendo pro inscrito em algum momento.
+
+  **Gaps reais, por ordem de impacto**:
+  1. **Nenhum canal de confirmação além da tela na hora** — o cadastro só pede nome e telefone
+     (sem e-mail), e o código de check-in só aparece uma vez na tela ("anote ou tire um print");
+     não existe confirmação enviada pra guardar depois. Sympla, Even3 e Eventbrite mandam e-mail de
+     confirmação com o ingresso/QR anexado, por padrão, pra toda inscrição — é o item de maior
+     impacto porque, sem isso, quem perde o print depende do fluxo de "esqueci o código" (que
+     existe e funciona, mas é uma correção, não o padrão esperado).
+  2. **Lembrete alcança só quem instalou o site como app e permitiu notificação** — o lembrete de
+     evento (Fase construída anteriormente) é só push; sem e-mail cadastrado, não existe um segundo
+     canal pra quem não ativou push. Os três concorrentes usam e-mail como canal padrão de
+     lembrete, sem exigir instalação de nada.
+  3. **Lista de espera não se promove sozinha** — hoje só promove quem está esperando quando um
+     administrador aumenta manualmente o limite de vagas (`painel-eventos`); não existe fluxo de "o
+     próprio inscrito cancelou" liberando a vaga automaticamente, nem notificação de quem foi
+     promovido. Eventbrite documenta especificamente isso como recurso padrão: cancelamento libera
+     vaga e notifica automaticamente o próximo da fila.
+  4. **Sem cancelamento pelo próprio inscrito** — hoje só a equipe apaga o evento inteiro
+     (`painel-eventos`); a pessoa que se inscreveu não tem como desistir da própria vaga. Está
+     amarrado ao gap anterior — não dá pra promover a lista de espera automaticamente sem antes ter
+     como alguém liberar a própria vaga.
+  5. **Certificado não tem verificação pública de autenticidade** — a Even3 tem um link público
+     onde qualquer terceiro (ex. um empregador) digita o código do certificado e confirma que é
+     autêntico. O nosso código de certificado é só uma chave de acesso privada (código + telefone),
+     não um selo verificável por quem não é o próprio inscrito.
+  6. **Sem controle de múltiplos portões/dispositivos de check-in** — a Sympla permite configurar
+     aparelhos diferentes por portão com controle de fluxo de entrada. Registrado só por
+     completude: **provavelmente não vale a pena** no porte de evento desta igreja (um point de
+     check-in já cobre o fluxo real hoje) — não recomendado sem um caso concreto que justifique.
+
+  **O que fica decidido vs. o que ainda depende da análise futura**: os gaps 1-4 são relativamente
+  simples de descrever (e-mail no cadastro, e-mail como segundo canal de lembrete, cancelamento
+  pelo inscrito, promoção automática da lista de espera) e não dependem da decisão de "tipos de
+  evento" do início desta fase — poderiam virar itens de uma fase própria de melhoria do módulo de
+  eventos, independente do caso do batismo. O gap 5 é menor prioridade. O gap 6 não é recomendado.
+  A parte de pagamento segue de fora, como pedido.
+
+  Fontes consultadas: [Check-in Sympla](https://produtores.sympla.com.br/funcionalidades/check-in-para-eventos/),
+  [Credenciamento mobile Sympla](https://produtores.sympla.com.br/funcionalidades/credenciamento-mobile/),
+  [Credenciamento Even3](https://plataforma.even3.com.br/aplicativo-de-credenciamento/),
+  [Certificados Even3](https://plataforma.even3.com.br/certificados-para-eventos/),
+  [Eventbrite — Waitlist](https://www.eventbrite.com/features/waitlist/),
+  [Eventbrite — Registration](https://www.eventbrite.com/features/registration/).
+
 **Fases 0 a 5 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 6 a 21,
 nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia antes
 mesmo desta pesquisa). O detalhe completo de cada achado (com a
