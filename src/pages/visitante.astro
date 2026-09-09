@@ -32,11 +32,25 @@ const nextSteps = [
   { label: "Congregações", description: "Encontre a congregação mais próxima de você.", href: "/congregacoes/" },
   { label: "Como chegar", description: "Endereço, rota e horários da sede.", href: "/contato/" },
 ];
+
+// FAQPage — deixa a pergunta/resposta elegível pro Google mostrar direto
+// no resultado de busca (rich result de "perguntas frequentes"), sem
+// precisar de nenhum conteúdo novo: já é o mesmo texto que já existe aqui.
+const faqStructuredData = visitante.faq?.length > 0 && {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: visitante.faq.map((item) => ({
+    "@type": "Question",
+    name: item.pergunta,
+    acceptedAnswer: { "@type": "Answer", text: item.resposta },
+  })),
+};
 ---
 
 <BaseLayout
   title="Primeira vez aqui?"
   description={`Informações para quem vai visitar a ${siteConfig.name} pela primeira vez.`}
+  structuredData={faqStructuredData || undefined}
 >
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">

@@ -143,6 +143,11 @@ e-mail e senha criado para cada pessoa.
   deve ter sua própria conta no GitHub e ser adicionado como colaborador do repositório
   `IEADESPA/site` (Settings → Collaborators). Antes de editar, rode sempre `git pull` primeiro,
   para não perder nenhuma configuração feita por outra pessoa.
+  **Branch `main` protegido** (ativado em 2026-09-09): ninguém consegue apagar o branch nem
+  reescrever o histórico (`force-push`) — mas push direto continua funcionando normalmente, sem
+  exigir Pull Request, porque hoje só uma pessoa mexe no código. Se um dia entrar outro
+  desenvolvedor no time, vale reforçar pra exigir Pull Request com aprovação antes de qualquer
+  mudança entrar no `main` (Settings → Branches → Branch protection rules).
 - **Painel do Directus**: para quem publica conteúdo (secretaria, diretoria). Cada pessoa tem seu
   próprio login de e-mail e senha, criado por um administrador do Directus (Configurações →
   Usuários → Criar usuário). Contas podem ser desativadas individualmente a qualquer momento, sem
@@ -793,9 +798,32 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
     envio nessas páginas) e que a gravação chega certa no Directus (testado direto, sem cookie,
     sem CORS liberado pra fora do domínio de produção — mesma proteção que qualquer outra coleção
     já tem). Responde exatamente as 2-3 perguntas reais que valem a pena (de onde vêm as pessoas,
-    quais páginas usam) sem herdar a complexidade de um produto de analytics genérico — quem
-    administra o Directus pode configurar um painel do próprio Insights (recurso já incluso, sem
-    custo extra) pra visualizar, ou consultar a coleção direto.
+    quais páginas usam) sem herdar a complexidade de um produto de analytics genérico.
+
+  - **Painel visual construído** (usuário pediu pra não deixar só "cru"): um Dashboard no próprio
+    Directus Insights (recurso já incluso, sem custo extra — não é preciso nenhuma extensão paga)
+    chamado "Visitas do site", com 4 painéis: total de visitas, visitas ao longo do tempo (por
+    dia), páginas mais vistas, e de onde as pessoas vêm. Construído direto pela API (o schema exato
+    de cada tipo de painel — `metric`, `time-series`, `bar-chart` — foi conferido no código-fonte
+    oficial do Directus antes de criar, pra não adivinhar campo errado às cegas, já que não dá pra
+    ver a tela do Insights renderizada durante a configuração). Testado rodando manualmente a mesma
+    consulta agregada que cada painel executa (contagem total, agrupado por página, agrupado por
+    dia) direto contra o Directus — todas retornaram o formato esperado, com dado real (a essa
+    altura já havia 4 visitas reais registradas, de gente que visitou o site nas horas depois do
+    deploy — não eram de teste). Acesse em Directus → menu **Insights** → "Visitas do site" (mesmo
+    login que já usa pra editar conteúdo).
+
+- **De quebra, 2 melhorias reais de SEO/tráfego orgânico encontradas nesta fase, fora do escopo
+  original mas do mesmo espírito** ("promoção de conteúdo"):
+  - **`FAQPage` (dado estruturado) em `/visitante/`**: as perguntas frequentes que já existiam
+    (Fase 3) agora são elegíveis para o Google mostrar a pergunta e a resposta direto no resultado
+    de busca, expansível, sem precisar clicar no site — zero conteúdo novo, só o mesmo texto já
+    cadastrado, exportado no formato que o Google entende.
+  - **Espaço pronto pra verificar o site no Google Search Console** (`siteConfig.
+    googleSiteVerification`, vazio por padrão): o Search Console é gratuito e é o que mostra de
+    verdade quais buscas trazem gente pro site — só falta a igreja criar a propriedade em
+    search.google.com/search-console (não dá pra fazer por código, precisa de uma conta Google) e
+    colar o código de verificação nesse campo, sem precisar de nenhum deploy além disso.
 
 O usuário pediu ainda mais uma rodada — comparando referências de sites de igreja no Brasil e no
 exterior, pra deixar este "o melhor site de igreja". Mais 5 fases, detalhadas na mesma seção de

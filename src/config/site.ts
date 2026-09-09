@@ -15,6 +15,11 @@ export const siteConfig = {
   /** Mesmo CNPJ usado como chave Pix em /doacoes/ — centralizado aqui pra
    * também aparecer em /transparencia/, sem duplicar o literal. */
   cnpj: "10.743.586/0001-38",
+  /** Código de verificação do Google Search Console (Configurações → Propriedade →
+   * Verificação → método "Tag HTML"). Vazio por padrão — preencher só depois de
+   * criar a propriedade gratuita em search.google.com/search-console, sem precisar
+   * de deploy nenhum além de colar o código aqui. */
+  googleSiteVerification: "",
   language: "pt-BR",
   dateLocale: "pt-BR",
   locale: "pt_BR",
