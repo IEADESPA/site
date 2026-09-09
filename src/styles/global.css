@@ -61,17 +61,37 @@
   --warning: #8a5b06;
   --danger: #b42318;
 
-  /* Set --font-display to var(--font-serif) for an editorial serif masthead and
-     headline set; body copy and UI keep the sans stack. */
+  /* Masthead e títulos usam a serifada (editorial, "site de igreja de
+     referência"); corpo de texto e UI seguem sans — ver Fase 11 no README. */
   --font-sans:
     "Geist", Inter, "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, Arial, sans-serif;
-  --font-display: var(--font-sans);
+  --font-display: var(--font-serif);
   --font-serif:
     "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", ui-serif, serif;
   --font-mono:
     "Geist Mono", ui-monospace, "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Consolas,
     Menlo, "Liberation Mono", monospace;
+
+  /*
+   * Escala tipográfica (Fase 11) — antes cada componente definia seu próprio
+   * clamp() solto (pagehead, hero, cards de post/notícia, título de artigo
+   * repetiam valores quase iguais, sem relação nenhuma entre si no código).
+   * Título e corpo de texto agora só escolhem um degrau daqui; um novo
+   * componente reaproveita, em vez de inventar mais um valor.
+   */
+  --text-title-sm: clamp(1.5rem, 3.2vw, 1.875rem);
+  --text-title-md: clamp(1.6rem, 3.6vw, 2.125rem);
+  --text-title-lg: clamp(1.9rem, 5vw, 2.75rem);
+  --text-title-xl: clamp(2.25rem, 6vw, 3.5rem);
+  --text-title-2xl: clamp(2.25rem, 6vw, 3.75rem);
+  --text-title-3xl: clamp(2.25rem, 6.5vw, 4rem);
+
+  --text-body-sm: 0.875rem;
+  --text-body-md: 1rem;
+  --text-body-lg: clamp(1.0625rem, 2.2vw, 1.25rem);
+  --text-body-xl: clamp(1.125rem, 2.4vw, 1.5rem);
+  --text-body-article: clamp(1.125rem, 2.4vw, 1.4rem);
 
   --layout-wide: 75rem;
   --layout-content: 45rem;
@@ -88,6 +108,16 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --duration-fast: 0.18s;
   --duration: 0.28s;
+
+  /*
+   * Elevação: cards de "destaque" (CTA de acesso rápido, horário em
+   * destaque no hero) usam sombra em vez da borda uniforme que todo outro
+   * card no site usa — dá uma hierarquia visual real a eles, em vez de
+   * tudo parecer o mesmo retângulo com fio. Sombra clara e difusa no tema
+   * claro; no escuro, uma sombra escura mal aparece contra o fundo já
+   * escuro, então vira glow (halo) sutil na cor de borda.
+   */
+  --shadow-card: 0 1px 2px rgb(16 29 51 / 6%), 0 12px 28px -14px rgb(16 29 51 / 24%);
 }
 
 @media (min-width: 768px) {
@@ -113,6 +143,7 @@
   --tip: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
+  --shadow-card: 0 0 0 1px var(--border), 0 12px 28px -16px rgb(0 0 0 / 55%);
 }
 
 /* Modo de leitura fácil: texto maior, mais espaçado e com mais contraste,
@@ -265,7 +296,7 @@
   .pagehead-title {
     margin: 0.75rem 0 0;
     font-family: var(--font-display);
-    font-size: clamp(2.25rem, 6vw, 3.5rem);
+    font-size: var(--text-title-xl);
     font-weight: 600;
     letter-spacing: -0.03em;
     line-height: 1.05;
@@ -279,6 +310,17 @@
     font-size: 1.0625rem;
     line-height: 1.6;
     text-wrap: pretty;
+  }
+
+  /*
+   * Card "de destaque" (CTA de acesso rápido, horário em evidência): sombra
+   * em vez da borda de 1px que todo outro card no site usa — ver
+   * --shadow-card. Reaproveitado por index.astro e visitante.astro.
+   */
+  .card-elevated {
+    background: var(--card);
+    border: 1px solid transparent;
+    box-shadow: var(--shadow-card);
   }
 
   .skip-link {

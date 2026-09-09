@@ -168,8 +168,8 @@ const versiculoInicial = baldeInicial[epochDays % baldeInicial.length];
 
         renderHoje();
         renderRelogio();
-        setInterval(renderRelogio, 15000);
-        setInterval(renderHoje, 5 * 60 * 1000);
+        window.ieadespaSetInterval(renderRelogio, 15000);
+        window.ieadespaSetInterval(renderHoje, 5 * 60 * 1000);
       })();
     </script>
 
@@ -214,7 +214,7 @@ const versiculoInicial = baldeInicial[epochDays % baldeInicial.length];
         }
 
         atualizarEventoHoje();
-        setInterval(atualizarEventoHoje, 20000);
+        window.ieadespaSetInterval(atualizarEventoHoje, 20000);
       })();
     </script>
 
@@ -255,7 +255,7 @@ const versiculoInicial = baldeInicial[epochDays % baldeInicial.length];
         };
 
         render();
-        setInterval(render, 5 * 60 * 1000);
+        window.ieadespaSetInterval(render, 5 * 60 * 1000);
       })();
     </script>
 

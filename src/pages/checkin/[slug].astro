@@ -351,8 +351,8 @@ const allPosts = visiblePosts(await getAllMensagens());
       }
 
       carregarRoster();
-      setInterval(carregarRoster, 20000);
-      setInterval(sincronizarPendencias, 8000);
+      window.ieadespaSetInterval(carregarRoster, 20000);
+      window.ieadespaSetInterval(sincronizarPendencias, 8000);
       window.addEventListener("online", sincronizarPendencias);
 
       // Confirma na hora (otimista, sem esperar a rede) — quem está na fila

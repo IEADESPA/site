@@ -114,28 +114,51 @@ const quickLinks = [
   <main id="content" class="outer">
     <div class="inner">
       <section class="hero pt-10 pb-14 md:pt-16 md:pb-20" aria-label="Apresentação">
-        <p class="eyebrow">{siteConfig.name} &middot; Parauapebas/PA</p>
-        <h1 class="hero-title">{config.tagline}</h1>
-        <p class="hero-description">{config.about}</p>
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">{siteConfig.name} &middot; Parauapebas/PA</p>
+            <h1 class="hero-title">{config.tagline}</h1>
+            <p class="hero-description">{config.about}</p>
 
-        <div class="mt-8 flex flex-wrap items-center gap-3">
-          <a href="/visitante/" class="btn btn-solid">Primeira vez aqui?</a>
-          <a href="/ao-vivo/" class="btn btn-outline">Assista ao vivo</a>
-          <a href="/mensagens/" class="btn btn-outline">Ouvir mensagens</a>
-          <a href="/contato/" class="btn btn-outline">Como chegar</a>
-          <a href="https://app.ieadespa.org.br" target="_blank" rel="noreferrer" class="btn btn-outline">Portal do Membro</a>
+            <div class="mt-8 flex flex-wrap items-center gap-3">
+              <a href="/visitante/" class="btn btn-solid">Primeira vez aqui?</a>
+              <a href="/ao-vivo/" class="btn btn-outline">Assista ao vivo</a>
+              <a href="/mensagens/" class="btn btn-outline">Ouvir mensagens</a>
+              <a href="/contato/" class="btn btn-outline">Como chegar</a>
+              <a href="https://app.ieadespa.org.br" target="_blank" rel="noreferrer" class="btn btn-outline">Portal do Membro</a>
+            </div>
+
+            <p class="mt-4 text-sm text-muted-foreground">
+              <a href={mapsHref(config)} target="_blank" rel="noreferrer" class="link-sweep text-accent font-semibold">
+                📍 {enderecoCompleto(config)}
+              </a>
+            </p>
+          </div>
+
+          {
+            /*
+             * Área reservada pra foto real da igreja/congregação (depende da
+             * Fase 4 — upload em Directus). Enquanto não existe, mostra um
+             * padrão gráfico só em CSS (duotone nas cores da marca + raios
+             * concêntricos bem sutis), pra já ocupar o layout de duas
+             * colunas sem parecer um espaço vazio quebrado. Pra trocar pela
+             * foto de verdade depois: troque esta div por
+             * `<img src=... alt=... class="hero-media__photo" />` dentro de
+             * `.hero-media` — o overlay de degradê abaixo já fica pronto
+             * pra aplicar sobre a foto (é só descomentar `.hero-media__photo`
+             * no <style>).
+             */
+          }
+          <div class="hero-media" aria-hidden="true">
+            <div class="hero-media__pattern"></div>
+            <div class="hero-media__overlay"></div>
+          </div>
         </div>
-
-        <p class="mt-4 text-sm text-muted-foreground">
-          <a href={mapsHref(config)} target="_blank" rel="noreferrer" class="link-sweep text-accent font-semibold">
-            📍 {enderecoCompleto(config)}
-          </a>
-        </p>
 
         <ul class="hero-services mt-10 grid gap-4 sm:grid-cols-3">
           {
             heroSchedule.map((service) => (
-              <li class="hero-service">
+              <li class="hero-service card-elevated">
                 <span class="block text-xs font-semibold tracking-wide text-accent uppercase">{service.label}</span>
                 <span class="mt-1 block text-lg font-semibold tracking-tight">{service.title}</span>
                 {service.time && <span class="mt-1 block text-sm text-muted-foreground">{service.time}</span>}
@@ -251,7 +274,7 @@ const quickLinks = [
                   render();
                   // Sem precisar recarregar a página: confere a cada 5
                   // minutos se entrou num novo período de 6h.
-                  setInterval(render, 5 * 60 * 1000);
+                  window.ieadespaSetInterval(render, 5 * 60 * 1000);
                 };
 
                 const adiarParaOcioso = (fn) =>
@@ -270,7 +293,7 @@ const quickLinks = [
         <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {
             quickLinks.map((link) => (
-              <a href={link.href} class="quick-link link-title">
+              <a href={link.href} class="quick-link card-elevated link-title">
                 <span class="link-title__text block text-lg font-semibold tracking-tight">{link.label}</span>
                 <span class="mt-2 block text-sm leading-relaxed text-muted-foreground">{link.description}</span>
               </a>
@@ -361,7 +384,7 @@ const quickLinks = [
   .verse-text {
     margin: 0;
     font-family: var(--font-serif);
-    font-size: clamp(1.0625rem, 2vw, 1.25rem);
+    font-size: var(--text-body-lg);
     line-height: 1.5;
     text-wrap: pretty;
   }
@@ -407,10 +430,23 @@ const quickLinks = [
     text-underline-offset: 0.2em;
   }
 
+  .hero-grid {
+    display: grid;
+    gap: 2.5rem;
+    align-items: center;
+  }
+
+  @media (min-width: 768px) {
+    .hero-grid {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      gap: 3rem;
+    }
+  }
+
   .hero-title {
     margin: 0.75rem 0 0;
     font-family: var(--font-display);
-    font-size: clamp(2.25rem, 6vw, 3.75rem);
+    font-size: var(--text-title-2xl);
     font-weight: 600;
     letter-spacing: -0.03em;
     line-height: 1.05;
@@ -421,28 +457,77 @@ const quickLinks = [
     max-width: 40rem;
     margin: 1.25rem 0 0;
     color: var(--muted-foreground);
-    font-size: clamp(1.0625rem, 2vw, 1.25rem);
+    font-size: var(--text-body-lg);
     line-height: 1.55;
     text-wrap: pretty;
   }
 
+  /* Escondida abaixo de md: numa tela estreita, texto + botões já preenchem
+     bem o espaço, e uma segunda coluna só empurraria tudo pra baixo. */
+  .hero-media {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .hero-media {
+      position: relative;
+      aspect-ratio: 4 / 5;
+      overflow: hidden;
+      display: block;
+      border-radius: var(--radius-md);
+      background: linear-gradient(155deg, var(--primary), var(--accent-strong));
+    }
+  }
+
+  /* Textura de raios concêntricos, bem sutil (soft-light), simulando luz —
+     só decorativo, unificado nas duas cores da marca (duotone). Some
+     nenhuma foto real; é o "encaixe" que a foto vai preencher depois. */
+  .hero-media__pattern {
+    position: absolute;
+    inset: 0;
+    background-image: repeating-conic-gradient(
+      from 0deg at 50% 116%,
+      rgb(255 255 255 / 16%) 0deg 3deg,
+      transparent 3deg 11deg
+    );
+    mix-blend-mode: soft-light;
+  }
+
+  /* Vinheta pra dar profundidade ao degradê; é a mesma técnica de overlay
+     que entra em cima da foto real quando ela chegar (troca só o `background`
+     do elemento pela foto, este overlay continua igual por cima). */
+  .hero-media__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgb(0 0 0 / 22%), transparent 55%);
+  }
+
+  /* Uncomment quando a foto real (Fase 4) existir, e troque o `<div
+     class="hero-media__pattern">` por `<img class="hero-media__photo">`. */
+  /*
+  .hero-media__photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  */
+
   .hero-service {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
     padding: 1.1rem 1.25rem;
   }
 
   .quick-link {
     display: block;
-    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1.25rem 1.4rem;
     text-decoration: none;
-    transition: border-color var(--duration) var(--ease-out);
+    transition:
+      transform var(--duration) var(--ease-out),
+      box-shadow var(--duration) var(--ease-out);
   }
 
   .quick-link:hover,
   .quick-link:focus-visible {
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    transform: translateY(-2px);
   }
 </style>

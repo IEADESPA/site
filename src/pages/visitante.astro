@@ -115,7 +115,7 @@ const faqStructuredData = visitante.faq?.length > 0 && {
         <h2 id="next-steps-heading" class="section-title">Próximos passos</h2>
         <div class="mt-5 grid gap-5 sm:grid-cols-3">
           {nextSteps.map((step) => (
-            <a href={step.href} class="quick-link link-title">
+            <a href={step.href} class="quick-link card-elevated link-title">
               <span class="link-title__text block text-base font-semibold tracking-tight">{step.label}</span>
               <span class="mt-2 block text-sm leading-relaxed text-muted-foreground">{step.description}</span>
             </a>
@@ -163,15 +163,16 @@ const faqStructuredData = visitante.faq?.length > 0 && {
 
   .quick-link {
     display: block;
-    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1.25rem 1.4rem;
     text-decoration: none;
-    transition: border-color var(--duration) var(--ease-out);
+    transition:
+      transform var(--duration) var(--ease-out),
+      box-shadow var(--duration) var(--ease-out);
   }
 
   .quick-link:hover,
   .quick-link:focus-visible {
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    transform: translateY(-2px);
   }
 </style>

@@ -1,4 +1,5 @@
 ---
+import { ClientRouter } from "astro:transitions";
 import { siteConfig } from "@/config/site";
 import { DIRECTUS_URL } from "@/lib/directus";
 import "@/styles/global.css";
@@ -72,6 +73,7 @@ const schema = structuredData ?? defaultStructuredData;
     {nextUrl && <link rel="next" href={new URL(nextUrl, siteConfig.siteUrl).toString()} />}
     <link rel="alternate" type="application/rss+xml" title={`${siteConfig.name} RSS`} href={new URL("/rss.xml", siteConfig.siteUrl).toString()} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <ClientRouter />
     <meta property="og:locale" content={siteConfig.locale} />
     <meta property="og:type" content={type} />
     <meta property="og:site_name" content={siteConfig.name} />
@@ -86,20 +88,38 @@ const schema = structuredData ?? defaultStructuredData;
     <script is:inline type="application/ld+json" set:html={JSON.stringify(schema)} />
     <script is:inline>
       /*
-       * Runs before first paint so the stored reading mode is applied without a
-       * flash. Falls back to the system preference until the reader picks a side.
+       * Roda antes do primeiro paint pra aplicar tema/leitura fácil sem
+       * flash. Com o ClientRouter (transição de página, Fase 11) o <html>
+       * de cada navegação chega com os atributos "de fábrica" do HTML
+       * gerado no servidor daquela página (data-theme="light" etc.) — a
+       * troca de página substitui esses atributos pelos da página nova,
+       * por cima do que o clique no botão tinha ajustado. Por isso a
+       * aplicação de tema/leitura e a amarração dos botões viram uma
+       * função só, chamada de novo em "astro:after-swap" (depois de cada
+       * troca), não só uma vez no carregamento inicial.
        */
       (() => {
         const storageKey = "ieadespa-theme";
+        const readableKey = "ieadespa-readable";
         const root = document.documentElement;
         const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
-        let storedTheme;
 
-        try {
-          storedTheme = localStorage.getItem(storageKey);
-        } catch {
-          storedTheme = null;
-        }
+        const lerStorage = (key) => {
+          try {
+            return localStorage.getItem(key);
+          } catch {
+            return null;
+          }
+        };
+
+        const salvarStorage = (key, value) => {
+          try {
+            localStorage.setItem(key, value);
+          } catch {}
+        };
+
+        let storedTheme = lerStorage(storageKey);
+        let readable = lerStorage(readableKey) === "true";
 
         const updateToggles = (theme) => {
           const isDark = theme === "dark";
@@ -113,35 +133,10 @@ const schema = structuredData ?? defaultStructuredData;
           root.dataset.theme = theme;
           if (persist) {
             storedTheme = theme;
-            try {
-              localStorage.setItem(storageKey, theme);
-            } catch {}
+            salvarStorage(storageKey, theme);
           }
           updateToggles(theme);
         };
-
-        const preferredTheme =
-          storedTheme === "light" || storedTheme === "dark"
-            ? storedTheme
-            : systemDark.matches
-              ? "dark"
-              : "light";
-
-        setTheme(preferredTheme);
-
-        systemDark.addEventListener("change", (event) => {
-          if (storedTheme === "light" || storedTheme === "dark") return;
-          setTheme(event.matches ? "dark" : "light");
-        });
-
-        // Modo de leitura fácil: texto maior e mais contraste, pensado para
-        // idosos e baixa visão. Independente do tema claro/escuro.
-        const readableKey = "ieadespa-readable";
-        let readable = false;
-
-        try {
-          readable = localStorage.getItem(readableKey) === "true";
-        } catch {}
 
         const updateReadableToggles = (isReadable) => {
           document.querySelectorAll("[data-readable-toggle]").forEach((button) => {
@@ -156,30 +151,40 @@ const schema = structuredData ?? defaultStructuredData;
         const setReadable = (isReadable, persist = false) => {
           readable = isReadable;
           root.dataset.readable = String(isReadable);
-          if (persist) {
-            try {
-              localStorage.setItem(readableKey, String(isReadable));
-            } catch {}
-          }
+          if (persist) salvarStorage(readableKey, String(isReadable));
           updateReadableToggles(isReadable);
         };
 
-        setReadable(readable);
+        const temaPreferido = () =>
+          storedTheme === "light" || storedTheme === "dark" ? storedTheme : systemDark.matches ? "dark" : "light";
 
-        window.addEventListener("DOMContentLoaded", () => {
-          updateToggles(root.dataset.theme || preferredTheme);
+        const aplicarEAmarrarBotoes = () => {
+          setTheme(temaPreferido());
+          setReadable(readable);
+
           document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
             button.addEventListener("click", () => {
               setTheme(root.dataset.theme === "dark" ? "light" : "dark", true);
             });
           });
-
-          updateReadableToggles(readable);
           document.querySelectorAll("[data-readable-toggle]").forEach((button) => {
             button.addEventListener("click", () => {
               setReadable(!readable, true);
             });
           });
+        };
+
+        // Chamada direta: pinta o <html> sem flash antes do <body> existir
+        // (os `querySelectorAll` de botão simplesmente não acham nada ainda).
+        aplicarEAmarrarBotoes();
+        // Primeira carga de verdade: já dá pra amarrar os botões do <body>.
+        document.addEventListener("DOMContentLoaded", aplicarEAmarrarBotoes);
+        // Toda troca de página do ClientRouter: refaz tudo de novo.
+        document.addEventListener("astro:after-swap", aplicarEAmarrarBotoes);
+
+        systemDark.addEventListener("change", (event) => {
+          if (storedTheme === "light" || storedTheme === "dark") return;
+          setTheme(event.matches ? "dark" : "light");
         });
       })();
     </script>
@@ -187,6 +192,28 @@ const schema = structuredData ?? defaultStructuredData;
   <body>
     <a class="skip-link" href="#content">Pular para o conteúdo</a>
     <slot />
+    <script is:inline>
+      /*
+       * Transição de página (ClientRouter, ver <ClientRouter /> no <head>)
+       * troca só o <body> em vez de recarregar a página inteira — o que
+       * quer dizer que um setInterval() criado pelo script de uma página
+       * (relógio do painel de recepção, rotação do versículo, sincronização
+       * do check-in) continua rodando escondido depois que a pessoa navega
+       * pra outra página, já que o intervalo em si não morre sozinho só
+       * porque os elementos que ele atualizava saíram do documento. Todo
+       * setInterval de qualquer página deve ser registrado por
+       * `window.ieadespaSetInterval(fn, ms)` em vez do global direto, pra
+       * ser encerrado automaticamente aqui antes de cada troca de página.
+       */
+      window.ieadespaSetInterval = (fn, ms) => {
+        window.__ieadespaIntervalIds ??= [];
+        window.__ieadespaIntervalIds.push(setInterval(fn, ms));
+      };
+      document.addEventListener("astro:before-swap", () => {
+        (window.__ieadespaIntervalIds ?? []).forEach((id) => clearInterval(id));
+        window.__ieadespaIntervalIds = [];
+      });
+    </script>
     <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
       /*
        * Contador de visitas próprio — sem cookie, sem armazenamento no

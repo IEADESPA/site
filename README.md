@@ -829,18 +829,49 @@ O usuário pediu ainda mais uma rodada — comparando referências de sites de i
 exterior, pra deixar este "o melhor site de igreja". Mais 5 fases, detalhadas na mesma seção de
 pesquisa transversal mais abaixo:
 
-- **Fase 11 — design/UX de referência (Brasil e exterior)**: o maior gap visual comparado a
-  qualquer site de igreja de referência é o hero 100% textual (sem foto/vídeo nenhum) — a correção
-  possível já agora, mesmo sem foto real disponível ainda (essa depende da igreja, já registrado na
-  Fase 4), é preparar o layout em duas colunas (texto + área de imagem) e decidir a técnica de
-  tratamento (overlay em degradê ou duotone nas cores da marca) para a foto encaixar sem redesenho
-  quando chegar; ativar a fonte serifada já prevista no próprio CSS (`--font-display`) em títulos,
-  hoje só sans-serif em tudo; formalizar uma escala de tipografia em tokens (hoje cada componente
-  define seu próprio tamanho solto, risco real de inconsistência conforme o site cresce); variar o
-  tratamento visual dos cards de destaque (sombra em vez de borda uniforme em todo elemento);
-  transição simples de página (crossfade via `ClientRouter` do Astro, sem o `transition:persist` do
-  áudio, que segue bloqueado por falta de conteúdo); agrupar o rodapé por seção (ministérios,
-  visite, institucional) em vez de lista única, à medida que a Fase 5 adicionar mais páginas.
+- [x] **Fase 11 — design/UX de referência (Brasil e exterior).** Os 6 pontos, todos construídos e
+  testados (build real + `astro check` + Playwright contra `astro preview`, telas clara/escura,
+  desktop/mobile):
+  - **Hero em duas colunas** (texto + área de imagem) em `index.astro`, a partir de 768px (empilha
+    em telas estreitas, onde uma segunda coluna só empurraria o conteúdo pra baixo). Como a foto
+    real da igreja ainda depende da Fase 4, a coluna da direita mostra por enquanto um padrão só em
+    CSS — degradê duotone nas cores da marca (`--primary` → `--accent-strong`, os dois já trocam
+    sozinhos no tema escuro) com raios concêntricos bem sutis (`mix-blend-mode: soft-light`) e uma
+    vinheta por cima —, deixado pronto (comentário no código explica o encaixe exato) pra virar
+    `<img>` real sem precisar redesenhar nada quando a foto chegar.
+  - **Fonte serifada ativada nos títulos**: `--font-display` (usado em `pagehead-title`,
+    `hero-title`, título de card, `wordmark`, `prose h2/h3`) trocou de `var(--font-sans)` pra
+    `var(--font-serif)` — já era só isso, o token só não tinha sido ligado ainda.
+  - **Escala de tipografia formalizada em tokens** (`--text-title-sm` a `--text-title-3xl`,
+    `--text-body-sm` a `--text-body-article`, em `global.css`): antes cada componente (card de
+    post, card de notícia, título de artigo, hero, pagehead, busca) definia seu próprio `clamp()`
+    solto, vários quase idênticos sem nenhuma relação no código; agora todos apontam pro mesmo
+    degrau, e um componente novo reaproveita em vez de inventar mais um valor.
+  - **Cards de destaque com sombra em vez de borda uniforme**: nova classe `.card-elevated` (token
+    `--shadow-card`, halo de borda em vez de sombra no tema escuro, onde sombra escura não aparece
+    contra fundo já escuro) aplicada aos cards de "Acesso rápido"/"Próximos passos" e aos cards de
+    horário em destaque no hero — os únicos realmente "de call-to-action" da home; cards
+    informativos (horário na página de visitante, FAQ) continuam com a borda simples de sempre, de
+    propósito, pra sombra não virar só "todo card tem uma sombra agora" sem hierarquia nenhuma.
+  - **Transição de página (crossfade)** via `<ClientRouter />` do Astro (`BaseLayout.astro`) — o
+    crossfade é o comportamento padrão dele, sem precisar de `transition:animate` em nada; já
+    desativa sozinho com `prefers-reduced-motion`.
+  - **Rodapé agrupado por seção** (`footerNavigation` em `config/site.ts` virou 3 grupos —
+    Participe, Institucional, Equipe — em vez de uma lista única) em `SiteFooter.astro`, com
+    espaço pra crescer à medida que a Fase 5 adicionar mais páginas sem virar uma parede de links.
+  - **2 problemas reais encontrados e corrigidos por causa do `ClientRouter`, não haviam antes
+    dele**: (1) ele troca os atributos do `<html>` pelos "de fábrica" da página nova a cada
+    navegação — o que resetava o tema escuro e o modo de leitura fácil pro padrão claro a cada
+    clique em um link, e deixava os botões "A+"/tema da página nova sem funcionar (o script de
+    tema só rodava uma vez, amarrado aos botões da primeira página); corrigido reestruturando esse
+    script em `BaseLayout.astro` pra reaplicar tema/leitura e religar os botões também no evento
+    `astro:after-swap`, não só no carregamento inicial. (2) um `setInterval()` de uma página (telão
+    da recepção, sincronização do check-in, rotação do versículo na home) não morre sozinho só
+    porque a pessoa navegou pra outra página — ficaria rodando escondido pro resto da sessão,
+    acumulando um a cada visita à mesma página. Corrigido com um `window.ieadespaSetInterval()`
+    global (também em `BaseLayout.astro`) que registra o ID de cada intervalo e limpa todos antes
+    de cada troca de página (`astro:before-swap`); os 7 `setInterval()` do site (`index.astro`,
+    `checkin/[slug].astro`, `painel/[local].astro`) foram migrados pra ele.
 
 - **Fase 12 — Libras e acessibilidade específica do Brasil**: nenhuma exigência legal clara e
   específica pra igreja privada, mas recomendado por inclusão genuína — a legenda em português nos
@@ -1186,7 +1217,7 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 10 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 11 a
+**Fases 0 a 11 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 12 a
 24, nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia
 antes mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em

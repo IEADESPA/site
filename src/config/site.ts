@@ -67,15 +67,36 @@ export const navigation = [
   { label: "Contato", href: "/contato/" },
 ];
 
-/** Navegação secundária exibida no rodapé. */
+/**
+ * Navegação secundária exibida no rodapé, agrupada por assunto (Fase 11) em
+ * vez de uma lista única — à medida que a Fase 5 adicionar mais páginas, o
+ * grupo certo cresce sem virar uma parede de links sem hierarquia nenhuma.
+ * Adicione um item ao grupo existente que fizer mais sentido; só crie um
+ * grupo novo se nenhum dos três já cobrir o assunto.
+ */
 export const footerNavigation = [
-  { label: "Doações", href: "/doacoes/" },
-  { label: "Kids", href: "/kids/" },
-  { label: "Assista ao vivo", href: "/ao-vivo/" },
-  { label: "Galeria", href: "/galeria/" },
-  { label: "Transparência", href: "/transparencia/" },
-  { label: "Pregadores", href: "/pregadores/" },
-  { label: "Privacidade", href: "/privacidade/" },
-  { label: "Painel de conteúdo", href: DIRECTUS_ADMIN_URL },
-  { label: "Gestão de eventos", href: "/painel-eventos/" },
+  {
+    label: "Participe",
+    items: [
+      { label: "Doações", href: "/doacoes/" },
+      { label: "Kids", href: "/kids/" },
+      { label: "Assista ao vivo", href: "/ao-vivo/" },
+      { label: "Galeria", href: "/galeria/" },
+    ],
+  },
+  {
+    label: "Institucional",
+    items: [
+      { label: "Transparência", href: "/transparencia/" },
+      { label: "Pregadores", href: "/pregadores/" },
+      { label: "Privacidade", href: "/privacidade/" },
+    ],
+  },
+  {
+    label: "Equipe",
+    items: [
+      { label: "Painel de conteúdo", href: DIRECTUS_ADMIN_URL },
+      { label: "Gestão de eventos", href: "/painel-eventos/" },
+    ],
+  },
 ];

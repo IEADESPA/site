@@ -17,47 +17,51 @@ const currentYear = new Date().getFullYear();
 ---
 
 <footer class="outer mt-[var(--space-section)] border-t border-border">
-  <div class="inner grid gap-10 py-12 text-center md:grid-cols-3 md:items-center md:gap-8 md:text-left">
-    <div>
-      <a href="/" class="wordmark"><img src="/logo-icon.png" alt={siteConfig.name} width="40" height="40" /></a>
-      <p class="mt-2 text-xs text-muted-foreground">&copy; {currentYear}. Todos os direitos reservados.</p>
-    </div>
-
-    <div class="flex flex-col items-center gap-5">
-      <ul class="flex items-center gap-2.5">
-        {
-          socials.map((item) => (
-            <li>
-              <a
-                href={item.href}
-                class="social-btn"
-                aria-label={item.label === "RSS" ? "Feed RSS" : `${siteConfig.name} no ${item.label}`}
-                rel={item.href.startsWith("http") ? "noreferrer" : undefined}
-              >
-                <LocalIcon name={item.icon} className="h-[0.95rem] w-[0.95rem]" />
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-
-      <nav aria-label="Navegação do rodapé">
-        <ul class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+  <div class="inner py-12">
+    <div class="footer-top grid gap-10 text-center sm:grid-cols-2 sm:text-left lg:grid-cols-[1.2fr_repeat(3,1fr)]">
+      <div>
+        <a href="/" class="wordmark"><img src="/logo-icon.png" alt={siteConfig.name} width="40" height="40" /></a>
+        <p class="mt-3 max-w-[22rem] text-sm leading-relaxed text-muted-foreground">{siteConfig.tagline}</p>
+        <ul class="mt-5 flex items-center justify-center gap-2.5 sm:justify-start">
           {
-            footerNavigation.map((item, index) => (
-              <li class="flex items-center gap-4">
-                {index > 0 && <span class="footer-dot" aria-hidden="true" />}
-                <a href={item.href} class="nav-link">{item.label}</a>
+            socials.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class="social-btn"
+                  aria-label={item.label === "RSS" ? "Feed RSS" : `${siteConfig.name} no ${item.label}`}
+                  rel={item.href.startsWith("http") ? "noreferrer" : undefined}
+                >
+                  <LocalIcon name={item.icon} className="h-[0.95rem] w-[0.95rem]" />
+                </a>
               </li>
             ))
           }
         </ul>
-      </nav>
+      </div>
+
+      {
+        footerNavigation.map((group) => (
+          <nav aria-label={`Rodapé — ${group.label}`}>
+            <p class="footer-group-title">{group.label}</p>
+            <ul class="mt-4 grid gap-3">
+              {group.items.map((item) => (
+                <li>
+                  <a href={item.href} class="nav-link footer-link">{item.label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))
+      }
     </div>
 
-    <p class="text-xs text-muted-foreground md:text-right">
-      Feito com <a href="https://astro.build/" rel="noreferrer" class="link-quiet underline underline-offset-2">Astro</a>
-    </p>
+    <div class="footer-bottom mt-12 flex flex-col items-center gap-2 border-t border-border pt-6 text-center md:flex-row md:justify-between md:text-left">
+      <p class="text-xs text-muted-foreground">&copy; {currentYear} {siteConfig.name}. Todos os direitos reservados.</p>
+      <p class="text-xs text-muted-foreground">
+        Feito com <a href="https://astro.build/" rel="noreferrer" class="link-quiet underline underline-offset-2">Astro</a>
+      </p>
+    </div>
   </div>
 </footer>
 
@@ -83,10 +87,18 @@ const currentYear = new Date().getFullYear();
     transform: translateY(-2px);
   }
 
-  .footer-dot {
-    width: 2px;
-    height: 2px;
-    background: var(--border-strong);
-    border-radius: 50%;
+  .footer-group-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--foreground);
+  }
+
+  .footer-link {
+    font-size: 0.875rem;
+    text-transform: none;
+    letter-spacing: normal;
   }
 </style>
