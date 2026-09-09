@@ -282,6 +282,25 @@ const responsaveisDisponiveis = [...new Set(events.map((e) => e.responsavel).fil
 
           const ENDPOINT_KEY = "ieadespa-push-endpoint";
           const RESPONSAVEIS_KEY = "ieadespa-push-responsaveis";
+          // Preferências das 3 notificações (eventos, mensagens, notícias)
+          // compartilham a mesma inscrição push do navegador — guardadas
+          // juntas aqui pra saber, na hora de cancelar UMA, se ainda sobra
+          // alguma outra ativa (só então cancela a inscrição de verdade;
+          // senão, cancelar aviso de evento apagaria também o de mensagem
+          // nova, sem a pessoa esperar isso).
+          const PREFS_KEY = "ieadespa-push-prefs";
+          const lerPrefs = () => {
+            try {
+              return JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+            } catch {
+              return {};
+            }
+          };
+          const salvarPrefs = (prefs) => {
+            try {
+              localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+            } catch {}
+          };
 
           const urlBase64ToUint8Array = (base64String) => {
             const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -319,7 +338,11 @@ const responsaveisDisponiveis = [...new Set(events.map((e) => e.responsavel).fil
           }
 
           function atualizarBotoes() {
-            const jaInscrito = Boolean(endpointSalvo());
+            // O botão fala especificamente de EVENTOS — usa a preferência
+            // própria, não só "existe alguma inscrição push", porque agora
+            // o mesmo navegador pode estar inscrito só em mensagem/notícia,
+            // sem eventos, e o botão precisa refletir isso corretamente.
+            const jaInscrito = Boolean(endpointSalvo()) && lerPrefs().eventos !== false;
             toggleBtn.textContent = jaInscrito ? "Notificações ativadas — gerenciar" : "Avisar quando um evento estiver chegando";
             salvarBtn.textContent = jaInscrito ? "Salvar alterações" : "Ativar notificações";
             cancelarBtn.hidden = !jaInscrito;
@@ -373,14 +396,20 @@ const responsaveisDisponiveis = [...new Set(events.map((e) => e.responsavel).fil
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     query: { filter: { endpoint: { _eq: json.endpoint } } },
-                    data: { responsaveis, p256dh: json.keys.p256dh, auth: json.keys.auth },
+                    data: { responsaveis, avisar_eventos: true, p256dh: json.keys.p256dh, auth: json.keys.auth },
                   }),
                 });
               } else {
                 await fetch(`${directusUrl}/items/push_subscriptions`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, responsaveis }),
+                  body: JSON.stringify({
+                    endpoint: json.endpoint,
+                    p256dh: json.keys.p256dh,
+                    auth: json.keys.auth,
+                    responsaveis,
+                    avisar_eventos: true,
+                  }),
                 });
               }
 
@@ -388,6 +417,7 @@ const responsaveisDisponiveis = [...new Set(events.map((e) => e.responsavel).fil
                 localStorage.setItem(ENDPOINT_KEY, json.endpoint);
                 localStorage.setItem(RESPONSAVEIS_KEY, JSON.stringify(responsaveis));
               } catch {}
+              salvarPrefs({ ...lerPrefs(), eventos: true });
 
               atualizarBotoes();
               if (statusEl) {
@@ -406,24 +436,39 @@ const responsaveisDisponiveis = [...new Set(events.map((e) => e.responsavel).fil
             cancelarBtn.disabled = true;
             try {
               const endpoint = endpointSalvo();
+              const prefsRestantes = { ...lerPrefs(), eventos: false };
+              // Só cancela a inscrição push do navegador de vez se não sobrar
+              // NENHUMA das 3 preferências ativa — senão, cancelar aviso de
+              // evento apagaria também o aviso de mensagem/notícia nova, que
+              // a pessoa pode ter ativado sem relação nenhuma com este botão.
+              const aindaQuerOutraCoisa = prefsRestantes.mensagens || prefsRestantes.noticias;
+
               if (endpoint) {
                 await fetch(`${directusUrl}/items/push_subscriptions`, {
-                  method: "DELETE",
+                  method: aindaQuerOutraCoisa ? "PATCH" : "DELETE",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ query: { filter: { endpoint: { _eq: endpoint } } } }),
+                  body: JSON.stringify(
+                    aindaQuerOutraCoisa
+                      ? { query: { filter: { endpoint: { _eq: endpoint } } }, data: { avisar_eventos: false, responsaveis: null } }
+                      : { query: { filter: { endpoint: { _eq: endpoint } } } },
+                  ),
                 });
               }
-              if ("serviceWorker" in navigator) {
+
+              if (!aindaQuerOutraCoisa && "serviceWorker" in navigator) {
                 const registration = await navigator.serviceWorker.getRegistration("/sw.js");
                 const subscription = await registration?.pushManager.getSubscription();
                 await subscription?.unsubscribe();
               }
+
               try {
-                localStorage.removeItem(ENDPOINT_KEY);
                 localStorage.removeItem(RESPONSAVEIS_KEY);
+                if (!aindaQuerOutraCoisa) localStorage.removeItem(ENDPOINT_KEY);
               } catch {}
+              salvarPrefs(prefsRestantes);
+
               atualizarBotoes();
-              if (statusEl) statusEl.textContent = "Notificações canceladas — você não recebe mais avisos.";
+              if (statusEl) statusEl.textContent = "Aviso de eventos cancelado.";
             } catch {
               if (statusEl) statusEl.textContent = "Não foi possível cancelar agora. Tente novamente.";
             } finally {

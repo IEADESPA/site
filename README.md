@@ -740,15 +740,55 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
   ícones, imagem de compartilhamento social) passa de ~180KB ou está sem otimização — nenhum outro
   ponto do tamanho dos 4 já corrigidos foi encontrado.
 
-- **Fase 10 — analytics e promoção de conteúdo**: o gap real não é "falta newsletter", é que o RSS
-  já existe (`/rss.xml`, mensagens + notícias) mas é tecnicamente descoberto e invisível pra quem
-  não sabe o que é RSS — nenhuma página tem uma frase explicando isso; a correção de maior valor e
-  menor esforço é só esse texto explicativo perto do link, sem nenhuma mudança técnica; considerar
-  depois um serviço gratuito que transforma esse RSS em e-mail automático pra quem preferir (sem
-  a igreja precisar curar uma newsletter manualmente, que historicamente para de sair em poucos
-  meses em organizações pequenas); analytics sem cookies só se alguém for de fato revisar, medindo
-  2-3 perguntas reais (de onde vêm as pessoas, quais páginas usam) — não pageview bruto, que é
-  métrica de vaidade sem decisão nenhuma do outro lado.
+- [x] **Fase 10 — analytics e promoção de conteúdo.** Pedida explicitamente sem depender de nenhum
+  serviço pago de terceiro fora do Azure — as 3 partes discutidas com o usuário, todas construídas
+  reaproveitando só infraestrutura que a igreja já paga (Directus/Postgres) ou que já é gratuita
+  (GitHub Actions), **sem nenhum serviço novo**:
+
+  - **RSS explicado, não só existente**: `/mensagens/` e `/noticias/` ganharam uma frase explicando
+    o que é RSS e como usar, com link pro feed — a correção de maior valor/menor esforço já
+    identificada, sem mudança técnica nenhuma.
+  - **Aviso automático de conteúdo novo, sem e-mail e sem newsletter**: em vez de um serviço de
+    RSS-pra-e-mail (dependeria de terceiro — envio de e-mail em massa de graça não existe nem
+    dentro do Azure), **estendida a notificação push que já existia só pra eventos** — mesma tabela
+    `push_subscriptions`, mesmas chaves VAPID, mesmo Service Worker. Cada preferência (eventos,
+    mensagens, notícias) agora é um campo booleano próprio (`avisar_eventos`, `avisar_mensagens`,
+    `avisar_noticias`) na mesma inscrição do navegador, com um cuidado que não existia antes:
+    cancelar UM tipo de aviso só desliga aquele — a inscrição push de verdade (e o registro no
+    banco) só é removida quando os três estiverem desligados, senão cancelar aviso de evento
+    apagaria também o aviso de mensagem nova sem a pessoa esperar isso. Botão de assinar em
+    `/mensagens/` e `/noticias/`, no mesmo padrão do que já existia em `/eventos/`.
+    - Backend: novo script `.github/scripts/send-content-notifications.mjs` +
+      `.github/workflows/content-notifications.yml`, disparado pelo **mesmo** `repository_dispatch`
+      que já existe (a Flow do Directus dispara em qualquer publicação, não só mensagem/notícia
+      nova) — por isso o envio é **idempotente por design**: cada mensagem/notícia tem um campo
+      `notificacao_enviada`, só notifica uma vez, e vira `true` logo depois, então rodar de novo
+      (ou editar um conteúdo antigo) nunca reenvia. Conteúdo já existente foi marcado como já
+      enviado no momento de criar o campo, pra não disparar um aviso retroativo de 20+ itens de
+      uma vez.
+    - **Testado de verdade em duas partes**, porque o ambiente de teste local não consegue usar a
+      Push API de verdade (limitação conhecida do Chromium em contexto efêmero, não do código):
+      testado que o botão nunca tenta nada em página interna, e testado o script de envio de
+      ponta a ponta contra o Directus real — criada uma mensagem de teste e uma inscrição push
+      (com chaves VAPID descartáveis geradas na hora, só pra esse teste, nunca as reais), rodado o
+      script de verdade: encontrou a pendência certa, tentou enviar, tratou o endpoint inválido
+      como esperado, marcou `notificacao_enviada: true` — e rodando de novo, confirmado **zero**
+      reenvio. A entrega de verdade pra um aparelho real reaproveita o mesmo `web-push` já
+      comprovado em produção pelo aviso de eventos, não foi reinventada.
+  - **Contador de visitas próprio, sem cookie nenhum**: nova coleção `pageviews` no Directus —
+    só caminho da página, domínio de origem (se veio de fora, nunca a URL completa) e data. Sem
+    IP, sem identificador de pessoa, sem nada guardado no navegador do visitante. Permissão
+    Pública é **só criar** (mesmo padrão de `contato_mensagens`/`mural_oracao`) — ninguém de fora
+    consegue ler os dados de ninguém pela API. Um script de ~15 linhas em `BaseLayout.astro` manda
+    isso via `navigator.sendBeacon` em toda página pública — **excluindo de propósito** as páginas
+    internas (`/painel-eventos/`, `/painel/`, `/checkin/`), que não são "visita" de verdade e
+    distorceriam os números. Testado confirmando que a exclusão funciona (nenhuma tentativa de
+    envio nessas páginas) e que a gravação chega certa no Directus (testado direto, sem cookie,
+    sem CORS liberado pra fora do domínio de produção — mesma proteção que qualquer outra coleção
+    já tem). Responde exatamente as 2-3 perguntas reais que valem a pena (de onde vêm as pessoas,
+    quais páginas usam) sem herdar a complexidade de um produto de analytics genérico — quem
+    administra o Directus pode configurar um painel do próprio Insights (recurso já incluso, sem
+    custo extra) pra visualizar, ou consultar a coleção direto.
 
 O usuário pediu ainda mais uma rodada — comparando referências de sites de igreja no Brasil e no
 exterior, pra deixar este "o melhor site de igreja". Mais 5 fases, detalhadas na mesma seção de
@@ -1061,7 +1101,7 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   aceita, quem pode fixar/desafixar da home, quantos itens fixados ao mesmo tempo) — por isso ficam
   só como intenção registrada, não como escopo fechado igual às Fases 21 e 22.
 
-**Fases 0 a 9 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 10 a
+**Fases 0 a 10 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 11 a
 23, nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia
 antes mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em

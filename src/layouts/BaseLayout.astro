@@ -184,5 +184,37 @@ const schema = structuredData ?? defaultStructuredData;
   <body>
     <a class="skip-link" href="#content">Pular para o conteúdo</a>
     <slot />
+    <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
+      /*
+       * Contador de visitas próprio — sem cookie, sem armazenamento no
+       * navegador, sem identificar a pessoa nem segui-la entre visitas.
+       * Só grava caminho da página e, se veio de outro site, o domínio de
+       * origem (nunca a URL completa, que poderia ter termo de busca ou
+       * outro dado da pessoa). Não roda em páginas internas de operação
+       * (painel da equipe, telão da recepção) — não são "visita" de
+       * verdade, e contá-las junto distorceria os números.
+       */
+      (() => {
+        const path = location.pathname;
+        const internas = ["/painel-eventos", "/painel/", "/checkin"];
+        if (internas.some((prefixo) => path.startsWith(prefixo))) return;
+
+        let referrerDomain = null;
+        try {
+          if (document.referrer && new URL(document.referrer).hostname !== location.hostname) {
+            referrerDomain = new URL(document.referrer).hostname;
+          }
+        } catch {}
+
+        const corpo = JSON.stringify({ path, referrer_domain: referrerDomain });
+        const url = `${directusUrl}/items/pageviews`;
+
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([corpo], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: corpo, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
   </body>
 </html>
