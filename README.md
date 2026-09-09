@@ -775,6 +775,13 @@ concretos, detalhados na seção "Pesquisa detalhada — temas transversais" mai
       como esperado, marcou `notificacao_enviada: true` — e rodando de novo, confirmado **zero**
       reenvio. A entrega de verdade pra um aparelho real reaproveita o mesmo `web-push` já
       comprovado em produção pelo aviso de eventos, não foi reinventada.
+    - **Achado real, não relacionado a esta fase, só descoberto por causa desse teste**: o secret
+      `DIRECTUS_ADMIN_TOKEN` do GitHub estava **desatualizado** — diferente do token de
+      administrador realmente válido hoje. O primeiro disparo automático desta fase falhou com
+      `401`, o que expôs o problema: o aviso de eventos (Fase já existente antes desta sessão)
+      teria falhado do mesmo jeito na próxima execução agendada, silenciosamente, sem ninguém
+      perceber até um evento não avisar ninguém. Corrigido atualizando o secret pro valor correto,
+      confirmado com um novo disparo manual (sucesso).
   - **Contador de visitas próprio, sem cookie nenhum**: nova coleção `pageviews` no Directus —
     só caminho da página, domínio de origem (se veio de fora, nunca a URL completa) e data. Sem
     IP, sem identificador de pessoa, sem nada guardado no navegador do visitante. Permissão
