@@ -1141,16 +1141,20 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   **só registro, não construir agora**, e com uma correção importante feita antes de registrar
   qualquer escopo.
 
-  **Correção necessária, pesquisada agora**: o usuário lembrava de um crédito fixo de "US$ 200/mês"
-  do Google Maps Platform — **esse modelo foi aposentado pelo próprio Google em 1º de março de
-  2025** ([fonte oficial](https://developers.google.com/maps/billing-and-pricing/faq)). Hoje cada
-  API tem sua própria cota gratuita mensal separada, sem juntar num valor em dólar — a faixa
-  "Essentials" (onde ficam Maps JavaScript API e Geocoding API, as duas relevantes aqui) dá **10.000
-  usos grátis por mês, cada uma**. Pro tamanho de tráfego deste site, isso cobre uso real
-  tranquilamente sem custo — só não é "US$ 200 pra gastar", é uma cota de uso, e alguns
-  serviços têm limite bem mais baixo (ex.: 1.000/mês na faixa "Enterprise") — vale conferir a cota
-  exata de cada API específica antes de usar, direto no [site oficial de preços](https://developers.google.com/maps/billing-and-pricing/overview),
-  porque essas cotas já mudaram uma vez e podem mudar de novo.
+  **Duas fontes de crédito diferentes, as duas reais, pesquisadas e confirmadas**:
+  1. **Cota gratuita padrão, pra qualquer projeto** — o crédito geral de "US$ 200/mês" que existia
+     antes **foi aposentado pelo próprio Google em 1º de março de 2025**
+     ([fonte oficial](https://developers.google.com/maps/billing-and-pricing/faq)), substituído por
+     uma cota gratuita mensal separada por API (10.000 usos/mês na faixa "Essentials", onde ficam
+     Maps JavaScript API e Geocoding API) — não junta mais num valor em dólar.
+  2. **Crédito adicional específico pra organização sem fins lucrativos verificada** — esse é o que
+     o usuário lembrava, e está certo: existe um **crédito de US$ 250/mês em Google Maps Platform,
+     só pra quem tem conta verificada no [Google para ONGs](https://www.google.com/nonprofits/)**
+     ([fonte oficial](https://support.google.com/nonprofits/answer/3367237)), **a mais** da cota
+     gratuita padrão do item 1. Não é automático — precisa: (a) primeiro ter a conta da igreja
+     verificada no Google para ONGs (organização religiosa se qualifica), (b) dentro desse painel,
+     na seção "Créditos do Google Maps Platform", pedir a ativação — o Google revisa em até 3 dias
+     úteis. Com os dois juntos, a folga de uso fica bem confortável pro tamanho deste site.
 
   **O que fica registrado pra quando o projeto Google Cloud existir**:
   - **Geocoding API pra preencher `lat`/`lng` das 41 congregações** — hoje **nenhuma** tem
@@ -1169,14 +1173,16 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
 
   **Pré-requisitos que têm que existir antes de eu escrever qualquer código** (nenhum depende de
   mim, todos dependem de uma conta Google do usuário):
-  1. Projeto criado no Google Cloud com faturamento (cartão) ativado — sem isso, nenhuma chamada
+  1. Conta da igreja verificada no Google para ONGs (se ainda não tiver) — pré-requisito pro
+     crédito de US$ 250/mês do item 2 acima, mesmo que ele não seja usado imediatamente.
+  2. Projeto criado no Google Cloud com faturamento (cartão) ativado — sem isso, nenhuma chamada
      funciona, mesmo dentro da cota gratuita.
-  2. APIs "Maps JavaScript API" e "Geocoding API" ativadas nesse projeto.
-  3. Uma chave de API gerada e **restringida** (por domínio/referenciador HTTP, só
+  3. APIs "Maps JavaScript API" e "Geocoding API" ativadas nesse projeto.
+  4. Uma chave de API gerada e **restringida** (por domínio/referenciador HTTP, só
      `ieadespa.org.br`/`www.ieadespa.org.br`, e só às 2 APIs acima) — sem essa restrição, qualquer
      pessoa que copiar a chave do código-fonte da página (ela é pública por natureza, usada no
      navegador do visitante) pode gastar a cota da igreja em outro site.
-  4. Um **alerta de orçamento** configurado no Google Cloud Billing (gratuito, e-mail avisando ao
+  5. Um **alerta de orçamento** configurado no Google Cloud Billing (gratuito, e-mail avisando ao
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
