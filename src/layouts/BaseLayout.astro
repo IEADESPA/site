@@ -223,8 +223,15 @@ const schema = structuredData ?? defaultStructuredData;
        * outro dado da pessoa). Não roda em páginas internas de operação
        * (painel da equipe, telão da recepção) — não são "visita" de
        * verdade, e contá-las junto distorceria os números.
+       *
+       * Amarrado em "astro:page-load" (não só chamado direto): esse evento
+       * dispara tanto na carga inicial quanto depois de cada navegação via
+       * ClientRouter (Fase 11) — sem ele, só a primeira página vista na
+       * sessão contaria, porque a troca de página não recarrega o
+       * documento e o Astro não re-executa um `<script>` com o mesmo
+       * conteúdo de novo sozinho.
        */
-      (() => {
+      document.addEventListener("astro:page-load", () => {
         const path = location.pathname;
         const internas = ["/painel-eventos", "/painel/", "/checkin"];
         if (internas.some((prefixo) => path.startsWith(prefixo))) return;
@@ -244,7 +251,73 @@ const schema = structuredData ?? defaultStructuredData;
         } else {
           fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: corpo, keepalive: true }).catch(() => {});
         }
-      })();
+      });
+    </script>
+
+    {
+      /*
+       * VLibras (Fase 12) — widget oficial do Governo Federal (LAViD/UFPB)
+       * que traduz o texto da tela pra Libras usando um avatar 3D, sob
+       * demanda (a pessoa abre o painel e escolhe o quê traduzir). É real e
+       * gratuito pra sempre, mas **não é** "site acessível em Libras": só
+       * texto, nunca vídeo/áudio (por isso não ajuda em nada nos vídeos de
+       * mensagem — aí quem resolve de verdade é a legenda em português do
+       * próprio YouTube). Ver nota sobre isso em /privacidade/.
+       *
+       * `transition:persist`: o widget se inicializa uma única vez lendo o
+       * <script src> abaixo; sem isso, a troca de página do ClientRouter
+       * (Fase 11) substituiria essa div por uma cópia nova e "crua" a cada
+       * navegação, apagando o botão já inicializado sem religar nada nele
+       * (o script, sendo idêntico em toda página, não roda de novo
+       * sozinho) — o mesmo tipo de problema já corrigido acima pro tema e
+       * pros `setInterval`. De propósito **sem** a chamada manual
+       * `new window.VLibras.Widget(...)` da documentação: o próprio
+       * `vlibras-plugin.js` já se auto-inicializa sozinho ao carregar,
+       * achando esta div `vw` que já está no HTML — testado que chamar o
+       * construtor manualmente é redundante (o widget já ligou sozinho) e,
+       * pior, arriscado aqui: `vlibras-plugin.js` faz um redirect 302 pra
+       * um CDN antes de responder, e com o `transition:persist` esse
+       * `<script>` deixa de bloquear o parser como um script normal
+       * bloquearia — a chamada manual rodava antes do redirect terminar,
+       * "window.VLibras" ainda `undefined`.
+       */
+    }
+    <div id="vlibras-widget" transition:persist transition:name="vlibras-widget">
+      <div {...{ vw: true }} class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+          <div class="vw-plugin-top-wrapper"></div>
+        </div>
+      </div>
+      <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    </div>
+    <script is:inline>
+      /*
+       * `vlibras-plugin.js` (acima) não desenha o botão dentro da própria
+       * div `vw` que ele recebeu — na hora que carrega, ele cria um
+       * elemento novo (`#vlibras-access-wrapper`) direto como filho de
+       * `<body>`, do lado de fora da div `#vlibras-widget` marcada
+       * `transition:persist`. Resultado visto testando de verdade: o botão
+       * aparecia na primeira página e sumia pra sempre depois da primeira
+       * navegação — o `transition:persist` só sabe preservar o que já
+       * estava dentro da div marcada, e esse elemento nasce fora dela.
+       * Correção: qualquer coisa que o VLibras criar direto em `<body>` é
+       * movida pra dentro da div persistida assim que aparece — daí ela
+       * passa a fazer parte da mesma subárvore preservada e sobrevive a
+       * todas as trocas de página seguintes.
+       */
+      const vlibrasWrapper = document.getElementById("vlibras-widget");
+      if (vlibrasWrapper) {
+        new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+              if (node.nodeType === 1 && node.id?.startsWith("vlibras-") && node.id !== "vlibras-widget") {
+                vlibrasWrapper.appendChild(node);
+              }
+            }
+          }
+        }).observe(document.body, { childList: true });
+      }
     </script>
   </body>
 </html>

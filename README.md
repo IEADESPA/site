@@ -873,15 +873,68 @@ pesquisa transversal mais abaixo:
     de cada troca de página (`astro:before-swap`); os 7 `setInterval()` do site (`index.astro`,
     `checkin/[slug].astro`, `painel/[local].astro`) foram migrados pra ele.
 
-- **Fase 12 — Libras e acessibilidade específica do Brasil**: nenhuma exigência legal clara e
-  específica pra igreja privada, mas recomendado por inclusão genuína — a legenda em português nos
-  vídeos de mensagem (quando existirem de fato, já é pré-requisito da Fase 4/`videoUrl`) é a
-  melhoria de maior retorno (o YouTube já gera legenda automática grátis, só precisa revisão de
-  termos religiosos); um widget gratuito de tradução automática pra Libras existe e é fácil de
-  instalar, mas só traduz texto sob demanda, não vídeo/áudio, e não deve ser tratado como "site
-  acessível em Libras" — só ajuda como complemento parcial em páginas institucionais (Sobre,
-  Visitante, horários); se um dia a igreja gravar um vídeo de mensagem com intérprete de verdade,
-  isso vale muito mais que qualquer tradução automática.
+- [x] **Fase 12 — Libras e acessibilidade específica do Brasil.** Nenhuma exigência legal clara e
+  específica pra igreja privada, mas pedida pelo usuário por inclusão genuína, com uma cobrança
+  explícita: não instalar "de enfeite" — tinha que testar de ponta a ponta e confirmar que funciona
+  de verdade, não só que o botão aparece na tela.
+  - **VLibras instalado site inteiro** (não só em 3 páginas como a pesquisa original cogitava —
+    global é mais simples e mais útil): o widget oficial do Governo Federal (LAViD/UFPB, o mesmo
+    usado em site `.gov.br`), gratuito pra sempre, que traduz o texto da tela pra Libras com um
+    avatar 3D, sob demanda. **Sendo honesto sobre o que ele não é** (documentado também em
+    `/privacidade/`, numa seção nova): só traduz texto, nunca vídeo/áudio — não ajuda em nada nos
+    vídeos de mensagem, aí quem resolve de verdade é a legenda em português do próprio YouTube
+    (gratuita, automática, só precisa de alguém revisar termo religioso depois). Não é "site 100%
+    acessível em Libras", é um complemento real, mas parcial.
+  - **3 problemas de verdade encontrados testando com Playwright contra um build real** (não
+    contra `astro preview`, que ignora CSP — contra o emulador `@azure/static-web-apps-cli`, que
+    aplica o `staticwebapp.config.json` de verdade), todos corrigidos antes de considerar a fase
+    pronta:
+    1. **CSP bloqueava o widget inteiro.** A política de segurança (`Content-Security-Policy` em
+       `staticwebapp.config.json`) só liberava os domínios que o site já usava — sem
+       `vlibras.gov.br` (e, surpresa, sem `cdn.jsdelivr.net`, pra onde o script do VLibras
+       redireciona de verdade), o navegador bloqueava o script e as imagens do avatar. Corrigido
+       liberando os dois domínios em `script-src`, `img-src`, `font-src`, `media-src`,
+       `connect-src` e `frame-src` — só o suficiente pro widget funcionar, nada a mais.
+    2. **A chamada de inicialização manual (`new window.VLibras.Widget(...)`, do próprio exemplo
+       da documentação oficial) rodava cedo demais e quebrava com "Cannot read properties of
+       undefined".** Causa: `vlibras-plugin.js` faz um redirect 302 pro CDN antes de responder, e
+       o `<script src>` que carrega isso está dentro de uma div `transition:persist` (necessária
+       pra sobreviver à transição de página da Fase 11) — o que tira dele a garantia normal de
+       bloquear o script seguinte até terminar de carregar. Corrigido **removendo** a chamada
+       manual: o próprio `vlibras-plugin.js` já se auto-inicializa sozinho ao carregar (confirmado
+       lendo a documentação oficial — a chamada manual só é necessária pra customizar avatar/
+       posição, não pra ligar o widget), então a causa do bug nem precisava existir no código.
+    3. **O botão sumia pra sempre depois da primeira navegação.** O `vlibras-plugin.js`, ao
+       carregar, cria um elemento novo (`#vlibras-access-wrapper`, com o botão de verdade dentro,
+       numa Shadow DOM) direto como filho de `<body>` — fora da div que a Fase 11 sabe preservar
+       entre páginas (`transition:persist` só preserva o que já existia no HTML da própria
+       página; não tem como marcar de antemão um elemento que um script de terceiro só cria depois
+       em tempo de execução). Corrigido com um `MutationObserver` (em `BaseLayout.astro`) que mora
+       para sempre a espreitar `<body>`: qualquer coisa que o VLibras crie ali é movida pra dentro
+       da div persistida assim que aparece, e daí sobrevive a todas as trocas de página seguintes
+       como parte da mesma subárvore. Testado com 3 navegações client-side seguidas — o botão
+       segue lá em todas.
+    - **De quebra, achado um 4º problema real, sem relação nenhuma com o VLibras**: o contador de
+      visitas da Fase 10 (`navigator.sendBeacon` em `BaseLayout.astro`) também parou de contar
+      depois da primeira página da sessão, pelo mesmo motivo de fundo — um `<script>` idêntico em
+      toda página não roda de novo sozinho numa navegação client-side da Fase 11. Corrigido
+      amarrando o envio no evento `astro:page-load` (dispara na carga inicial e em toda navegação
+      seguinte), em vez de rodar direto uma única vez.
+  - **Limitação real, testada, e assumida sem tentar esconder**: o botão flutua sempre no meio
+    vertical da tela (posição fixa, só a lateral — direita ou esquerda — é configurável pela
+    ferramenta oficial); em celular, com a tela mais baixa, isso pode encostar num botão da própria
+    página (visto testando: encostava no canto do botão "Assista ao vivo" da home). É o mesmo
+    comportamento em qualquer site brasileiro que usa esta mesma ferramenta oficial — não é um bug
+    nosso pra "consertar" com gambiarra em cima de um widget de terceiro que a gente não controla
+    (o botão real vive dentro de uma Shadow DOM, isolada de propósito). Documentado aqui em vez de
+    forçar uma correção não testada que poderia quebrar o widget numa atualização futura dele.
+  - **Testado**: build real + `astro check` + `@azure/static-web-apps-cli` (não `astro preview`,
+    que não aplica o CSP) + Playwright — CSP sem nenhuma violação, o widget carregando e abrindo o
+    painel de verdade (avatar 3D "VLibras Widget v7.12.2" com a marca gov.br, controles de
+    play/pausa/velocidade), sobrevivendo a 3 navegações seguidas sem duplicar, escondido de
+    propósito atrás do menu mobile e da busca em tela cheia (mesmo `z-index` altíssimo que o
+    widget usa por padrão pra garantir que sempre apareça por cima de tudo), e testado nos temas
+    claro e escuro.
 
 - **Fase 13 — app instalável (PWA)**: ⚠️ **já construído e testado, ao contrário do que a pesquisa
   poderia sugerir** — manifest, ícones, service worker com cache de 3 páginas essenciais, botão
@@ -1217,7 +1270,7 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 11 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 12 a
+**Fases 0 a 12 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 13 a
 24, nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia
 antes mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em

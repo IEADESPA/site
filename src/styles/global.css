@@ -756,6 +756,15 @@
     overflow: hidden;
   }
 
+  /* O botão flutuante do VLibras (Fase 12) usa um z-index altíssimo por
+     padrão pra garantir que sempre apareça — o que faz ele flutuar por
+     cima do menu mobile e da busca em tela cheia se não for escondido de
+     propósito enquanto um dos dois estiver aberto. */
+  html.has-open-menu #vlibras-widget,
+  html.has-open-search #vlibras-widget {
+    display: none;
+  }
+
   .mobile-menu-panel {
     position: fixed;
     inset: 0;
