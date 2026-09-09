@@ -1136,8 +1136,52 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   aceita, quem pode fixar/desafixar da home, quantos itens fixados ao mesmo tempo) — por isso ficam
   só como intenção registrada, não como escopo fechado igual às Fases 21 e 22.
 
+- **Fase 24 — mapas de verdade com Google Maps Platform (última fase planejada)**: pedida pelo
+  usuário, condicionada a ele configurar antes um projeto no Google Cloud com faturamento ativado —
+  **só registro, não construir agora**, e com uma correção importante feita antes de registrar
+  qualquer escopo.
+
+  **Correção necessária, pesquisada agora**: o usuário lembrava de um crédito fixo de "US$ 200/mês"
+  do Google Maps Platform — **esse modelo foi aposentado pelo próprio Google em 1º de março de
+  2025** ([fonte oficial](https://developers.google.com/maps/billing-and-pricing/faq)). Hoje cada
+  API tem sua própria cota gratuita mensal separada, sem juntar num valor em dólar — a faixa
+  "Essentials" (onde ficam Maps JavaScript API e Geocoding API, as duas relevantes aqui) dá **10.000
+  usos grátis por mês, cada uma**. Pro tamanho de tráfego deste site, isso cobre uso real
+  tranquilamente sem custo — só não é "US$ 200 pra gastar", é uma cota de uso, e alguns
+  serviços têm limite bem mais baixo (ex.: 1.000/mês na faixa "Enterprise") — vale conferir a cota
+  exata de cada API específica antes de usar, direto no [site oficial de preços](https://developers.google.com/maps/billing-and-pricing/overview),
+  porque essas cotas já mudaram uma vez e podem mudar de novo.
+
+  **O que fica registrado pra quando o projeto Google Cloud existir**:
+  - **Geocoding API pra preencher `lat`/`lng` das 41 congregações** — hoje **nenhuma** tem
+    coordenada cadastrada (só a sede) — é a limitação que já tinha feito rejeitar, na Fase 3,
+    unificar a tecnologia de mapa do site inteiro. Resolvido isso, essa rejeição pode ser
+    revisitada. Uso pontual (41 chamadas, uma vez, mais alguma manutenção esporádica) — nem chega
+    perto da cota gratuita.
+  - **Mapa interativo de verdade na listagem de congregações**, substituindo o Leaflet/OpenStreetMap
+    atual (que existe hoje só porque as coordenadas reais não existiam) — pinos de verdade,
+    clique pra detalhes, no estilo visual do site.
+  - **Mapa interativo em cada página de congregação individual**, substituindo o embed simples
+    atual (iframe de busca por endereço) por um mapa de verdade com pino exato e botão de rota.
+  - **Avaliar** (não decidido ainda) uma função de "qual congregação mais perto de mim", usando a
+    geolocalização do próprio navegador do visitante (já usada em outras partes do site) contra as
+    coordenadas agora reais — só faz sentido depois do item da Geocoding API acima estar pronto.
+
+  **Pré-requisitos que têm que existir antes de eu escrever qualquer código** (nenhum depende de
+  mim, todos dependem de uma conta Google do usuário):
+  1. Projeto criado no Google Cloud com faturamento (cartão) ativado — sem isso, nenhuma chamada
+     funciona, mesmo dentro da cota gratuita.
+  2. APIs "Maps JavaScript API" e "Geocoding API" ativadas nesse projeto.
+  3. Uma chave de API gerada e **restringida** (por domínio/referenciador HTTP, só
+     `ieadespa.org.br`/`www.ieadespa.org.br`, e só às 2 APIs acima) — sem essa restrição, qualquer
+     pessoa que copiar a chave do código-fonte da página (ela é pública por natureza, usada no
+     navegador do visitante) pode gastar a cota da igreja em outro site.
+  4. Um **alerta de orçamento** configurado no Google Cloud Billing (gratuito, e-mail avisando ao
+     atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
+     cota grátis.
+
 **Fases 0 a 10 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 11 a
-23, nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia
+24, nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia
 antes mesmo desta pesquisa). O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
