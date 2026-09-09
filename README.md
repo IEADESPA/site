@@ -936,15 +936,34 @@ pesquisa transversal mais abaixo:
     widget usa por padrão pra garantir que sempre apareça por cima de tudo), e testado nos temas
     claro e escuro.
 
-- **Fase 13 — app instalável (PWA)**: ⚠️ **já construído e testado, ao contrário do que a pesquisa
-  poderia sugerir** — manifest, ícones, service worker com cache de 3 páginas essenciais, botão
-  "Instalar app" no cabeçalho (Android/desktop via `beforeinstallprompt`, instrução manual no iOS) e
-  o check-in offline-capable já existem e passaram por teste de ponta a ponta (ver histórico de
-  commits). Só sobraram dois retoques pequenos: um ícone com variante "maskable" (pra não cortar em
-  launcher Android que recorta em círculo) e `shortcuts` no manifest espelhando as mesmas 3 páginas
-  já privilegiadas no cache offline. Expandir o cache pra mais páginas foi avaliado e **não é
-  recomendado** — a pesquisa confirma que cache pequeno e deliberado é a prática certa pra esse
-  porte, e cache demais é o erro clássico de PWA mal feita.
+- [x] **Fase 13 — app instalável (PWA)**: ⚠️ **já construído e testado, ao contrário do que a
+  pesquisa poderia sugerir** — manifest, ícones, service worker com cache de 3 páginas essenciais,
+  botão "Instalar app" no cabeçalho (Android/desktop via `beforeinstallprompt`, instrução manual no
+  iOS) e o check-in offline-capable já existem e passaram por teste de ponta a ponta (ver histórico
+  de commits). Expandir o cache pra mais páginas foi avaliado e **não é recomendado** — a pesquisa
+  confirma que cache pequeno e deliberado é a prática certa pra esse porte, e cache demais é o erro
+  clássico de PWA mal feita. Os 2 retoques pequenos que faltavam, agora construídos e testados:
+  - **Ícone "maskable"** (`public/maskable-icon.png`, gerado com `sharp` a partir do `logo.png`
+    já existente — sem precisar de nenhuma arte nova): o ícone normal (`logo.png`) tem o emblema e
+    o texto "IEADESPA" ocupando quase a largura/altura inteiras da imagem, o que um launcher
+    Android que recorta em círculo (a maioria recorta, hoje) cortaria de verdade, sobretudo o texto
+    da denominação embaixo. O maskable-icon centraliza o mesmo logo bem menor (58% do canvas), com
+    bastante respiro ao redor — **testado de verdade**, não só "deveria caber": simulei o recorte
+    circular mais agressivo que existe (círculo raio 40% do canvas, o padrão oficial de "safe
+    zone") com o próprio `sharp`, comparando o antes/depois pixel a pixel — a primeira tentativa
+    (logo a 300px, ~59%) ainda perdia a pontinha do texto da denominação no recorte simulado;
+    reduzido pra 255px (~50%) até o recorte simulado sair limpo, sem cortar nada. Referenciado no
+    manifest com `"purpose": "maskable"`, ao lado dos ícones normais (`"purpose": "any"`) — os
+    launchers que não recortam em círculo continuam usando o ícone cheio de sempre.
+  - **`shortcuts` no manifest**: 2 dos 3 atalhos, não os 3 — de propósito. Um atalho pra "/" (a
+    home) seria redundante: abrir o app já leva pra lá (`start_url`), então um atalho extra
+    apontando pro mesmo lugar só duplicaria a primeira opção sem ajudar ninguém a chegar mais
+    rápido em lugar nenhum novo. Ficaram os 2 que economizam navegação de verdade quando a pessoa
+    já teria feito um segundo toque mesmo: **Eventos e programação** e **Fale conosco**.
+  - **Testado**: manifest validado como JSON, servido com `Content-Type: application/manifest+json`
+    de verdade pelo emulador `@azure/static-web-apps-cli` (o `mimeTypes` do
+    `staticwebapp.config.json` só se aplica ali, não no `astro preview`), ícone maskable acessível
+    em `/maskable-icon.png`, `astro check` sem erro novo.
 
 - **Fase 14 — WhatsApp e automação de FAQ**: o link `wa.me` institucional já existe em `/contato/`
   (usa o telefone cadastrado no Directus, não um número fixo no código) mas está enterrado como
@@ -1270,9 +1289,8 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 12 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 13 a
-24, nada foi construído ainda**, com uma exceção: o app instalável da Fase 13 (que já existia
-antes mesmo desta pesquisa). O detalhe completo de cada achado (com a
+**Fases 0 a 13 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 14 a
+24, nada foi construído ainda.** O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
 fontes consultadas.
