@@ -45,6 +45,17 @@ export const VERIFICAR_INSCRICAO_URL = "/api/verificar-inscricao";
 export const TELEFONE_HASH_URL = "/api/telefone-hash";
 
 /**
+ * Fase 21 — cancelamento pelo próprio inscrito, sem depender da equipe.
+ * Mesma verificação de identidade de `VERIFICAR_INSCRICAO_URL` (código +
+ * telefone conferido por hash) — só que, em vez de só consultar, esta
+ * apaga a inscrição de verdade e, se a vaga cancelada era confirmada (não
+ * uma vaga que já estava na lista de espera), promove sozinha quem está há
+ * mais tempo esperando naquele evento (mesma lógica que já existia só pro
+ * caminho do admin aumentar o limite de vagas, em `painel-eventos`).
+ */
+export const CANCELAR_INSCRICAO_URL = "/api/cancelar-inscricao";
+
+/**
  * Busca uma URL do Directus com tentativas automáticas em caso de erro
  * transitório (5xx ou falha de rede) — o Directus no plano gratuito
  * ocasionalmente fica "sob pressão" por alguns segundos, e sem isso um

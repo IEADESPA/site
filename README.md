@@ -1185,22 +1185,77 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     usuário é trabalho humano de pedir/reunir material, fora do escopo de qualquer coisa que o site
     resolva sozinho.
 
-- **Fase 21 — eventos customizáveis por tipo (batismo e além)**: registrada a partir da própria
-  análise do usuário na revisão da Fase 5 — **não é pra construir agora, é só escopo e
-  planejamento**, esperando uma análise de caso futura que decida se compensa ou não.
+- [x] **Fase 21 — eventos customizáveis por tipo (batismo e além).** Registrada a partir da própria
+  análise do usuário na revisão da Fase 5, como só escopo/planejamento. **Retomada e auditada
+  contra o código real antes de decidir o que construir** — o texto original desta fase (abaixo)
+  ficou desatualizado nesse meio tempo:
 
-  **O problema de origem**: batismo não encaixa no módulo de eventos como ele existe hoje, porque
-  todo evento assume implicitamente uma congregação com endereço fixo — um batismo pode acontecer
-  num rio, numa piscina, num lugar diferente a cada vez, sem vínculo com nenhuma congregação
-  cadastrada. Ao investigar esse caso, apareceram outros que têm a mesma raiz — um evento "genérico"
+  ⚠️ **O "problema de origem" já estava resolvido, sem precisar de nada novo** — auditoria real do
+  código (não só leitura do README) confirmou que `location` em `eventos` já é campo de texto
+  livre, opcional e **independente** de `congregacao` (`src/pages/evento/[slug].astro`:
+  `event.congregacao ? event.congregacao.name : event.location`; o próprio formulário em
+  `painel-eventos/evento/` já rotula isso como "Local (se não for numa congregação)"). Um batismo
+  num rio já podia ser cadastrado normalmente, sem `congregacao` e com `location` livre — nenhuma
+  mudança estrutural de "tipo de evento" era necessária pra esse caso. Da mesma forma,
+  "Congresso: vaga limitada" também já estava resolvido — `vagas_limite` já bloqueia de verdade
+  (`aguardando_vaga: true` automático ao encher) e a lista de espera já era promovida em lote
+  quando o admin aumentava o limite (`painel-eventos/evento/index.astro`).
+
+  **O que a auditoria confirmou como lacuna real** (comparado à pesquisa de mercado já feita nesta
+  fase — Sympla/Even3/Eventbrite, ver abaixo): dos 6 gaps listados, 4 seguem sem solução
+  (confirmação por e-mail, e-mail como 2º canal de lembrete, cancelamento pelo próprio inscrito,
+  verificação pública de certificado) e 1 é parcial (a lista de espera só se promove sozinha
+  quando o *admin* aumenta o limite — nunca quando o *inscrito* cancela a própria vaga, porque
+  esse cancelamento nem existia). O usuário escolheu, entre essas opções, construir agora:
+
+  - [x] **Cancelamento pelo próprio inscrito, com promoção automática da lista de espera** — nova
+    Azure Function `cancelar-inscricao` (`api/src/functions/cancelarInscricao.js`) + página
+    `/cancelar-inscricao/[slug]/`, no mesmo padrão já testado de certificado/QR Code/crachá:
+    verificação de identidade por código + telefone (conferido por hash, nunca texto puro — mesma
+    função `conferirHash` já usada em `verificar-inscricao`), sem exigir nenhum login novo.
+    - Ao cancelar, a Function apaga a inscrição (mesma ordem já usada no painel: respostas do
+      formulário do evento antes da inscrição em si) e, **só quando a vaga cancelada era uma vaga
+      confirmada de verdade** (não uma que já estava na própria lista de espera), promove
+      automaticamente quem está há mais tempo esperando — mesma lógica que já existia isolada no
+      caminho do admin, agora também acionada pelo cancelamento em si.
+    - Link "cancelar minha inscrição" adicionado na mesma linha de atalhos que já existia em
+      `/evento/[slug]/` (check-in, QR Code, crachá, certificado, pesquisa de satisfação).
+    - **Testado de ponta a ponta com o runtime real** (`azure-functions-core-tools` + emulador
+      `@azure/static-web-apps-cli`, não só `astro preview`): criado um evento de teste real com
+      `vagas_limite: 1`, uma inscrição confirmada e uma em lista de espera (com hash de telefone
+      gerado de verdade) — confirmado via API que cancelar a confirmada apaga a inscrição **e**
+      promove a que estava esperando (`aguardando_vaga` vira `false` sozinho); confirmado que
+      código/telefone errados são rejeitados sem cancelar nada; e testado o formulário de verdade
+      no navegador (Playwright), incluindo o diálogo de confirmação e a mensagem de sucesso.
+    - **Ajuste de UX feito depois de ver o primeiro teste**: o botão ficava desabilitado pra
+      sempre após um cancelamento bem-sucedido — corrigido pra reabilitar depois, já que numa
+      inscrição em grupo a mesma pessoa pode voltar à mesma página pra cancelar a vaga de outro
+      integrante, com outro código.
+
+  Os demais gaps confirmados (e-mail de confirmação/lembrete, verificação pública de certificado)
+  **seguem só registrados, não construídos** — e-mail especificamente exigiria montar envio de
+  e-mail transacional pela primeira vez no projeto, uma peça de infraestrutura nova que não foi
+  pedida nesta rodada.
+
+  **Texto original da análise, mantido como registro do raciocínio e da pesquisa de mercado (a
+  parte de pesquisa continua válida mesmo com a premissa do batismo corrigida acima)**:
+
+  **O problema de origem, como registrado antes da auditoria**: batismo não encaixa no módulo de
+  eventos como ele existe hoje, porque todo evento assume implicitamente uma congregação com
+  endereço fixo — um batismo pode acontecer num rio, numa piscina, num lugar diferente a cada vez,
+  sem vínculo com nenhuma congregação cadastrada. Ao investigar esse caso, apareceram outros que
+  têm a mesma raiz — um evento "genérico"
   não serve igualmente bem pra todo tipo de programação da igreja:
   - **Congresso**: precisaria de inscrições limitadas por vaga (o sistema atual já tem
-    `aguardando_vaga`, mas não um limite numérico rígido que fecha inscrição sozinho).
+    `aguardando_vaga`, mas não um limite numérico rígido que fecha inscrição sozinho). ⚠️ **Corrigido
+    pela auditoria acima: já existe, `vagas_limite` já bloqueia de verdade.**
   - **Curso/escola**: precisaria de um fluxo de inscrição com critério de aceite (hoje toda
     inscrição é aceita automaticamente; um curso pode precisar de pré-requisito ou aprovação
-    manual antes de confirmar vaga).
+    manual antes de confirmar vaga). **Não fez parte da auditoria desta rodada** — continua uma
+    lacuna real não confirmada nem construída, diferente dos outros dois itens desta lista.
   - **Batismo**: precisaria de local variável por edição do evento, em vez de herdar o endereço de
-    uma congregação cadastrada.
+    uma congregação cadastrada. ⚠️ **Corrigido pela auditoria acima: já existe, `location` já é
+    texto livre e independente de `congregacao`.**
 
   **O que a análise de caso futura precisa decidir**: se vale a pena introduzir um campo "tipo de
   evento" com comportamento condicional (endereço obrigatório vs. opcional, vaga limitada vs.
@@ -1393,9 +1448,9 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 14 e 17 a 20 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
+**Fases 0 a 14 e 17 a 21 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
 fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
-construído"). **Das fases 21 a 24, nada foi construído ainda.** O detalhe completo de cada achado
+construído"). **Das fases 22 a 24, nada foi construído ainda.** O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
