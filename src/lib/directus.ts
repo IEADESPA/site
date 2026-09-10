@@ -191,6 +191,10 @@ export interface Configuracoes {
   phone: string;
   lat: number | null;
   lng: number | null;
+  /** Fase 24 — texto que identifica o perfil real e confirmado da Sede no
+   * Google Maps (não só o endereço) — ver README. Null enquanto não
+   * confirmado; nesse caso o mapa cai para a busca por endereço de sempre. */
+  google_maps_place_query: string | null;
 }
 
 export const fetchConfiguracoes = () => fetchSingleton<Configuracoes>("configuracoes");

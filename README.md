@@ -1631,21 +1631,21 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     (`maps_url`) resolve para um perfil de verdade do Google Maps — *"Igreja AD/SETA Parauapebas -
     Templo Central"* — confirmando que a Sede já está pronta pro critério acima.
 
-  **Bloqueio técnico encontrado, faltando resolver antes de construir o mapa da Sede**: mostrar um
-  mapa que referencia um perfil (não só coordenada) usa a **Maps Embed API**, diferente da Maps
-  JavaScript API/Geocoding API já ativadas — testado e confirmado que falta ativar. Passos que só a
-  igreja consegue fazer (acesso ao Google Cloud):
-  1. **APIs e serviços → Biblioteca** → buscar **"Maps Embed API"** → Ativar.
-  2. **Credenciais** → editar a chave 1 (a restrita por site) → **Restrições de API** → marcar
-     também **"Maps Embed API"**, além do que já está marcado.
+  - [x] **Mapa real da Sede construído**, em `/contato/` — substitui o antigo embed por busca de
+    endereço (que já podia mostrar o lugar errado, sem nenhuma garantia). Precisou de mais uma API
+    (**Maps Embed API** — diferente da Maps JavaScript API/Geocoding API já ativadas, testado e
+    confirmado que faltava ativar; ativada pelo usuário e testada de novo, funcionando). Novo campo
+    `google_maps_place_query` em Configurações guarda o texto exato do perfil confirmado
+    ("Igreja AD/SETA Parauapebas - Templo Central") — o embed usa a Maps Embed API com esse texto
+    quando preenchido, e só cai pro embed antigo (busca por endereço) se esse campo estiver vazio —
+    mesmo critério do resto da fase, nunca publicar sem perfil confirmado. Chave da Maps Embed/JS
+    API (restrita por domínio, ver `src/config/site.ts`) testada e confirmada funcionando de
+    verdade contra o perfil real (mesmo identificador interno do Google nos dois testes).
 
   **O que falta, nesta ordem**:
-  1. Ativar a Maps Embed API e liberar na chave 1 (acima) — aí eu construo o mapa de verdade da
-     Sede, referenciando o perfil confirmado, em `/contato/` (substituindo o iframe de busca por
-     endereço que existe hoje).
-  2. Conversa do usuário com a liderança de cada congregação, uma a uma, sobre perfil no Google
+  1. Conversa do usuário com a liderança de cada congregação, uma a uma, sobre perfil no Google
      Maps — sem prazo definido, decide conforme for confirmando.
-  3. Conforme cada congregação for confirmando perfil (e, se for o caso, corrigindo endereço no
+  2. Conforme cada congregação for confirmando perfil (e, se for o caso, corrigindo endereço no
      Directus pra regeocodificar), o mapa dela entra — nunca antes disso, mesmo que já tenha
      coordenada provisória gravada.
 

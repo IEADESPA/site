@@ -21,10 +21,16 @@ const structuredData = churchStructuredData(
 const contact = siteConfig.contact;
 const instagram = siteConfig.socials.find((social) => social.label === "Instagram");
 const isEnabled = contact.enabled;
-/* A pré-visualização em iframe só funciona com uma busca por endereço (é o
-   formato de embed sem chave de API do Google) — o link "Ver rota", esse
-   sim, aponta para o perfil real da igreja no Google Maps quando cadastrado. */
-const mapsEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(enderecoMapsQuery(config))}&output=embed`;
+/* Fase 24 — quando o perfil real da Sede no Google Maps está confirmado
+   (google_maps_place_query preenchido em Configurações), o mapa referencia
+   esse perfil de verdade via Maps Embed API (chave restrita por domínio,
+   ver README/site.ts) — cartão com fotos/avaliação, não só um pino calculado
+   por texto de endereço. Sem isso preenchido, cai pro embed antigo (busca
+   por endereço, sem chave de API nenhuma) — mesmo critério usado pras
+   congregações: nunca publicar mapa sem perfil confirmado. */
+const mapsEmbedSrc = config.google_maps_place_query
+  ? `https://www.google.com/maps/embed/v1/place?key=${siteConfig.googleMapsEmbedKey}&q=${encodeURIComponent(config.google_maps_place_query)}`
+  : `https://www.google.com/maps?q=${encodeURIComponent(enderecoMapsQuery(config))}&output=embed`;
 const mapsLinkHref = mapsHref(config);
 ---
 

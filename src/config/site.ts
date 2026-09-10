@@ -20,6 +20,14 @@ export const siteConfig = {
    * criar a propriedade gratuita em search.google.com/search-console, sem precisar
    * de deploy nenhum além de colar o código aqui. */
   googleSiteVerification: "",
+  /**
+   * Fase 24 — chave de Maps Embed API/Maps JavaScript API, restrita por
+   * referenciador HTTP só a ieadespa.org.br/www.ieadespa.org.br e às duas
+   * APIs (ver README). Não é segredo crítico — é usada no navegador do
+   * visitante por natureza — mas a restrição de domínio é o que impede
+   * outro site de usar a mesma chave e gastar a cota da igreja.
+   */
+  googleMapsEmbedKey: "AIzaSyD399wNWdUa2favTGgXwbAo70fNUhugU-8",
   language: "pt-BR",
   dateLocale: "pt-BR",
   locale: "pt_BR",
