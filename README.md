@@ -1825,6 +1825,13 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       produção — clicado o botão de verdade e confirmado: rota desenhada no mapa, mensagem final
       "8.4 km · 16 mins de carro" (distância/tempo reais, calculados pela Directions API), sem
       nenhum erro no console.
+    - **Ajuste feito depois de testar de verdade, a pedido do usuário**: a rota desenhada na tela é
+      só uma prévia — pra navegar de verdade (turn-by-turn), precisa abrir o app/site do Google
+      Maps de verdade, e **já com origem e destino prontos**, sem a pessoa ter que digitar tudo de
+      novo por lá. Adicionado o link "Abrir esta rota no Google Maps", que só aparece depois que a
+      rota é calculada com sucesso, usando o formato de link público de rota do próprio Google
+      Maps (`google.com/maps/dir/?api=1&origin=...&destination=...`) — não é uma API paga, é só um
+      formato de URL documentado, sem gastar nada da cota do Maps Platform.
   - [ ] **Fase 24.8 — mapa único com todos os eventos de local próprio**: uma visão de mapa em
     `/eventos/` com um pino por evento que tem `location` própria (marchas, batismos etc.) — não
     inclui congregação, só eventos.

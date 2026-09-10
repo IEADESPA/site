@@ -154,6 +154,16 @@ const ogImageUrl =
               <div class="mt-3">
                 <button type="button" class="btn btn-outline" data-tracar-rota>Traçar rota até aqui</button>
                 <p class="mt-2 text-xs text-muted-foreground" data-rota-status role="status" aria-live="polite" />
+                <a
+                  href="#"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="link-sweep mt-1 inline-block text-sm font-semibold text-accent"
+                  data-abrir-no-maps
+                  hidden
+                >
+                  Abrir esta rota no Google Maps &rarr;
+                </a>
               </div>
             )
           }
@@ -340,6 +350,7 @@ const ogImageUrl =
 
         const botaoRota = document.querySelector("[data-tracar-rota]");
         const statusRota = document.querySelector("[data-rota-status]");
+        const linkAbrirNoMaps = document.querySelector("[data-abrir-no-maps]");
 
         botaoRota?.addEventListener("click", () => {
           if (!statusRota) return;
@@ -355,6 +366,7 @@ const ogImageUrl =
 
           botaoRota.disabled = true;
           statusRota.textContent = "Localizando você…";
+          if (linkAbrirNoMaps) linkAbrirNoMaps.hidden = true;
 
           navigator.geolocation.getCurrentPosition(
             (posicaoAtual) => {
@@ -374,6 +386,16 @@ const ogImageUrl =
                     directionsRenderer.setDirections(resultado);
                     const perna = resultado.routes[0]?.legs[0];
                     statusRota.textContent = perna ? `${perna.distance?.text} · ${perna.duration?.text} de carro` : "";
+
+                    // Pedido do usuário: a rota traçada na tela é só uma
+                    // prévia — pra navegar de verdade, precisa ir pro app do
+                    // Google Maps já com a origem/destino prontos (sem
+                    // digitar tudo de novo lá). Formato de link público do
+                    // próprio Google Maps, sem precisar de chave de API.
+                    if (linkAbrirNoMaps) {
+                      linkAbrirNoMaps.href = `https://www.google.com/maps/dir/?api=1&origin=${origem.lat},${origem.lng}&destination=${posicaoSede.lat},${posicaoSede.lng}&travelmode=driving`;
+                      linkAbrirNoMaps.hidden = false;
+                    }
                   } else {
                     statusRota.textContent = "Não foi possível traçar a rota agora.";
                   }
