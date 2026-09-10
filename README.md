@@ -1673,6 +1673,27 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   - [ ] **Fase 24.6 — imagem de compartilhamento de `/contato/`**: usar Street View ou Static Maps
     como imagem social (`og:image`) da página de contato, pra o link ficar mais reconhecível quando
     compartilhado no WhatsApp/redes.
+  - [ ] **Fase 24.7 — rota traçada na própria tela**: usar a **Directions API** pra desenhar a rota
+    de verdade dentro do mapa da Sede (Fase 24.1), pedindo a localização do navegador de quem visita
+    (mesmo mecanismo de geolocalização já usado em outras partes do site) — em vez de só abrir o
+    Google Maps externo pra ver a rota.
+  - [ ] **Fase 24.8 — mapa único com todos os eventos de local próprio**: uma visão de mapa em
+    `/eventos/` com um pino por evento que tem `location` própria (marchas, batismos etc.) — não
+    inclui congregação, só eventos.
+  - [ ] **Fase 24.9 — "qual congregação mais perto de você"**: usando a localização do navegador
+    contra as coordenadas reais das congregações (Distance Matrix ou cálculo direto de distância) —
+    **bloqueada atrás da Fase 24 principal**: só faz sentido depois que as congregações tiverem
+    perfil confirmado (a mesma trava de "não publicar sem perfil real" já registrada acima).
+  - [ ] **Fase 24.10 — Aerial View (experimental)**: vídeo curto de sobrevoo automático do endereço
+    da Sede, gerado pela Aerial View API — mais efeito visual do que utilidade prática, registrado
+    como experimento a avaliar, não uma necessidade confirmada.
+
+  **Descartado de propósito, pra não fingir aproveitamento onde não há uso real**: Air Quality,
+  Pollen, Solar, Roads, Time Zone e Weather API existem na mesma plataforma, mas resolvem problema
+  de outro tipo de negócio (imobiliária, agro, logística) — nenhuma tem aplicação real num site
+  institucional de igreja. Incluir qualquer uma delas só pra "gastar crédito" seria construir algo
+  que ninguém vai usar, contra o próprio critério já seguido no resto do projeto (ver "Mais
+  personalizações pesquisadas" mais abaixo, onde a mesma lógica já rejeitou outras ideias).
 
   Cada sub-fase, quando construída, ganha sua própria entrada `[x]` com o teste de ponta a ponta,
   igual ao resto do projeto — só a ordem de execução (uma por vez, não tudo junto) é diferente aqui,
