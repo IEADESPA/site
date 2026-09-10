@@ -1712,10 +1712,26 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     - **Testado de ponta a ponta**: criado um evento de teste real com local avulso + o link
       colado, gerado o build de verdade, e confirmado no HTML final que o mapa recebeu a coordenada
       exata do pino (não a do centro da tela) — evento de teste apagado depois.
-  - [ ] **Fase 24.4 — autocomplete de endereço nos formulários internos**: usar a **Places API**
-    (Autocomplete) nos campos de endereço do painel (evento, e futuramente congregação) pra sugerir
-    o endereço certo enquanto quem edita digita — ataca a própria causa do problema encontrado nesta
-    fase (endereço digitado errado/incompleto levando a geocodificação pro lugar errado).
+  - [x] **Fase 24.4 — autocomplete de endereço no painel de eventos — construído, redesenhado em
+    cima da Fase 24.3**: o plano original era usar Autocomplete pra sugerir texto de endereço mais
+    preciso pra geocodificar depois — mas a Fase 24.3 já trocou geocodificação por link colado, então
+    o Autocomplete virou uma **alternativa mais rápida ao próprio fluxo de colar link**: um campo de
+    busca novo em `painel-eventos/evento/` (`google.maps.places.Autocomplete`, biblioteca `places` da
+    Maps JavaScript API) — a pessoa digita o nome do lugar, escolhe um resultado da lista, e os dois
+    campos da Fase 24.3 (Local + Link do Maps) se preenchem sozinhos, com a coordenada exata do
+    resultado escolhido (`place.geometry.location`), sem precisar sair da página pra copiar link
+    nenhum. Busca com viés de região (caixa ao redor de Parauapebas, sem travar resultado de fora).
+    Colar o link manualmente continua funcionando, como alternativa.
+    - **Congregações ficaram de fora desta rodada**: a edição de congregação acontece direto no
+      Directus Studio (interface genérica do CMS, não uma tela própria do site) — colocar
+      autocomplete lá exigiria uma extensão de interface customizada do Directus, um tipo de
+      trabalho bem diferente (outro pipeline de build/deploy), fora do escopo desta sub-fase.
+    - **Limite de teste encontrado**: o serviço REST de Autocomplete (`/maps/api/place/autocomplete/
+      json`, testável direto por `curl`) **recusa chave restrita por referenciador** — mesma regra
+      já vista na Geocoding API. Isso não afeta o widget de verdade (`google.maps.places.Autocomplete`
+      roda dentro da biblioteca `places` já carregada no navegador, por outro mecanismo interno, não
+      por essa chamada REST direta) — mas por causa disso não dá pra confirmar por `curl`, só
+      testando de verdade no navegador, contra o domínio real, logado no painel.
   - [ ] **Fase 24.5 — mapa estático nos PDFs**: usar a **Static Maps API** pra incluir uma miniatura
     do local no PDF de certificado/programação de evento, quando o evento tiver localização.
   - [ ] **Fase 24.6 — imagem de compartilhamento de `/contato/`**: usar Street View ou Static Maps

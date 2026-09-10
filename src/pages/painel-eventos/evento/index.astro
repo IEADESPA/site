@@ -2,6 +2,7 @@
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
 import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 
@@ -126,6 +127,16 @@ const tipoPerguntaOpcoes = [
             <label class="text-sm font-semibold" for="f-location">Local (se não for numa congregação)</label>
             <input id="f-location" class="field" />
           </div>
+        </div>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-location-busca">Buscar local (Fase 24.4 — mais rápido que colar link)</label>
+          <input id="f-location-busca" class="field" placeholder="Digite o nome do lugar…" autocomplete="off" data-places-autocomplete />
+          <p class="text-xs text-muted-foreground">
+            Comece a digitar e escolha um resultado da lista — preenche sozinho o local e o link
+            abaixo, com a coordenada exata do lugar escolhido. Se preferir, ainda dá pra colar o
+            link manualmente.
+          </p>
         </div>
 
         <div class="grid gap-2">
@@ -443,6 +454,49 @@ const tipoPerguntaOpcoes = [
     </div>
   </main>
   <SiteFooter />
+
+  <script is:inline define:vars={{ googleMapsKey: siteConfig.googleMapsEmbedKey }}>
+    // Fase 24.4 — Places Autocomplete no campo de busca de local: alternativa
+    // mais rápida ao fluxo manual de "achar no Maps, copiar link, colar" já
+    // construído na Fase 24.3 — continua preenchendo os mesmos dois campos
+    // (Local + Link do Maps), só que sozinho, com a coordenada exata do
+    // resultado escolhido (não o texto digitado, evitando o mesmo problema
+    // de imprecisão já visto).
+    window.initPlacesAutocomplete = function initPlacesAutocomplete() {
+      const input = document.querySelector("[data-places-autocomplete]");
+      if (!input || !window.google?.maps?.places) return;
+
+      const autocomplete = new google.maps.places.Autocomplete(input, {
+        fields: ["name", "formatted_address", "geometry"],
+        componentRestrictions: { country: "br" },
+        // Region bias solto em torno de Parauapebas — não trava buscas fora
+        // da cidade (útil pra evento fora da região), só prioriza o que é
+        // perto.
+        bounds: new google.maps.LatLngBounds(
+          { lat: -6.3, lng: -50.15 },
+          { lat: -5.85, lng: -49.65 },
+        ),
+      });
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry?.location) return;
+
+        const fLocation = document.getElementById("f-location");
+        const fLocationMapsUrl = document.getElementById("f-location-maps-url");
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+
+        if (fLocation) fLocation.value = place.name || place.formatted_address || "";
+        if (fLocationMapsUrl) fLocationMapsUrl.value = `https://www.google.com/maps/@${lat},${lng},19z`;
+      });
+    };
+
+    const placesScript = document.createElement("script");
+    placesScript.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsKey}&libraries=places&callback=initPlacesAutocomplete`;
+    placesScript.async = true;
+    document.head.appendChild(placesScript);
+  </script>
 
   <script>
     import { jsPDF } from "jspdf";
