@@ -1149,25 +1149,38 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     plano de leitura bíblica anual seguem **descartados** (ver "Ideias rejeitadas") — o "versículo
     do dia" já existente cumpre esse papel.
 
-- **Fase 20 — acervo histórico ampliado**: pedida pelo usuário depois de ver a linha do tempo visual
-  construída pra histórico de liderança de órgão (Fase 1) — a mesma ideia, só que pro acervo da
-  igreja inteira. **A estrutura técnica já existe**: `/historia/` já é uma timeline visual completa
-  (navegação por ano, foto, texto), com 21 marcos cadastrados (2006 a 2026). **O problema não é
-  técnico, é de conteúdo**: boa parte desses marcos tem título genérico ("Segunda congregação",
-  "Ministério de comunicação e mídia") sem foto nem relato de verdade — os últimos ~20 anos de
-  história da igreja não foram documentados/reunidos ainda, e recuperar isso agora depende de
-  encontrar pessoas que guardam fotos e lembranças de época, não de escrever código. Mesmo padrão
-  já registrado na Fase 4 (conteúdo que só a igreja pode gerar) — **não é pra construir nada agora**,
-  é pra registrar a intenção e o que fica pronto assim que o conteúdo chegar:
-  - Hoje cada marco só aceita **uma foto**; caberia um campo de galeria (múltiplas fotos por
-    marco/era), já que um evento histórico de verdade raramente tem só um registro fotográfico.
-  - **Preservação de qualidade já está coberta pela arquitetura atual, vale confirmar isso ao
-    usuário em vez de tratar como pendência**: o Directus nunca sobrescreve o arquivo original
-    enviado — os parâmetros de largura/qualidade (`directusAssetUrl(..., { width, quality })`)
-    geram só uma versão derivada pra exibição no site, o arquivo em alta resolução enviado continua
-    guardado integralmente no Blob Storage. O cuidado real fica do lado de quem digitaliza uma foto
-    física antiga: escanear na maior resolução possível antes de enviar, já que o site preserva
-    fielmente o que for enviado, não consegue "recuperar" qualidade que a digitalização não captou.
+- [x] **Fase 20 — acervo histórico ampliado.** Pedida pelo usuário depois de ver a linha do tempo
+  visual construída pra histórico de liderança de órgão (Fase 1) — a mesma ideia, só que pro acervo
+  da igreja inteira. **O problema de conteúdo continua de pé, e isso não é pra ser resolvido por
+  código**: boa parte dos 21 marcos cadastrados tem título genérico ("Segunda congregação",
+  "Ministério de comunicação e mídia") sem foto nem relato de verdade — recuperar isso depende de
+  encontrar pessoas que guardam fotos e lembranças de época, não de escrever código, mesmo padrão da
+  Fase 4. **O que era puramente técnico nesta fase, e não dependia de conteúdo nenhum, foi
+  construído agora**:
+  - [x] **Galeria por marco** (`historia_files`, relação M2M com `directus_files` — mesmo mecanismo
+    nativo do Directus usado por qualquer campo de "múltiplos arquivos", não uma tabela improvisada
+    à mão): cada marco continua com sua foto principal de sempre, e agora pode ter várias fotos
+    extras associadas (`fotos`), mostradas como uma grade de miniaturas com lightbox ao clicar
+    (mesmo padrão de `/galeria/`, um `<dialog>` nativo). Some por completo quando o marco não tem
+    nenhuma foto extra — não aparece grade vazia.
+    - **Testado de ponta a ponta com dado real temporário** (2 fotos de teste enviadas de verdade
+      via API do Directus, associadas a um marco de teste, removidas depois): confirmado que a
+      leitura pública consegue expandir a relação (`fields=fotos.directus_files_id`), que a ordem
+      (`sort`) é respeitada, e visualmente com Playwright que a miniatura abre no tamanho grande
+      certo dentro do lightbox.
+    - **Bug real de integridade encontrado e corrigido durante o próprio teste, antes do deploy**:
+      a relação M2M, do jeito que a API do Directus cria por padrão, não limpa a linha de junção
+      sozinha quando o marco (ou o arquivo) é apagado — apagar um marco com foto de galeria
+      vinculada quebrava com erro de chave estrangeira. Corrigido configurando `ON DELETE CASCADE`
+      nas duas pontas da relação (apagar o marco limpa a galeria dele sozinho; apagar um arquivo
+      da biblioteca de mídia só remove aquele vínculo, sem tentar apagar o marco) — testado de novo
+      depois da correção, confirmando que os dois casos agora funcionam sem erro.
+  - **Preservação de qualidade já estava coberta pela arquitetura atual, nenhuma mudança
+    necessária**: o Directus nunca sobrescreve o arquivo original enviado — os parâmetros de
+    largura/qualidade (`directusAssetUrl(..., { width, quality })`) geram só uma versão derivada
+    pra exibição no site, o arquivo em alta resolução enviado continua guardado integralmente no
+    Blob Storage. O cuidado real fica do lado de quem digitaliza uma foto física antiga: escanear
+    na maior resolução possível antes de enviar.
   - Sem tráfego pago em hipótese nenhuma — o "achado de pessoas com fotos antigas" citado pelo
     usuário é trabalho humano de pedir/reunir material, fora do escopo de qualquer coisa que o site
     resolva sozinho.
@@ -1380,9 +1393,9 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 14, 17, 18 e 19 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
+**Fases 0 a 14 e 17 a 20 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
 fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
-construído"). **Das fases 20 a 24, nada foi construído ainda.** O detalhe completo de cada achado
+construído"). **Das fases 21 a 24, nada foi construído ainda.** O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
