@@ -1666,8 +1666,16 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       chave pro domínio certo. Testado também com Playwright contra o build local — o script
       carrega e tenta montar o mapa de verdade (confirma que o código roda sem erro de sintaxe/API),
       mas o **Google recusa o carregamento completo em localhost** (`RefererNotAllowedMapError`),
-      exatamente como esperado — é a mesma limitação de sempre pra chave restrita por domínio, só
-      dá pra confirmar 100% depois do deploy no domínio de verdade.
+      exatamente como esperado — é a mesma limitação de sempre pra chave restrita por domínio.
+    - **Bug real encontrado só depois do deploy em produção**: o mapa não carregava — a própria
+      **Content-Security-Policy do site** (`public/staticwebapp.config.json`) bloqueava o script do
+      Google Maps, porque `maps.googleapis.com` nunca tinha sido liberado (o embed antigo funcionava
+      porque `frame-src` já liberava `google.com` pro iframe — a Maps JavaScript API é outro
+      mecanismo, script direto, não iframe). Corrigido liberando `maps.googleapis.com` em
+      `script-src`/`connect-src`, `maps.gstatic.com`/`*.googleapis.com`/`*.ggpht.com` em `img-src`
+      (tiles e ícones do mapa) e `fonts.googleapis.com`/`fonts.gstatic.com` (fonte que a própria
+      biblioteca do Google carrega pra estilizar a caixinha de informação). Testado de novo com
+      Playwright contra o domínio real depois da correção, confirmando o mapa carregando de verdade.
   - [ ] **Fase 24.2 — foto de rua (Street View) da Sede**: imagem real da fachada via Street View
     Static API, em `/contato/` e/ou `/visitante/` — ajuda quem nunca foi a reconhecer o prédio
     chegando, sem depender de a igreja tirar e enviar uma foto.
