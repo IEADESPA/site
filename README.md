@@ -1738,8 +1738,41 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       confirmado que os dois campos (Local + Link do Maps) preencheram sozinhos com coordenada real;
       clicado "Salvar" e confirmado, direto no Directus, que os valores foram gravados de verdade —
       evento de teste apagado depois.
-  - [ ] **Fase 24.5 — mapa estático nos PDFs**: usar a **Static Maps API** pra incluir uma miniatura
-    do local no PDF de certificado/programação de evento, quando o evento tiver localização.
+  - [x] **Fase 24.5 — mapa estático nos PDFs — construído, com escopo bem maior do que o previsto**:
+    o usuário, ao pensar em como usar o mapa no PDF, apontou que o **PDF de exportação de eventos**
+    (`/eventos/exportar/`, de uma fase anterior) estava mal organizado — texto corrido, sem
+    diferenciar bem quem é responsável pelo evento nem o local. A fase virou uma reformulação real
+    desse PDF, não só "colar uma imagem de mapa":
+    - **Layout mudou de texto corrido pra tabela** — colunas Data | Evento | Responsável | Local,
+      desenhadas manualmente com `jsPDF` (sem plugin de tabela, seguindo o mesmo estilo do resto do
+      projeto).
+    - **Agrupamento agora é escolha da pessoa que exporta**: cronológico por mês (como já era) ou
+      por nível de responsável (Diretoria → Conselho → Congregação → Departamento/Ministério →
+      Área/Regional → sem categoria — mesma ordem/rótulo já usada nos filtros existentes).
+    - **Filtro de mapa em 3 modos**, também escolha de quem exporta: mostrar mini-mapa quando o
+      evento tiver (padrão), só eventos com mapa, ou só eventos sem mapa/local marcado (útil pra
+      saber quais eventos ainda precisam ganhar o link do Maps).
+    - **Mini-mapa de verdade na célula de Local**: só para evento sem congregação com
+      `location_maps_url` (Fase 24.3) — imagem via **Static Maps API**, com um link clicável de
+      verdade por cima (`doc.link`, anotação PDF) apontando pro link real do Google Maps daquele
+      evento — clicar leva pra rota, exatamente como confirmado com o usuário.
+    - **Resolução de coordenada acontece em tempo de build** (na própria página, junto do resto do
+      frontmatter) — rodar em tempo de build evita o mesmo problema de CORS já visto: seguir um
+      link curto (`maps.app.goo.gl`) direto do navegador de quem gera o PDF esbarraria nisso. Só a
+      *imagem* do mini-mapa (Static Maps API) é buscada no navegador na hora de gerar — essa API
+      libera CORS de verdade (confirmado por `curl`, header `Access-Control-Allow-Origin: *`).
+    - **Bug real encontrado e corrigido durante o teste, não relacionado a esta fase**: um evento
+      de teste sem `slug` quebrava a geração de `.ics` (`evento/[slug].ics.ts` não filtra por slug
+      antes de gerar as rotas) — não foi corrigido agora (fora do escopo desta sub-fase), só evitado
+      nos dados de teste; fica registrado aqui pra não esquecer.
+    - **Testado de ponta a ponta com dados reais**: criados dois eventos de teste (um com link do
+      Maps colado, outro sem), gerado o PDF de verdade com Playwright contra produção, e o PDF
+      baixado analisado com `pdftotext`/inspeção binária — confirmado: cabeçalho da tabela e texto
+      de Local presentes (um teste inicial, feito por engano contra o código antigo ainda não
+      publicado, tinha parecido mostrar essas informações sumidas — corrigido ao perceber que a
+      publicação não tinha sido feita ainda, e confirmado certo depois do deploy de verdade);
+      imagem do mini-mapa embutida (3 imagens no PDF: logo + mapa); anotação de link presente, com
+      a URL exata do link colado no evento de teste. Eventos de teste apagados depois.
   - [ ] **Fase 24.6 — imagem de compartilhamento de `/contato/`**: usar Street View ou Static Maps
     como imagem social (`og:image`) da página de contato, pra o link ficar mais reconhecível quando
     compartilhado no WhatsApp/redes.
