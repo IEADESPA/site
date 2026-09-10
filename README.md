@@ -1726,12 +1726,18 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       Directus Studio (interface genérica do CMS, não uma tela própria do site) — colocar
       autocomplete lá exigiria uma extensão de interface customizada do Directus, um tipo de
       trabalho bem diferente (outro pipeline de build/deploy), fora do escopo desta sub-fase.
-    - **Limite de teste encontrado**: o serviço REST de Autocomplete (`/maps/api/place/autocomplete/
-      json`, testável direto por `curl`) **recusa chave restrita por referenciador** — mesma regra
-      já vista na Geocoding API. Isso não afeta o widget de verdade (`google.maps.places.Autocomplete`
-      roda dentro da biblioteca `places` já carregada no navegador, por outro mecanismo interno, não
-      por essa chamada REST direta) — mas por causa disso não dá pra confirmar por `curl`, só
-      testando de verdade no navegador, contra o domínio real, logado no painel.
+    - **Limite de teste encontrado, contornado**: o serviço REST de Autocomplete
+      (`/maps/api/place/autocomplete/json`, testável direto por `curl`) **recusa chave restrita por
+      referenciador** — mesma regra já vista na Geocoding API. Isso não afeta o widget de verdade
+      (`google.maps.places.Autocomplete` roda dentro da biblioteca `places` já carregada no
+      navegador, por outro mecanismo interno, não por essa chamada REST direta) — então o teste real
+      foi feito com Playwright contra o domínio de produção, injetando o token de admin do Directus
+      direto no `sessionStorage` (evita precisar de login manual pra automatizar o teste).
+    - **Testado de ponta a ponta com dado real**: criado um evento de teste real; no navegador,
+      digitado "Praça Central Parauapebas" no campo de busca — sugestão apareceu, clicado nela,
+      confirmado que os dois campos (Local + Link do Maps) preencheram sozinhos com coordenada real;
+      clicado "Salvar" e confirmado, direto no Directus, que os valores foram gravados de verdade —
+      evento de teste apagado depois.
   - [ ] **Fase 24.5 — mapa estático nos PDFs**: usar a **Static Maps API** pra incluir uma miniatura
     do local no PDF de certificado/programação de evento, quando o evento tiver localização.
   - [ ] **Fase 24.6 — imagem de compartilhamento de `/contato/`**: usar Street View ou Static Maps
