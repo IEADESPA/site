@@ -1,11 +1,11 @@
 ---
 import { marked } from "marked";
 import Breadcrumbs from "@/components/Breadcrumbs.astro";
-import LocalIcon from "@/components/LocalIcon.astro";
 import PostCard from "@/components/PostCard.astro";
 import ShareButtons from "@/components/ShareButtons.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
+import YoutubeFacade from "@/components/YoutubeFacade.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import {
@@ -111,12 +111,9 @@ const structuredData = [
         )}
 
         {data.videoUrl && (
-          <p class="mt-5">
-            <a href={data.videoUrl} target="_blank" rel="noreferrer" class="btn btn-outline">
-              <LocalIcon name="youtube" className="h-4 w-4" />
-              Assistir à pregação
-            </a>
-          </p>
+          <div class="mt-6 article-video">
+            <YoutubeFacade url={data.videoUrl} title={`Assistir à pregação — ${data.title}`} />
+          </div>
         )}
 
         {serie.length > 1 && (

@@ -999,14 +999,15 @@ pesquisa transversal mais abaixo:
     `FAQPage` (26 perguntas) no HTML gerado, Playwright contra `astro preview` conferindo
     visualmente a página nova, a página de visitante sem o FAQ antigo, e o link novo no rodapé.
 
-- **Fase 15 — comunidade (pequenos grupos)**: pequenos grupos/células teriam modelo de dado simples
-  (nome/tema, líder, dia, bairro aproximado — não endereço exato, por privacidade), mas **depende de
-  confirmar com a liderança se existe de fato um programa formal de grupos pequenos** (a estrutura
-  visível hoje é por congregação/ponto de pregação, não célula doméstica) — sem essa confirmação,
-  não construir, pelo mesmo motivo que já levou a não inventar dado na Fase 4 (história). O item
-  "servir/seja voluntário" (incluindo a variante mais leve "Quero servir" dentro de `/contato/`,
-  proposta numa rodada de pesquisa anterior) foi **definitivamente descartado** — ver justificativa
-  do usuário em "Ideias rejeitadas".
+- **Fase 15 — comunidade (pequenos grupos): descartada em definitivo pelo usuário**, não só adiada
+  por falta de confirmação como o texto original desta entrada dizia. A igreja não vai ter pequenos
+  grupos/células — e mesmo que viesse a ter, o usuário esclareceu (numa conversa à parte, sobre um
+  segundo sistema que ele mantém, `governança-ieadespa`, dedicado a membro/governança/EBD/
+  financeiro) que qualquer recurso que dependa de acompanhar a pessoa ao longo do tempo — o que
+  inclui departamentos/secretarias "servindo" o membro, a ideia real por trás de "pequenos grupos"
+  — pertence a esse outro sistema, nunca ao site público. Reforça o limite já registrado logo
+  abaixo (não propor gestão que dependa de outro sistema externo). O item "servir/seja voluntário"
+  já estava **definitivamente descartado** desde antes — ver "Ideias rejeitadas".
 
 Última leva pedida pelo usuário, focada em painéis/sistemas de **gestão interna** (não página
 pública). Depois de revisar essa leva, o usuário esclareceu um limite importante que vale registrar
@@ -1023,32 +1024,43 @@ resultaram em "não construir" antes mesmo desse esclarecimento (achados incorpo
 correspondentes de "Ideias rejeitadas": diretório de membros, módulo de EBD e reserva de espaço/
 salão):
 
-- **Fase 16 — agendamento (visita pastoral)**: hoje "Visita pastoral" é só mais uma opção do
-  `<select>` de assunto em `/contato/`, sem nenhum campo de preferência de horário — a pesquisa
-  mostra que sites de referência não usam calendário de disponibilidade em tempo real pra isso
-  (sessão pastoral sempre passa por triagem humana antes de confirmar), então o valor real está em
-  melhorar o formulário existente, não em construir um sistema de agenda: acrescentar um campo de
-  "melhores dias/turnos pra contato" e "prefere presencial ou por telefone/vídeo", no mesmo molde
-  já construído pro "Pedido de oração", reaproveitando a mesma coleção `contato_mensagens` (sem
-  coleção nova). Aproveitar pra adicionar também o consentimento específico de dado sensível
-  planejado na Fase 7 (LGPD), já que o motivo de uma visita pastoral pode revelar informação
-  sensível sem a pessoa perceber que está compartilhando algo delicado num campo de texto livre.
+- **Fase 16 — agendamento (visita pastoral): descartada em definitivo pelo usuário** — não existe
+  processo de "visita pastoral"/aconselhamento a formalizar ("não tem visita pastoral, não tem
+  aconselhamento"). Mesma razão de fundo da Fase 15: qualquer coisa nessa linha pertenceria ao
+  sistema de governança, não ao site público.
 
 Última leva pedida pelo usuário, agora de volta ao que é puramente conteúdo/função do próprio site
 (sem depender de nenhum sistema/banco de dado externo — o mesmo critério da leva anterior), depois
 de esclarecido que "gestão de igreja" não é o objetivo aqui: vídeo, formato editorial de entrevista,
 depoimentos, e materiais compartilháveis. Mais 3 fases:
 
-- **Fase 17 — vídeo institucional**: trocar o link de saída do `videoUrl` de mensagem por um
-  "facade" (thumbnail estática do próprio YouTube + botão de play, só carregando o player pesado no
-  clique) é o item de maior retorno — mantém o visitante no site e evita ~500KB de JS carregado à
-  toa em toda página de mensagem com vídeo. Criar uma coleção `videos` no Directus, clonando 100% o
-  padrão já testado da Galeria (grid, campo `sort`, estado vazio) mas só com URL/ID do YouTube (sem
-  upload nem custo de Blob Storage), permite categorizar por tipo (documentário, bastidores, louvor,
-  infantil) reaproveitando o mesmo padrão de filtro já planejado nas Fases 2/3. Um **hub/página
-  dedicada de vídeo foi avaliado e adiado** — com o volume de conteúdo de hoje (só o `videoUrl` de
-  mensagem), uma página de categorias ficaria com aparência vazia; só construir quando houver
-  produção regular de vídeo variado, mesmo critério já usado pra não antecipar a Fase 4.
+- [x] **Fase 17 — vídeo institucional.** Só o item de maior retorno confirmado (o "facade"),
+  construído e testado. A coleção `videos`/hub dedicado seguem **adiados** — mesmo motivo já
+  registrado: com o volume de hoje (só o `videoUrl` de mensagem, e nenhuma mensagem tem vídeo
+  cadastrado agora mesmo), uma página de categorias ficaria vazia; sem hub pra consumir, a coleção
+  também não tinha pra que existir ainda — só construir os dois juntos quando houver produção
+  regular de vídeo variado, mesmo critério de não antecipar conteúdo já usado na Fase 4.
+  - **`YoutubeFacade.astro`** (novo componente, `src/lib/youtube.ts` extrai o ID do vídeo de
+    qualquer formato de link do YouTube): troca o antigo link simples "Assistir à pregação" por
+    uma miniatura estática (`i.ytimg.com`, sem nenhuma chamada ao YouTube até o clique) com botão
+    de play — o player pesado do YouTube só carrega depois que a pessoa clica de propósito,
+    evitando ~500KB de JS/rede à toa pra quem só está lendo o texto da mensagem. O link em volta da
+    miniatura é o link de verdade pro YouTube (funciona sem JavaScript, abre em aba nova); com JS,
+    o clique troca a miniatura por um `<iframe>` do `youtube-nocookie.com` embutido na própria
+    página. Usado também na página `/ao-vivo/`, que ganhou uma seção "Mensagens em vídeo" de
+    verdade — antes só existia um texto fixo prometendo "aparece automaticamente aqui assim que
+    tiver vídeo", que nunca tinha sido implementado (a lista nunca fora escrita).
+  - **Bug real encontrado testando com Playwright, não visível só lendo o código**: a primeira
+    versão do botão de play usava um `<svg>` inline (ícone de triângulo) — o círculo escuro do
+    botão aparecia, mas o triângulo branco dentro dele **nunca renderizava**, em nenhum navegador
+    testado (confirmado com captura de tela ampliada). Corrigido trocando o SVG por um triângulo em
+    CSS puro (a técnica clássica de `border`), mais simples e sem depender de nenhum comportamento
+    de padding/viewBox de `<svg>` entre navegadores.
+  - **Testado de ponta a ponta com um vídeo real temporário**: como nenhuma mensagem tinha
+    `video_url` cadastrado, anexei um vídeo de teste a uma mensagem real via API do Directus só
+    durante o teste (removido depois), confirmando com Playwright: a miniatura aparece, o clique
+    troca pelo `<iframe>` de verdade (YouTube tocando), e a mesma miniatura aparece corretamente em
+    `/ao-vivo/`, linkando de volta pra página da mensagem.
 
 - **Fase 18 — formato editorial: testemunho e depoimentos curtos**: dois formatos distintos, dois
   tamanhos de esforço. **Testemunho/entrevista mais longa**: a categoria `testemunho` já existe no
@@ -1311,8 +1323,9 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 14 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 15 a
-24, nada foi construído ainda.** O detalhe completo de cada achado (com a
+**Fases 0 a 14 e a Fase 17 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
+fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
+construído"). **Das fases 18 a 24, nada foi construído ainda.** O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
 fontes consultadas.
