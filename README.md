@@ -1642,12 +1642,41 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     API (restrita por domínio, ver `src/config/site.ts`) testada e confirmada funcionando de
     verdade contra o perfil real (mesmo identificador interno do Google nos dois testes).
 
-  **O que falta, nesta ordem**:
-  1. Conversa do usuário com a liderança de cada congregação, uma a uma, sobre perfil no Google
-     Maps — sem prazo definido, decide conforme for confirmando.
-  2. Conforme cada congregação for confirmando perfil (e, se for o caso, corrigindo endereço no
-     Directus pra regeocodificar), o mapa dela entra — nunca antes disso, mesmo que já tenha
-     coordenada provisória gravada.
+  **Congregações**: fora do escopo de código por enquanto — depende só da conversa do usuário com
+  a liderança de cada uma sobre ter/ceder um perfil confirmado no Google Maps. Ele manda os perfis
+  conforme forem confirmando; nenhum mapa de congregação entra antes disso, mesmo já tendo
+  coordenada provisória gravada.
+
+  **A igreja tem crédito mensal do Google Maps Platform sobrando (a cota gratuita, e possivelmente
+  o crédito extra de ONG) e o usuário pediu pra aproveitar o máximo possível da plataforma agora
+  que ela está configurada** — não tudo de uma vez, **uma sub-fase por rodada**, testando cada uma
+  antes de ir pra próxima (ao contrário do resto do projeto, aqui o próprio usuário pediu
+  explicitamente pra ir aos poucos, "pra não ficar pesado numa rodada só"). Sub-fases registradas,
+  nenhuma construída ainda:
+
+  - [ ] **Fase 24.1 — mapa da Sede com estilo próprio**: trocar o embed genérico (Maps Embed API,
+    já funcionando) por um mapa de verdade com a **Maps JavaScript API** — marcador customizado nas
+    cores da igreja, caixinha de informação ao clicar (horários de culto, botão "Ver rota"), em vez
+    do cartão padrão do Google.
+  - [ ] **Fase 24.2 — foto de rua (Street View) da Sede**: imagem real da fachada via Street View
+    Static API, em `/contato/` e/ou `/visitante/` — ajuda quem nunca foi a reconhecer o prédio
+    chegando, sem depender de a igreja tirar e enviar uma foto.
+  - [ ] **Fase 24.3 — mapa real em eventos com endereço próprio**: eventos com `location` livre (ex.:
+    um batismo num rio, sem congregação vinculada) ganham mapa de verdade na própria página do
+    evento, em vez de só o texto do endereço — mesma Geocoding API já testada e funcionando.
+  - [ ] **Fase 24.4 — autocomplete de endereço nos formulários internos**: usar a **Places API**
+    (Autocomplete) nos campos de endereço do painel (evento, e futuramente congregação) pra sugerir
+    o endereço certo enquanto quem edita digita — ataca a própria causa do problema encontrado nesta
+    fase (endereço digitado errado/incompleto levando a geocodificação pro lugar errado).
+  - [ ] **Fase 24.5 — mapa estático nos PDFs**: usar a **Static Maps API** pra incluir uma miniatura
+    do local no PDF de certificado/programação de evento, quando o evento tiver localização.
+  - [ ] **Fase 24.6 — imagem de compartilhamento de `/contato/`**: usar Street View ou Static Maps
+    como imagem social (`og:image`) da página de contato, pra o link ficar mais reconhecível quando
+    compartilhado no WhatsApp/redes.
+
+  Cada sub-fase, quando construída, ganha sua própria entrada `[x]` com o teste de ponta a ponta,
+  igual ao resto do projeto — só a ordem de execução (uma por vez, não tudo junto) é diferente aqui,
+  por pedido explícito do usuário.
 
 - **Fase 25 — newsletter/e-mail em massa + nome de exibição do remetente**: registrada depois que
   o e-mail transacional da Fase 21 (Azure Communication
