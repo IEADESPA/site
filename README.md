@@ -1574,55 +1574,80 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       abrindo o build de verdade — confirmado que o script no navegador removeu o expirado e manteve
       só o válido, e que os "pontinhos" do carrossel somem sozinhos quando resta 1 item só.
 
-- **Fase 24 — mapas de verdade com Google Maps Platform**: pedida pelo
-  usuário, condicionada a ele configurar antes um projeto no Google Cloud com faturamento ativado —
-  **só registro, não construir agora**, e com uma correção importante feita antes de registrar
-  qualquer escopo.
+- **Fase 24 — mapas de verdade com Google Maps Platform**: pedida pelo usuário. O projeto Google
+  Cloud já existe, faturamento e as APIs já foram ativados, e as duas chaves já foram criadas e
+  testadas de verdade (ver histórico abaixo) — **replanejada em cima de uma regra que só ficou
+  clara depois de já ter os dados em mãos**, explicada a seguir.
 
   **Duas fontes de crédito diferentes, as duas reais, pesquisadas e confirmadas**:
   1. **Cota gratuita padrão, pra qualquer projeto** — o crédito geral de "US$ 200/mês" que existia
      antes **foi aposentado pelo próprio Google em 1º de março de 2025**
      ([fonte oficial](https://developers.google.com/maps/billing-and-pricing/faq)), substituído por
-     uma cota gratuita mensal separada por API (10.000 usos/mês na faixa "Essentials", onde ficam
-     Maps JavaScript API e Geocoding API) — não junta mais num valor em dólar.
-  2. **Crédito adicional específico pra organização sem fins lucrativos verificada** — esse é o que
-     o usuário lembrava, e está certo: existe um **crédito de US$ 250/mês em Google Maps Platform,
-     só pra quem tem conta verificada no [Google para ONGs](https://www.google.com/nonprofits/)**
-     ([fonte oficial](https://support.google.com/nonprofits/answer/3367237)), **a mais** da cota
-     gratuita padrão do item 1. Não é automático — precisa: (a) primeiro ter a conta da igreja
-     verificada no Google para ONGs (organização religiosa se qualifica), (b) dentro desse painel,
-     na seção "Créditos do Google Maps Platform", pedir a ativação — o Google revisa em até 3 dias
-     úteis. Com os dois juntos, a folga de uso fica bem confortável pro tamanho deste site.
+     uma cota gratuita mensal separada por API (10.000 usos/mês na faixa "Essentials").
+  2. **Crédito adicional específico pra organização sem fins lucrativos verificada** — US$ 250/mês
+     a mais, condicionado a ter conta verificada no
+     [Google para ONGs](https://www.google.com/nonprofits/)
+     ([fonte oficial](https://support.google.com/nonprofits/answer/3367237)) — ainda não confirmado
+     se a igreja já tem essa verificação; não bloqueia o resto, só reduz a folga de uso.
 
-  **O que fica registrado pra quando o projeto Google Cloud existir**:
-  - **Geocoding API pra preencher `lat`/`lng` das 41 congregações** — hoje **nenhuma** tem
-    coordenada cadastrada (só a sede) — é a limitação que já tinha feito rejeitar, na Fase 3,
-    unificar a tecnologia de mapa do site inteiro. Resolvido isso, essa rejeição pode ser
-    revisitada. Uso pontual (41 chamadas, uma vez, mais alguma manutenção esporádica) — nem chega
-    perto da cota gratuita.
-  - **Mapa interativo de verdade na listagem de congregações**, substituindo o Leaflet/OpenStreetMap
-    atual (que existe hoje só porque as coordenadas reais não existiam) — pinos de verdade,
-    clique pra detalhes, no estilo visual do site.
-  - **Mapa interativo em cada página de congregação individual**, substituindo o embed simples
-    atual (iframe de busca por endereço) por um mapa de verdade com pino exato e botão de rota.
-  - **Avaliar** (não decidido ainda) uma função de "qual congregação mais perto de mim", usando a
-    geolocalização do próprio navegador do visitante (já usada em outras partes do site) contra as
-    coordenadas agora reais — só faz sentido depois do item da Geocoding API acima estar pronto.
+  **A regra que mudou o escopo, descoberta na prática**: o usuário decidiu, depois de ver os
+  primeiros resultados da Geocoding API, que **um pino no mapa só pode existir pra uma congregação
+  que tenha (ou passe a ter) um perfil de verdade no Google Maps** (o "cartão" que aparece quando
+  se busca o nome de um lugar — endereço, fotos, avaliações) — nunca só um ponto calculado a partir
+  do texto do endereço cadastrado no Directus. Motivo dado pelo próprio usuário: **um endereço
+  digitado pode estar errado ou incompleto, e a Geocoding API, sem conseguir achar o endereço
+  exato, às vezes "chuta" um lugar parecido em outra cidade** — o teste real feito nesta fase
+  confirmou isso na prática (ver abaixo). Referenciar o perfil de verdade evita publicar um pino
+  errado que ninguém mandou publicar.
 
-  **Pré-requisitos que têm que existir antes de eu escrever qualquer código** (nenhum depende de
-  mim, todos dependem de uma conta Google do usuário):
-  1. Conta da igreja verificada no Google para ONGs (se ainda não tiver) — pré-requisito pro
-     crédito de US$ 250/mês do item 2 acima, mesmo que ele não seja usado imediatamente.
-  2. Projeto criado no Google Cloud com faturamento (cartão) ativado — sem isso, nenhuma chamada
-     funciona, mesmo dentro da cota gratuita.
-  3. APIs "Maps JavaScript API" e "Geocoding API" ativadas nesse projeto.
-  4. Uma chave de API gerada e **restringida** (por domínio/referenciador HTTP, só
-     `ieadespa.org.br`/`www.ieadespa.org.br`, e só às 2 APIs acima) — sem essa restrição, qualquer
-     pessoa que copiar a chave do código-fonte da página (ela é pública por natureza, usada no
-     navegador do visitante) pode gastar a cota da igreja em outro site.
-  5. Um **alerta de orçamento** configurado no Google Cloud Billing (gratuito, e-mail avisando ao
-     atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
-     cota grátis.
+  **Consequência prática**: cada congregação só ganha mapa depois que a liderança dela confirmar
+  (ou repassar acesso a) um perfil próprio no Google Maps. O usuário vai conversar com os
+  dirigentes de cada congregação sobre isso — **fora do escopo de código**, depende só dessa
+  conversa. Enquanto isso não acontece, **só a Sede entra** — ela já tem um perfil de verdade,
+  confirmado (ver abaixo).
+
+  **Já feito nesta fase, com as chaves reais**:
+  - [x] **Chave 1 (Maps JavaScript API + Maps Embed API)** e **Chave 2 (Geocoding API)** criadas,
+    restringidas e testadas de ponta a ponta. A primeira por referenciador HTTP (só
+    `ieadespa.org.br`/`www.ieadespa.org.br`) — confirmado que funciona pro site e nada além disso;
+    a segunda sem restrição de app (roda só num script, nunca no navegador) — confirmado que a
+    Geocoding API **rejeita de propósito** chave restrita por referenciador (é uma regra do próprio
+    Google, não erro de configuração: "API keys with referer restrictions cannot be used with this
+    API"), por isso precisou ser uma chave separada.
+  - [x] **Geocoding rodado contra as 41 congregações reais** (script descartável, não versionado no
+    repositório — só usado uma vez pra esse preenchimento pontual). Resultado, com um filtro de
+    qualidade aplicado antes de gravar qualquer coisa (rejeita resultado fora do município e
+    resultado que só bateu no centro da cidade, sem rua nenhuma):
+    - **16 congregações** com coordenada específica gravada em `congregacoes.lat`/`lng` —
+      **provisório**: só vira mapa publicado depois que a congregação também tiver perfil confirmado
+      (ver regra acima). Até lá, é só um dado guardado, não usado em nenhuma página pública ainda.
+    - **14 congregações** ficaram de fora por resultado ruim — 3 caíram em **cidade errada**
+      (endereço homônimo em outro município — ex.: uma rua "Monte Sinai" que existe tanto em
+      Parauapebas quanto em Canaã dos Carajás, e o Google escolheu a errada) e 11 caíram **só no
+      centro da cidade**, sem achar a rua — nada foi gravado nessas, precisam de endereço mais
+      preciso no Directus antes de tentar de novo.
+    - **11 congregações** nem têm endereço cadastrado no Directus ainda.
+  - [x] **Perfil real da Sede confirmado**: o link curto já cadastrado em Configurações
+    (`maps_url`) resolve para um perfil de verdade do Google Maps — *"Igreja AD/SETA Parauapebas -
+    Templo Central"* — confirmando que a Sede já está pronta pro critério acima.
+
+  **Bloqueio técnico encontrado, faltando resolver antes de construir o mapa da Sede**: mostrar um
+  mapa que referencia um perfil (não só coordenada) usa a **Maps Embed API**, diferente da Maps
+  JavaScript API/Geocoding API já ativadas — testado e confirmado que falta ativar. Passos que só a
+  igreja consegue fazer (acesso ao Google Cloud):
+  1. **APIs e serviços → Biblioteca** → buscar **"Maps Embed API"** → Ativar.
+  2. **Credenciais** → editar a chave 1 (a restrita por site) → **Restrições de API** → marcar
+     também **"Maps Embed API"**, além do que já está marcado.
+
+  **O que falta, nesta ordem**:
+  1. Ativar a Maps Embed API e liberar na chave 1 (acima) — aí eu construo o mapa de verdade da
+     Sede, referenciando o perfil confirmado, em `/contato/` (substituindo o iframe de busca por
+     endereço que existe hoje).
+  2. Conversa do usuário com a liderança de cada congregação, uma a uma, sobre perfil no Google
+     Maps — sem prazo definido, decide conforme for confirmando.
+  3. Conforme cada congregação for confirmando perfil (e, se for o caso, corrigindo endereço no
+     Directus pra regeocodificar), o mapa dela entra — nunca antes disso, mesmo que já tenha
+     coordenada provisória gravada.
 
 - **Fase 25 — newsletter/e-mail em massa + nome de exibição do remetente**: registrada depois que
   o e-mail transacional da Fase 21 (Azure Communication
@@ -1656,8 +1681,10 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
 
 **Fases 0 a 14, 17 a 22 e a metade de destaque da 23 já foram construídas e testadas** (ver o `[x]`
 de cada uma acima). **As fases 15 e 16 foram descartadas em definitivo** (não é "falta construir",
-é "não vai ser construído"). **Da metade de enquete da 23 e das fases 24 a 26, nada foi construído
-ainda.** O detalhe completo de cada achado
+é "não vai ser construído"). **A Fase 24 tem preparação real feita (chaves testadas, geocodificação
+das congregações), mas o mapa em si ainda não foi construído — bloqueado numa API que falta ativar
+e, depois, na conversa do usuário com a liderança de cada congregação.** **Da metade de enquete da
+23 e das fases 25 e 26, nada foi construído ainda.** O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
