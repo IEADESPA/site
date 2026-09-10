@@ -7,6 +7,7 @@ import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { enderecoCompleto, fetchConfiguracoes, fetchSingleton, mapsHref } from "@/lib/directus";
 import { getAllProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
+import { hasStreetViewCoverage, streetViewImageUrl } from "@/lib/streetview";
 
 interface Visitante {
   headline: string;
@@ -25,6 +26,13 @@ const [boasVindasHtml, oQueEsperarHtml, estruturaHtml] = await Promise.all([
   marked.parse(visitante.o_que_esperar ?? ""),
   marked.parse(visitante.estrutura ?? ""),
 ]);
+
+/* Fase 24.2 — foto real da fachada (Street View Static API), pra quem
+   nunca veio reconhecer o prédio chegando. Confere cobertura em tempo de
+   build antes de publicar a imagem — nem todo endereço tem foto do Google,
+   e um <img> quebrado seria pior do que não mostrar nada. */
+const temStreetView = Boolean(config.lat && config.lng) && (await hasStreetViewCoverage(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey));
+const streetViewUrl = temStreetView ? streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey) : null;
 
 const nextSteps = [
   { label: "Programação semanal", description: "Veja os dias e horários de cada culto.", href: "/eventos/" },
@@ -65,6 +73,19 @@ const nextSteps = [
             📍 {enderecoCompleto(config)}
           </a>
         </p>
+
+        {
+          streetViewUrl && (
+            <img
+              src={streetViewUrl}
+              alt={`Vista da rua em frente à ${siteConfig.name}, pra reconhecer o prédio chegando`}
+              width="640"
+              height="400"
+              loading="lazy"
+              class="mt-4 w-full rounded-[var(--radius-md)] border border-border"
+            />
+          )
+        }
       </section>
 
       {visitante.boas_vindas && <div class="prose mt-10" set:html={boasVindasHtml} />}

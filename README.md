@@ -1676,9 +1676,18 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       (tiles e ícones do mapa) e `fonts.googleapis.com`/`fonts.gstatic.com` (fonte que a própria
       biblioteca do Google carrega pra estilizar a caixinha de informação). Testado de novo com
       Playwright contra o domínio real depois da correção, confirmando o mapa carregando de verdade.
-  - [ ] **Fase 24.2 — foto de rua (Street View) da Sede**: imagem real da fachada via Street View
-    Static API, em `/contato/` e/ou `/visitante/` — ajuda quem nunca foi a reconhecer o prédio
-    chegando, sem depender de a igreja tirar e enviar uma foto.
+  - [x] **Fase 24.2 — foto de rua (Street View) da Sede — construído**: imagem real da fachada via
+    **Street View Static API**, em `/contato/` (ao lado do mapa) e em `/visitante/` (logo abaixo do
+    endereço) — ajuda quem nunca foi a reconhecer o prédio chegando, sem depender de a igreja tirar
+    e enviar uma foto. `src/lib/streetview.ts` (novo): confere cobertura em tempo de build
+    (`/streetview/metadata`, chamada gratuita) antes de publicar a imagem — nem todo endereço tem
+    foto do Google, e um `<img>` quebrado seria pior que não mostrar nada; sem heading definido, a
+    própria API mira a câmera automaticamente na direção do endereço, a partir do panorama mais
+    próximo.
+    - **Testado com dado real**: cobertura confirmada pra Sede (foto de março/2026, segundo os
+      metadados), e a foto baixada e conferida visualmente — mostra a fachada de verdade, com a
+      placa "Assembleia de Deus — Templo Central" legível, confirmando que o enquadramento
+      automático (sem heading manual) funcionou.
   - [ ] **Fase 24.3 — mapa real em eventos com endereço próprio**: eventos com `location` livre (ex.:
     um batismo num rio, sem congregação vinculada) ganham mapa de verdade na própria página do
     evento, em vez de só o texto do endereço — mesma Geocoding API já testada e funcionando.
