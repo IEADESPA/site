@@ -5,9 +5,10 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { enderecoCompleto, fetchConfiguracoes, fetchSingleton, mapsHref } from "@/lib/directus";
+import { directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchSingleton, mapsHref } from "@/lib/directus";
 import { getAllProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
-import { hasStreetViewCoverage, streetViewImageUrl } from "@/lib/streetview";
+import { resolverFotoAtual } from "@/lib/fotoAtual";
+import { streetViewImageUrl, streetViewMetadata } from "@/lib/streetview";
 
 interface Visitante {
   headline: string;
@@ -27,12 +28,18 @@ const [boasVindasHtml, oQueEsperarHtml, estruturaHtml] = await Promise.all([
   marked.parse(visitante.estrutura ?? ""),
 ]);
 
-/* Fase 24.2 — foto real da fachada (Street View Static API), pra quem
-   nunca veio reconhecer o prédio chegando. Confere cobertura em tempo de
-   build antes de publicar a imagem — nem todo endereço tem foto do Google,
-   e um <img> quebrado seria pior do que não mostrar nada. */
-const temStreetView = Boolean(config.lat && config.lng) && (await hasStreetViewCoverage(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey));
-const streetViewUrl = temStreetView ? streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey) : null;
+/* Fase 24.2/24.11 — foto real da fachada, pra quem nunca veio reconhecer o
+   prédio chegando: compara a foto do Street View com uma foto manual
+   (opcional, upload em Configurações) e usa sempre a mais recente das duas
+   — o carro do Street View pode passar anos sem atualizar, principalmente
+   fora do centro. */
+const svMeta = config.lat && config.lng ? await streetViewMetadata(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey) : { coberto: false, data: null };
+const fotoFachada = resolverFotoAtual({
+  streetView: svMeta.coberto
+    ? { url: streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey), data: svMeta.data }
+    : null,
+  manual: config.foto_fachada ? { url: directusAssetUrl(config.foto_fachada, { width: 640, height: 400, fit: "cover" }), data: config.foto_fachada_data } : null,
+});
 
 const nextSteps = [
   { label: "Programação semanal", description: "Veja os dias e horários de cada culto.", href: "/eventos/" },
@@ -75,9 +82,9 @@ const nextSteps = [
         </p>
 
         {
-          streetViewUrl && (
+          fotoFachada && (
             <img
-              src={streetViewUrl}
+              src={fotoFachada.url}
               alt={`Vista da rua em frente à ${siteConfig.name}, pra reconhecer o prédio chegando`}
               width="640"
               height="400"

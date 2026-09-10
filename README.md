@@ -1819,6 +1819,28 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   - [ ] **Fase 24.10 — Aerial View (experimental)**: vídeo curto de sobrevoo automático do endereço
     da Sede, gerado pela Aerial View API — mais efeito visual do que utilidade prática, registrado
     como experimento a avaliar, não uma necessidade confirmada.
+  - [x] **Fase 24.11 — foto mais atual vence (Street View vs. foto manual) — construído**: pergunta
+    levantada pelo usuário depois de ver a foto da Sede funcionando: o carro do Street View pode
+    passar anos sem atualizar, ou nunca passar (comum em zona rural/congregação pequena) — confiar
+    só nele deixaria a foto velha pra sempre, sem a igreja conseguir corrigir. Decisão do usuário:
+    **usar sempre a foto mais recente entre a do Street View e uma foto enviada manualmente** (não
+    "manual sempre vence" nem "Street View sempre vence") — comparando a data de cada uma.
+    - **Dois campos novos em Configurações**: `foto_fachada` (upload de arquivo, opcional) e
+      `foto_fachada_data` (a data em que a foto foi tirada de verdade — não a data do upload, já
+      que a igreja pode subir uma foto antiga que tinha guardada).
+    - **`src/lib/fotoAtual.ts`** (novo, `resolverFotoAtual`): compara a data da metadata do Street
+      View (`/streetview/metadata` já devolve um campo `date`, no formato "AAAA-MM") com
+      `foto_fachada_data` e devolve a mais recente das duas — **escrito de propósito como uma
+      função pura e genérica** (recebe as duas fontes, não conhece Sede nem congregação), a pedido
+      do usuário, pra já poder ser reaproveitada quando as congregações tiverem sua própria foto
+      de fachada, mesmo sem construir a parte de congregação agora.
+    - Usado em `/contato/`, `/visitante/` e na imagem de compartilhamento (Fase 24.6) — as três
+      passaram a usar `resolverFotoAtual` em vez de sempre a foto do Street View.
+    - **Testado com dado real nos dois sentidos**: enviada uma foto de teste com data **mais
+      recente** que a do Street View (2026-03) — confirmado que a foto manual venceu nas três
+      saídas (og:image, `/contato/`, `/visitante/`); mudada só a data pra **mais antiga** que a do
+      Street View — confirmado que o Street View voltou a vencer, sem tocar em mais nada. Foto e
+      dados de teste apagados depois.
 
   **Descartado de propósito, pra não fingir aproveitamento onde não há uso real**: Air Quality,
   Pollen, Solar, Roads, Time Zone e Weather API existem na mesma plataforma, mas resolvem problema

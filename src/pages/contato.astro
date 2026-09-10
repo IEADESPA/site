@@ -5,9 +5,10 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { DIRECTUS_URL, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes, mapsHref } from "@/lib/directus";
+import { DIRECTUS_URL, directusAssetUrl, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes, mapsHref } from "@/lib/directus";
 import { churchStructuredData, getAllProgramacao, sedeProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
-import { hasStreetViewCoverage, streetViewImageUrl } from "@/lib/streetview";
+import { resolverFotoAtual } from "@/lib/fotoAtual";
+import { streetViewImageUrl, streetViewMetadata } from "@/lib/streetview";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const config = await fetchConfiguracoes();
@@ -39,19 +40,34 @@ const horarioResumo = sedeProgramacaoCompacta(programacao)
   .map((item) => `<strong>${item.label}:</strong> ${item.title}${item.time ? ` — ${item.time}` : ""}`)
   .join("<br />");
 
-// Fase 24.2 — mesma foto de fachada (Street View) usada em /visitante/, aqui
-// como complemento do mapa em vez de substituí-lo.
-const temStreetView = Boolean(config.lat && config.lng) && (await hasStreetViewCoverage(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey));
-const streetViewUrl = temStreetView ? streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey, "400x260") : null;
+// Fase 24.2/24.11 — foto de fachada: compara a foto do Street View com uma
+// foto manual (opcional, upload em Configurações) e usa sempre a mais
+// recente das duas — o carro do Street View pode passar anos sem atualizar,
+// principalmente fora do centro, então confiar só nele deixaria a foto
+// velha pra sempre sem chance de a igreja corrigir. Mesmo helper
+// (`resolverFotoAtual`) já pensado pra reaproveitar em congregação depois.
+const svMeta = config.lat && config.lng ? await streetViewMetadata(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey) : { coberto: false, data: null };
+const fotoFachada = resolverFotoAtual({
+  streetView: svMeta.coberto
+    ? { url: streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey, "400x260"), data: svMeta.data }
+    : null,
+  manual: config.foto_fachada ? { url: directusAssetUrl(config.foto_fachada, { width: 400, height: 260, fit: "cover" }), data: config.foto_fachada_data } : null,
+});
 
-// Fase 24.6 — mesma foto real da fachada, num tamanho mais parecido com o
-// formato que WhatsApp/redes esperam pra pré-visualização de link (~1.91:1),
-// em vez da imagem genérica padrão do site — quem recebe o link já reconhece
-// o prédio antes de clicar. Confirmado por `curl` sem cabeçalho `Referer`
-// nenhum (do jeito que um bot de rede social busca a imagem) que a chave
-// restrita por domínio ainda libera a imagem — só bloqueia quando o
-// `Referer` existe e não bate com o site, não quando ele nem existe.
-const ogImageUrl = temStreetView ? streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey, "640x335") : undefined;
+// Fase 24.6 — mesma foto de fachada (a mais atual das duas, ver acima), num
+// tamanho mais parecido com o formato que WhatsApp/redes esperam pra
+// pré-visualização de link (~1.91:1), em vez da imagem genérica padrão do
+// site. Confirmado por `curl` sem cabeçalho `Referer` nenhum (do jeito que
+// um bot de rede social busca a imagem) que a chave restrita por domínio
+// ainda libera a imagem do Street View — só bloqueia quando o `Referer`
+// existe e não bate com o site, não quando ele nem existe (uma foto manual
+// não tem essa restrição, é só um arquivo público no Directus).
+const ogImageUrl =
+  fotoFachada?.fonte === "manual" && config.foto_fachada
+    ? directusAssetUrl(config.foto_fachada, { width: 640, height: 335, fit: "cover" })
+    : svMeta.coberto
+      ? streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey, "640x335")
+      : undefined;
 ---
 
 <BaseLayout
@@ -134,9 +150,9 @@ const ogImageUrl = temStreetView ? streetViewImageUrl(Number(config.lat), Number
           </div>
 
           {
-            streetViewUrl && (
+            fotoFachada && (
               <img
-                src={streetViewUrl}
+                src={fotoFachada.url}
                 alt={`Vista da rua em frente à ${siteConfig.name}, pra reconhecer o prédio chegando`}
                 width="400"
                 height="260"

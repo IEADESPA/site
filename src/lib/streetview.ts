@@ -6,16 +6,25 @@
  * (`/streetview/metadata`, gratuito) só pra decidir se a foto existe antes
  * de publicar um `<img>` que poderia quebrar.
  */
-export async function hasStreetViewCoverage(lat: number, lng: number, key: string): Promise<boolean> {
+export interface StreetViewMetadata {
+  coberto: boolean;
+  /** "AAAA-MM" (mês/ano em que a foto foi tirada pelo Google), ou null se
+   * não houver cobertura — usado na Fase 24.11 pra decidir, comparando com
+   * uma foto manual, qual das duas está mais atual. */
+  data: string | null;
+}
+
+export async function streetViewMetadata(lat: number, lng: number, key: string): Promise<StreetViewMetadata> {
   try {
     const res = await fetch(
       `https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&key=${key}`,
     );
-    if (!res.ok) return false;
+    if (!res.ok) return { coberto: false, data: null };
     const json = await res.json();
-    return json.status === "OK";
+    if (json.status !== "OK") return { coberto: false, data: null };
+    return { coberto: true, data: typeof json.date === "string" ? json.date : null };
   } catch {
-    return false;
+    return { coberto: false, data: null };
   }
 }
 

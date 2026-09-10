@@ -195,6 +195,11 @@ export interface Configuracoes {
    * Google Maps (não só o endereço) — ver README. Null enquanto não
    * confirmado; nesse caso o mapa cai para a busca por endereço de sempre. */
   google_maps_place_query: string | null;
+  /** Fase 24.11 — foto manual da fachada (opcional) e a data em que foi
+   * tirada, pra comparar com a data da foto do Street View e usar sempre a
+   * mais recente das duas. */
+  foto_fachada: string | null;
+  foto_fachada_data: string | null;
 }
 
 export const fetchConfiguracoes = () => fetchSingleton<Configuracoes>("configuracoes");
