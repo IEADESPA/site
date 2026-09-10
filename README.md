@@ -1232,10 +1232,64 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       inscrição em grupo a mesma pessoa pode voltar à mesma página pra cancelar a vaga de outro
       integrante, com outro código.
 
-  Os demais gaps confirmados (e-mail de confirmação/lembrete, verificação pública de certificado)
-  **seguem só registrados, não construídos** — e-mail especificamente exigiria montar envio de
-  e-mail transacional pela primeira vez no projeto, uma peça de infraestrutura nova que não foi
-  pedida nesta rodada.
+  Pedido explícito do usuário pra construir **tudo** que der, sem fatiar mais — os outros 2 gaps
+  que dependiam só de código (não de infraestrutura nova) também foram construídos nesta mesma
+  rodada:
+
+  - [x] **Curso/escola com aprovação manual** — novo campo `requer_aprovacao` em `eventos`: quando
+    ativado, a inscrição pública nasce com `pendente_aprovacao: true` (sem contar vaga nenhuma
+    ainda, mesmo que o evento tenha `vagas_limite`) e mostra "Inscrição recebida — aguardando
+    aprovação da equipe organizadora" em vez de confirmar na hora. Nova ação **Aprovar/Reprovar**
+    na aba Inscritos (`painel-eventos/evento/inscritos.astro`), com um cartão de estatística e um
+    filtro próprios ("Aguardando aprovação"). Aprovar recalcula vaga na hora, com o **mesmo
+    critério exato** já usado no cadastro público e na promoção da lista de espera (Fase 21 acima)
+    — se já não houver mais vaga livre quando a equipe aprovar, a pessoa aprovada entra na lista
+    de espera em vez de ser confirmada direto, em vez de furar a fila de quem já esperava.
+    - **Testado de ponta a ponta**: simulei duas inscrições pendentes reais num evento de teste
+      com `vagas_limite: 1` e reproduzi exatamente a mesma sequência de chamadas que o botão
+      "Aprovar" faz — aprovar a 1ª confirma a vaga (vaga livre), aprovar a 2ª manda pra lista de
+      espera (vaga já ocupada pela 1ª) — confirmado o resultado final no Directus.
+  - [x] **Verificação pública de certificado, sem telefone** — novo modo `verificar_certificado`
+    na Function `verificar-inscricao` (não precisou de Function nova, só mais um modo na já
+    existente): recebe só `{ evento, codigo }`, **sem telefone** (de propósito — quem verifica é
+    um terceiro, como um empregador, que nunca teria o telefone de quem se inscreveu), e devolve
+    só `{ autentico, nome }` quando o código corresponde a alguém que **esteve presente** de
+    verdade — nunca revela se um código existe ou não pra quem não tem certificado, mesma forma
+    de resposta (`autentico:false`) nos dois casos, pra não vazar informação por tentativa e erro.
+    Nova página pública `/verificar-certificado/[slug]/`, e o próprio PDF do certificado
+    (`src/lib/certificado.ts`) passou a **imprimir o link de verificação com o código**, no
+    rodapé — é assim que a Even3 faz (o link mora no próprio certificado, não escondido em algum
+    canto do site).
+    - **Testado de ponta a ponta com o runtime real**: código certo sem telefone → `autentico:true`
+      com o nome; código errado → `autentico:false`; código de quem não esteve presente →
+      também `autentico:false` (mesma resposta, de propósito). Testado também o PDF de verdade —
+      gerado um certificado real via o fluxo público (com telefone, o de sempre) e conferido que a
+      linha "Verifique a autenticidade em www.ieadespa.org.br/verificar-certificado/.../ com o
+      código ..." sai certa no PDF baixado.
+
+  **E-mail de confirmação + lembrete: não construído, e por um motivo concreto, não por
+  prioridade** — diferente dos itens acima, isso não é só escrever código: exigiria uma peça de
+  infraestrutura que não existe hoje (um serviço de envio de e-mail transacional de verdade), e eu
+  não tenho como provisionar isso sozinho. Duas rotas possíveis, nenhuma que eu possa fazer sem a
+  igreja:
+  1. **Azure Communication Services (Email)** — dentro do ecossistema Azure já usado pelo projeto
+     inteiro, mas precisa de um recurso novo criado no Portal Azure + um domínio verificado (DNS) —
+     eu não tenho acesso ao Portal Azure pra criar recursos, só à API do Directus e ao GitHub.
+  2. **Um provedor de e-mail transacional de terceiro com plano grátis** (ex.: Brevo, Resend) —
+     tecnicamente mais simples, mas contraria o limite já registrado na Fase 10 ("sem depender de
+     recurso de terceiro pago **fora do ecossistema do Azure**") — um provedor de terceiro, mesmo
+     grátis, ainda é fora do Azure.
+
+  Mesmo padrão já usado pra Fase 24 (Google Maps): registrado, não construído, esperando um
+  pré-requisito que só a igreja consegue prover (criar o recurso de e-mail no Azure, ou autorizar
+  explicitamente sair do ecossistema Azure pra um provedor de terceiro). Assim que existir, o
+  código é simples de acrescentar — os dois pontos de entrada já existem prontos (o momento da
+  inscrição, em `evento/[slug].astro`, e o lembrete diário já automatizado por push em
+  `.github/scripts/send-event-reminders.mjs`).
+
+  Item 6 (múltiplos portões/dispositivos de check-in) segue **não construído** — não por falta de
+  tempo, mas porque a própria pesquisa de mercado desta fase já concluiu que não vale a pena nesse
+  porte de evento, sem um caso concreto que justifique.
 
   **Texto original da análise, mantido como registro do raciocínio e da pesquisa de mercado (a
   parte de pesquisa continua válida mesmo com a premissa do batismo corrigida acima)**:

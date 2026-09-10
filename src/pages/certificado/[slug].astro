@@ -52,9 +52,11 @@ const periodoEvento = event.event_date
         class="mt-8 grid gap-4 max-w-sm"
         data-certificado-form
         data-evento-id={event.id}
+        data-evento-slug={event.slug}
         data-evento-titulo={event.title}
         data-evento-periodo={periodoEvento}
         data-verificar-url={VERIFICAR_INSCRICAO_URL}
+        data-site-url={siteConfig.siteUrl}
       >
         <div class="grid gap-2">
           <label class="text-sm font-semibold" for="certificado-codigo">Código de confirmação</label>
@@ -100,18 +102,20 @@ const periodoEvento = event.event_date
     if (!form) throw new Error("formulário de certificado ausente");
 
     const eventoId = form.dataset.eventoId;
+    const eventoSlug = form.dataset.eventoSlug ?? "";
     const eventoTitulo = form.dataset.eventoTitulo ?? "";
     const eventoPeriodo = form.dataset.eventoPeriodo ?? "";
     const verificarUrl = form.dataset.verificarUrl ?? "";
+    const siteUrl = form.dataset.siteUrl ?? "";
     const resultado = document.querySelector<HTMLElement>("[data-certificado-resultado]");
     const codigoInput = document.getElementById("certificado-codigo") as HTMLInputElement;
     const telefoneInput = document.getElementById("certificado-telefone") as HTMLInputElement;
 
-    async function gerarCertificado(nome: string) {
+    async function gerarCertificado(nome: string, codigo: string) {
       const logo = await carregarLogoCertificado();
       const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
       configurarAcessibilidadePdf(doc, `Certificado — ${nome} — ${eventoTitulo}`);
-      desenharCertificado(doc, { nome, eventoTitulo, eventoPeriodo, logo });
+      desenharCertificado(doc, { nome, eventoTitulo, eventoPeriodo, logo, codigo, eventoSlug, siteUrl });
       doc.save(`certificado-${nome.toLowerCase().replace(/\s+/g, "-")}.pdf`);
     }
 
@@ -146,7 +150,7 @@ const periodoEvento = event.event_date
         }
 
         resultado.textContent = "Gerando certificado…";
-        await gerarCertificado(pessoa.nome);
+        await gerarCertificado(pessoa.nome, pessoa.codigo);
         resultado.textContent = `✅ Certificado de ${pessoa.nome} baixado!`;
       } catch {
         resultado.textContent = "Não foi possível buscar agora. Tente novamente em instantes.";

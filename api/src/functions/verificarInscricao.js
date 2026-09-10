@@ -87,6 +87,21 @@ app.http("verificar-inscricao", {
       return { jsonBody: responder(registro) };
     }
 
+    // Fase 21 — verificação pública de autenticidade de certificado: de
+    // propósito SEM telefone (quem confere é um terceiro — ex. um
+    // empregador — que nunca teria o telefone de quem se inscreveu, só o
+    // código impresso no próprio certificado). Por isso a resposta é
+    // mínima: nunca confirma nem nega que um código existe quando a pessoa
+    // não esteve presente — sempre a mesma forma (`autentico:false`), pra
+    // não revelar "existe mas não foi" de quem não tem certificado nenhum.
+    if (modo === "verificar_certificado") {
+      const registro = roster.find((r) => norm(r.codigo) === norm(codigo));
+      if (!registro || !registro.presente) {
+        return { jsonBody: { autentico: false } };
+      }
+      return { jsonBody: { autentico: true, nome: registro.nome } };
+    }
+
     return { jsonBody: { encontrado: false } };
   },
 });

@@ -62,6 +62,7 @@ interface Evento {
   registration_url: string | null;
   aceita_inscricao: boolean;
   vagas_limite: number | null;
+  requer_aprovacao: boolean;
   inscricoes_ate: string | null;
   inscricoes_encerradas: boolean;
   faixas_valor: { descricao: string; valor: number }[] | null;
@@ -298,6 +299,12 @@ const structuredData = startDate
               {event.inscricoes_ate && (
                 <li><strong class="text-foreground">Inscrições até:</strong> {dateFormatter.format(new Date(event.inscricoes_ate))}</li>
               )}
+              {event.requer_aprovacao && (
+                <li>
+                  <strong class="text-foreground">Vaga sujeita a aprovação:</strong> sua inscrição
+                  só é confirmada depois que a equipe organizadora analisar e aceitar.
+                </li>
+              )}
             </ul>
 
             {
@@ -439,6 +446,7 @@ const structuredData = startDate
           directusUrl: DIRECTUS_URL,
           telefoneHashUrl: TELEFONE_HASH_URL,
           vagasLimite: event.vagas_limite,
+          requerAprovacao: event.requer_aprovacao,
           vapidPublicKey: "BHjTzvfXIx0DAkcCgfJDNQO5N09SmO0jIPuTP8L6rxnEaITMn95fQH6kHFnbrEJE-Fdroim5bNnaKp5wwowXdak",
         }}
       >
@@ -656,7 +664,12 @@ const structuredData = startDate
               for (const nome of nomes) {
                 const codigo = gerarCodigo();
                 let aguardandoVaga = false;
-                if (vagasLimite) {
+                // Curso/escola com aprovação manual (Fase 21): a inscrição
+                // nasce pendente, sem mexer no contador de vagas ainda — só
+                // quando a equipe aprovar (painel-eventos) é que ela entra
+                // ou não na lista de espera, com o mesmo critério abaixo.
+                const pendenteAprovacao = Boolean(requerAprovacao);
+                if (vagasLimite && !pendenteAprovacao) {
                   aguardandoVaga = confirmados >= vagasLimite;
                   if (!aguardandoVaga) confirmados += 1;
                 }
@@ -684,6 +697,7 @@ const structuredData = startDate
                     valor: valorFinal,
                     cupom_usado: cupomAplicado,
                     aguardando_vaga: aguardandoVaga,
+                    pendente_aprovacao: pendenteAprovacao,
                   }),
                 });
                 if (!inscricaoRes.ok) throw new Error("falha ao criar inscrição");
@@ -709,28 +723,36 @@ const structuredData = startDate
                   });
                 }
 
-                resultados.push({ nome, codigo, aguardandoVaga, inscricaoId });
+                resultados.push({ nome, codigo, aguardandoVaga, pendenteAprovacao, inscricaoId });
               }
 
               if (status) {
                 if (resultados.length === 1) {
-                  const { codigo, aguardandoVaga } = resultados[0];
-                  status.innerHTML = aguardandoVaga
+                  const { codigo, aguardandoVaga, pendenteAprovacao } = resultados[0];
+                  status.innerHTML = pendenteAprovacao
+                    ? `Inscrição recebida — aguardando aprovação da equipe organizadora. Seu código é <strong>${codigo}</strong>; guarde-o, você vai precisar dele depois que a inscrição for aceita.`
+                    : aguardandoVaga
                     ? `Vagas esgotadas no momento — você está na <strong>lista de espera</strong>. Seu código é <strong>${codigo}</strong>; guarde-o, porque se abrir vaga sua inscrição é confirmada automaticamente com esse mesmo código.`
                     : `Inscrição confirmada! Seu código de check-in é <strong>${codigo}</strong> — anote ou tire um print, você vai usar na entrada do evento.`;
                 } else {
                   const linhas = resultados
-                    .map((r) => `${r.nome}: <strong>${r.codigo}</strong>${r.aguardandoVaga ? " (lista de espera)" : ""}`)
+                    .map(
+                      (r) =>
+                        `${r.nome}: <strong>${r.codigo}</strong>${
+                          r.pendenteAprovacao ? " (aguardando aprovação)" : r.aguardandoVaga ? " (lista de espera)" : ""
+                        }`,
+                    )
                     .join("<br />");
                   status.innerHTML = `${resultados.length} pessoas inscritas! Anote o código de cada uma — vai usar na entrada do evento:<br />${linhas}`;
                 }
               }
 
               // Lembrete automático só pra quem se inscreveu primeiro (a
-              // pessoa que está na tela) e só se ela ficou confirmada — quem
-              // está na lista de espera ainda não sabe se vai participar.
+              // pessoa que está na tela) e só se ela já ficou confirmada de
+              // verdade — quem está na lista de espera ou aguardando
+              // aprovação ainda não sabe se vai participar.
               const principal = resultados[0];
-              if (principal && !principal.aguardandoVaga) {
+              if (principal && !principal.aguardandoVaga && !principal.pendenteAprovacao) {
                 const lembreteBloco = document.querySelector("[data-lembrete-bloco]");
                 const lembreteBotao = document.querySelector("[data-lembrete-toggle]");
                 if (lembreteBloco && lembreteBotao) {

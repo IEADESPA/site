@@ -33,9 +33,21 @@ export async function carregarLogoCertificado(): Promise<string | null> {
  */
 export function desenharCertificado(
   doc: jsPDF,
-  params: { nome: string; eventoTitulo: string; eventoPeriodo: string; logo: string | null },
+  params: {
+    nome: string;
+    eventoTitulo: string;
+    eventoPeriodo: string;
+    logo: string | null;
+    /** Opcional — quando informado (junto com `eventoSlug`), imprime uma
+     * linha de verificação pública de autenticidade (Fase 21): qualquer
+     * terceiro, sem precisar do telefone de quem se inscreveu, pode
+     * conferir se este certificado é mesmo verdadeiro. */
+    codigo?: string;
+    eventoSlug?: string;
+    siteUrl?: string;
+  },
 ) {
-  const { nome, eventoTitulo, eventoPeriodo, logo } = params;
+  const { nome, eventoTitulo, eventoPeriodo, logo, codigo, eventoSlug, siteUrl } = params;
   const largura = doc.internal.pageSize.getWidth();
   const altura = doc.internal.pageSize.getHeight();
   const margem = 28;
@@ -85,4 +97,17 @@ export function desenharCertificado(
   doc.text(`Emitido em ${new Date().toLocaleDateString("pt-BR")}`, largura / 2, altura - margem - 40, { align: "center" });
   doc.setFont("helvetica", "bold");
   doc.text("IEADESPA", largura / 2, altura - margem - 24, { align: "center" });
+
+  if (codigo && eventoSlug && siteUrl) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...CINZA);
+    const host = siteUrl.replace(/^https?:\/\//, "");
+    doc.text(
+      `Verifique a autenticidade em ${host}/verificar-certificado/${eventoSlug}/ com o código ${codigo}`,
+      largura / 2,
+      altura - margem - 10,
+      { align: "center" },
+    );
+  }
 }

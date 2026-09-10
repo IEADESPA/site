@@ -2,6 +2,7 @@
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
 import { DIRECTUS_URL, TELEFONE_HASH_URL } from "@/lib/directus";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 
@@ -11,7 +12,7 @@ const allPosts = visiblePosts(await getAllMensagens());
 <BaseLayout title="Inscritos — Gestão de eventos" description="Área restrita da equipe." noindex>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
-    <div class="canvas inscritos-canvas" data-directus-url={DIRECTUS_URL} data-telefone-hash-url={TELEFONE_HASH_URL}>
+    <div class="canvas inscritos-canvas" data-directus-url={DIRECTUS_URL} data-telefone-hash-url={TELEFONE_HASH_URL} data-site-url={siteConfig.siteUrl}>
       <header class="pagehead">
         <p class="eyebrow" data-painel-voltar>
           <a href="/painel-eventos/" class="text-accent">← Gestão de eventos</a>
@@ -35,7 +36,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       </div>
 
       <div hidden data-painel-conteudo>
-        <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-cartoes-stats>
+        <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" data-cartoes-stats>
           <div class="stat-card">
             <p class="stat-valor" data-stat="total">0</p>
             <p class="stat-label">Inscritos</p>
@@ -53,6 +54,10 @@ const allPosts = visiblePosts(await getAllMensagens());
             <p class="stat-label">Lista de espera</p>
           </div>
           <div class="stat-card">
+            <p class="stat-valor" data-stat="pendentes">0</p>
+            <p class="stat-label">Aguardando aprovação</p>
+          </div>
+          <div class="stat-card">
             <p class="stat-valor" data-stat="arrecadado">R$ 0</p>
             <p class="stat-label">Arrecadado (pagos)</p>
           </div>
@@ -67,6 +72,7 @@ const allPosts = visiblePosts(await getAllMensagens());
             <button type="button" class="filtro-chip" data-filtro="presentes">Presentes</button>
             <button type="button" class="filtro-chip" data-filtro="ausentes">Ausentes</button>
             <button type="button" class="filtro-chip" data-filtro="espera">Lista de espera</button>
+            <button type="button" class="filtro-chip" data-filtro="pendentes">Aguardando aprovação</button>
           </div>
         </div>
 
@@ -137,6 +143,8 @@ const allPosts = visiblePosts(await getAllMensagens());
     let eventoTitulo = "";
     let eventoPeriodo = "";
     let eventoTema = "";
+    let eventoSlug = "";
+    let vagasLimite: number | null = null;
 
     interface Inscricao {
       id: number;
@@ -147,6 +155,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       valor: number | null;
       presente: boolean;
       aguardando_vaga: boolean;
+      pendente_aprovacao: boolean;
       cupom_usado: string | null;
       local_checkin: string | null;
       observacao_checkin: string | null;
@@ -173,6 +182,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     if (!container) throw new Error("contêiner do painel ausente");
     const directusUrl = container.dataset.directusUrl ?? "";
     const telefoneHashUrl = container.dataset.telefoneHashUrl ?? "";
+    const siteUrl = container.dataset.siteUrl ?? "";
 
     // O telefone nunca é gravado em texto puro — vira hash (scrypt, ver
     // api/src/lib/telefone.js) antes de chegar no Directus. `null`/vazio
@@ -272,12 +282,14 @@ const allPosts = visiblePosts(await getAllMensagens());
       const pagos = inscricoes.filter((i) => i.pago);
       const presentes = inscricoes.filter((i) => i.presente).length;
       const espera = inscricoes.filter((i) => i.aguardando_vaga).length;
+      const pendentes = inscricoes.filter((i) => i.pendente_aprovacao).length;
       const arrecadado = pagos.reduce((soma, i) => soma + (Number(i.valor) || 0), 0);
 
       document.querySelector('[data-stat="total"]')!.textContent = String(total);
       document.querySelector('[data-stat="pagos"]')!.textContent = String(pagos.length);
       document.querySelector('[data-stat="presentes"]')!.textContent = String(presentes);
       document.querySelector('[data-stat="espera"]')!.textContent = String(espera);
+      document.querySelector('[data-stat="pendentes"]')!.textContent = String(pendentes);
       document.querySelector('[data-stat="arrecadado"]')!.textContent = `R$ ${arrecadado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
     }
 
@@ -299,6 +311,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         if (filtroAtivo === "pagos") return i.pago;
         if (filtroAtivo === "nao-pagos") return !i.pago;
         if (filtroAtivo === "espera") return i.aguardando_vaga;
+        if (filtroAtivo === "pendentes") return i.pendente_aprovacao;
         if (filtroAtivo === "presentes") return i.presente;
         if (filtroAtivo === "ausentes") return !i.presente;
         return true;
@@ -449,11 +462,19 @@ const allPosts = visiblePosts(await getAllMensagens());
                 ${i.observacao_checkin ? `<p class="cupom-nota" title="Check-in excepcional">⚠️ ${escapeHtml(i.observacao_checkin)}</p>` : ""}
               </td>
               <td>${
-                i.aguardando_vaga
+                i.pendente_aprovacao
+                  ? `<span class="badge-toggle badge-pendente">Aguardando aprovação</span>`
+                  : i.aguardando_vaga
                   ? `<button type="button" class="badge-toggle badge-espera" data-acao="espera">Na espera</button>`
                   : `<span class="text-xs text-muted-foreground">—</span>`
               }</td>
               <td class="whitespace-nowrap acoes-cel">
+                ${
+                  i.pendente_aprovacao
+                    ? `<button type="button" class="link-sweep text-accent text-sm font-semibold" data-acao="aprovar">Aprovar</button>
+                       <button type="button" class="link-sweep text-sm font-semibold acao-excluir" data-acao="reprovar">Reprovar</button>`
+                    : ""
+                }
                 <button type="button" class="link-sweep text-accent text-sm font-semibold" data-acao="salvar">Salvar</button>
                 <button type="button" class="link-sweep text-accent text-sm font-semibold" data-acao="respostas">Respostas</button>
                 <button type="button" class="link-sweep text-sm font-semibold acao-excluir" data-acao="excluir">Excluir</button>
@@ -570,6 +591,49 @@ const allPosts = visiblePosts(await getAllMensagens());
           body: JSON.stringify({ [campo]: novoValor }),
         });
         (inscricao as any)[campo] = novoValor;
+        renderizar();
+        return;
+      }
+
+      if (target.matches('[data-acao="aprovar"]')) {
+        // Mesmo critério do cadastro público: só confirma vaga de verdade
+        // se ainda houver — senão a pessoa aprovada entra na lista de
+        // espera igual quem se inscreveu direto num evento lotado.
+        let aguardandoVaga = false;
+        if (vagasLimite) {
+          const resConfirmados = await fetch(
+            `${directusUrl}/items/inscricoes_eventos?aggregate[count]=id&filter[_and][0][evento][_eq]=${eventoId}&filter[_and][1][_or][0][aguardando_vaga][_eq]=false&filter[_and][1][_or][1][aguardando_vaga][_null]=true&filter[_and][2][pendente_aprovacao][_eq]=false`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const confirmados = Number((await resConfirmados.json()).data?.[0]?.count?.id ?? 0);
+          aguardandoVaga = confirmados >= vagasLimite;
+        }
+        await fetch(`${directusUrl}/items/inscricoes_eventos/${id}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ pendente_aprovacao: false, aguardando_vaga: aguardandoVaga }),
+        });
+        inscricao.pendente_aprovacao = false;
+        inscricao.aguardando_vaga = aguardandoVaga;
+        renderizar();
+        return;
+      }
+
+      if (target.matches('[data-acao="reprovar"]')) {
+        if (!confirm(`Reprovar a inscrição de "${inscricao.nome}"? Essa ação não pode ser desfeita.`)) return;
+        const respostas = respostasPorInscricao.get(id) ?? [];
+        if (respostas.length) {
+          await fetch(`${directusUrl}/items/respostas_inscricao`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(respostas.map((r) => r.id)),
+          });
+        }
+        await fetch(`${directusUrl}/items/inscricoes_eventos/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        inscricoes = inscricoes.filter((i) => i.id !== id);
         renderizar();
         return;
       }
@@ -699,9 +763,10 @@ const allPosts = visiblePosts(await getAllMensagens());
         return;
       }
 
-      const resEvento = await fetch(`${directusUrl}/items/eventos/${eventoId}?fields=id,title,description,event_date,end_date`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const resEvento = await fetch(
+        `${directusUrl}/items/eventos/${eventoId}?fields=id,title,slug,description,event_date,end_date,vagas_limite`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
       if (!resEvento.ok) {
         if (carregando) carregando.hidden = true;
         if (erroEl) erroEl.hidden = false;
@@ -709,6 +774,8 @@ const allPosts = visiblePosts(await getAllMensagens());
       }
       const eventoJson = await resEvento.json();
       const evento = eventoJson.data;
+      vagasLimite = evento.vagas_limite ?? null;
+      eventoSlug = evento.slug ?? "";
 
       eventoTitulo = evento.title;
       eventoTema = evento.description ?? "";
@@ -786,7 +853,15 @@ const allPosts = visiblePosts(await getAllMensagens());
           configurarAcessibilidadePdf(doc, `Certificados — ${eventoTitulo}`);
           presentes.forEach((pessoa, index) => {
             if (index > 0) doc.addPage();
-            desenharCertificado(doc, { nome: pessoa.nome, eventoTitulo, eventoPeriodo, logo });
+            desenharCertificado(doc, {
+              nome: pessoa.nome,
+              eventoTitulo,
+              eventoPeriodo,
+              logo,
+              codigo: pessoa.codigo ?? undefined,
+              eventoSlug,
+              siteUrl,
+            });
           });
           doc.save(`certificados-${eventoTitulo.toLowerCase().replace(/\s+/g, "-")}.pdf`);
         } finally {
@@ -920,6 +995,14 @@ const allPosts = visiblePosts(await getAllMensagens());
       border-color: color-mix(in srgb, #e0a52b 70%, var(--border));
       background: color-mix(in srgb, #e0a52b 22%, var(--background));
       color: #8a6416;
+    }
+
+    .badge-pendente {
+      display: inline-block;
+      cursor: default;
+      border-color: color-mix(in srgb, #6c5ce7 70%, var(--border));
+      background: color-mix(in srgb, #6c5ce7 18%, var(--background));
+      color: #4b3ab5;
     }
 
     .acoes-cel {
