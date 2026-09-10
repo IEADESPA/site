@@ -1820,7 +1820,11 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       `geolocation=(self)` — sem isso, o navegador negaria a permissão sozinho, sem nem perguntar
       pra quem visita, e o bug só apareceria depois do deploy (é a mesma classe de problema já visto
       com a CSP bloqueando o script do Maps, na Fase 24.1).
-    - *(teste de ponta a ponta pendente — feito depois do deploy, ver commit seguinte)*
+    - **Testado com Playwright, concedendo permissão de localização de verdade**
+      (`context.grantPermissions`/`geolocation`, com uma coordenada de teste a ~8km da Sede) contra
+      produção — clicado o botão de verdade e confirmado: rota desenhada no mapa, mensagem final
+      "8.4 km · 16 mins de carro" (distância/tempo reais, calculados pela Directions API), sem
+      nenhum erro no console.
   - [ ] **Fase 24.8 — mapa único com todos os eventos de local próprio**: uma visão de mapa em
     `/eventos/` com um pino por evento que tem `location` própria (marchas, batismos etc.) — não
     inclui congregação, só eventos.
