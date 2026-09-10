@@ -139,6 +139,11 @@ const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
     excerpt: "Perguntas comuns sobre visitar, participar e usar o site, organizadas por assunto.",
     href: "/duvidas-frequentes/",
   },
+  {
+    title: "Depoimentos",
+    excerpt: "Histórias curtas de quem já faz parte da igreja — leia ou deixe a sua.",
+    href: "/depoimentos/",
+  },
   { title: "Contato", excerpt: "Formulário, endereço e mapa.", href: "/contato/" },
   {
     title: "Pedido de oração",

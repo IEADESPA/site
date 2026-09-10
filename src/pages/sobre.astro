@@ -21,11 +21,18 @@ interface Congregacao {
 interface OrgaoResumo {
   category: string;
 }
+interface Depoimento {
+  nome: string;
+  texto: string;
+}
 
-const [historico, congregacoes, orgaos] = await Promise.all([
+const [historico, congregacoes, orgaos, depoimentos] = await Promise.all([
   fetchItems<RegistroHistorico>("historia"),
   fetchItems<Congregacao>("congregacoes"),
   fetchItems<OrgaoResumo>("ministerios"),
+  // A permissão pública de leitura já filtra `aprovado=true` no próprio
+  // Directus (ver /depoimentos/) — não precisa repetir esse filtro aqui.
+  fetchItems<Depoimento>("depoimentos", "sort=-date_created&limit=2"),
 ]);
 
 /**
@@ -111,10 +118,28 @@ const secoesSobre = await Promise.all(
         <p class="sobre-pendente-texto">Vídeo a ser inserido aqui.</p>
       </div>
 
-      <div class="sobre-pendente" aria-label="Depoimento de membro (a ser adicionado)">
-        <p class="sobre-pendente-rotulo">O que a nossa igreja diz</p>
-        <p class="sobre-pendente-texto">Depoimento a ser inserido aqui.</p>
-      </div>
+      <section class="mt-8" aria-labelledby="sobre-depoimentos-heading">
+        <h2 id="sobre-depoimentos-heading" class="section-title">O que a nossa igreja diz</h2>
+        {
+          depoimentos.length > 0 ? (
+            <div class="grid gap-5 sm:grid-cols-2">
+              {depoimentos.map((item) => (
+                <blockquote class="sobre-depoimento">
+                  <p class="sobre-depoimento-texto">&ldquo;{item.texto}&rdquo;</p>
+                  <footer class="sobre-depoimento-nome">{item.nome}</footer>
+                </blockquote>
+              ))}
+            </div>
+          ) : (
+            <p class="text-sm text-muted-foreground">Ainda não temos depoimentos publicados.</p>
+          )
+        }
+        <p class="mt-4">
+          <a href="/depoimentos/" class="link-sweep font-semibold text-accent">
+            {depoimentos.length > 0 ? "Ver todos os depoimentos" : "Seja o primeiro a deixar o seu"} &rarr;
+          </a>
+        </p>
+      </section>
 
       <div class="prose mt-16">
         <h2>Liderança</h2>
@@ -183,6 +208,28 @@ const secoesSobre = await Promise.all(
   .sobre-pendente-texto {
     margin-top: 0.35rem;
     font-style: italic;
+    color: var(--muted-foreground);
+  }
+
+  .sobre-depoimento {
+    margin: 0;
+    border-left: 3px solid var(--accent);
+    background: var(--muted);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.25rem;
+  }
+
+  .sobre-depoimento-texto {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-style: italic;
+    text-wrap: pretty;
+  }
+
+  .sobre-depoimento-nome {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
     color: var(--muted-foreground);
   }
 

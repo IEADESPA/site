@@ -1062,20 +1062,42 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     troca pelo `<iframe>` de verdade (YouTube tocando), e a mesma miniatura aparece corretamente em
     `/ao-vivo/`, linkando de volta pra página da mensagem.
 
-- **Fase 18 — formato editorial: testemunho e depoimentos curtos**: dois formatos distintos, dois
-  tamanhos de esforço. **Testemunho/entrevista mais longa**: a categoria `testemunho` já existe no
-  campo `category` de Notícias (`src/lib/noticias.ts`), sem uso real hoje — não precisa de coleção
-  nova, só um campo opcional de "entrevistado" (nome + papel, mesmo padrão de `author_name`/
-  `author_role` já usado em Mensagens) e convenção editorial de perguntas em destaque no corpo
-  markdown. ⚠️ **Só lançar depois de definir quem é o dono da pauta** (quem convida e agenda a
-  entrevista, não quem escreve) — sem isso, risco de abandono real, mesmo padrão já visto em EBD/
-  newsletter/escala. **Depoimento curto (mural de depoimentos)**: formato bem menor — citação +
-  nome + foto opcional, não uma reportagem — clona a arquitetura já testada do Mural de oração
-  (coleção nova com moderação, criação pública restrita, leitura só do aprovado), mas **sem opção
-  de anônimo** (depoimento sem nome prejudica credibilidade) e com checkbox de consentimento
-  específico obrigatório (nome+foto+texto publicados permanentemente, mais sensível que o mural de
-  oração) — liga direto com a Fase 7 (LGPD). Página própria (`/depoimentos/`), linkada a partir do
-  Sobre, sem prazo de expiração automática (diferente do mural de oração, que expira sozinho).
+- **Fase 18 — formato editorial: testemunho e depoimentos curtos.** Dois formatos distintos, dois
+  tamanhos de esforço — só um dos dois foi construído nesta rodada:
+  - [x] **Depoimento curto (mural de depoimentos) — construído e testado.** Clona de verdade a
+    arquitetura já provada do Mural de oração (coleção nova `depoimentos` no Directus, com
+    moderação: criação pública restrita a `nome`/`texto`/`consentimento_lgpd`, leitura pública só
+    do que estiver `aprovado=true` — testado de ponta a ponta via API, inclusive confirmando que o
+    público **não consegue** se auto-aprovar, `403` ao tentar enviar `aprovado` no corpo). Duas
+    diferenças deliberadas em relação ao mural, pelas razões já previstas: **sem opção de
+    anônimo** (nome é campo obrigatório — depoimento sem nome prejudica a credibilidade de quem
+    conta a própria história) e **sem prazo de expiração automática** (fica publicado até a pessoa
+    pedir remoção ou a equipe retirar, diferente dos 90 dias do mural). Checkbox de consentimento
+    próprio, mais explícito que o do mural (deixa claro que a publicação, incluindo nome, é
+    permanente) — documentado também em `/privacidade/`, na mesma tabela de tratamentos de dado
+    usada por todo formulário do site.
+    - **Foto: decisão de arquitetura, não pedida explicitamente, mas necessária.** O formulário
+      público **não** aceita upload de foto — seria o primeiro upload público de arquivo em todo o
+      projeto (todo outro upload, capa de mensagem/notícia, é feito só pela equipe no Directus),
+      abrindo uma superfície de abuso nova (custo de armazenamento com spam de arquivo, validação
+      de tipo/tamanho) sem necessidade real. Solução: a foto é opcional e, quando existir, é a
+      própria equipe quem anexa no Directus durante a moderação — o formulário público já orienta
+      isso ("se depois da aprovação você quiser incluir uma foto, fale com a gente pelo contato").
+    - Página própria `/depoimentos/`, linkada a partir da página Sobre (que ganhou um teaser real
+      com os 2 depoimentos mais recentes, substituindo o placeholder "Depoimento a ser inserido
+      aqui" que já existia lá há tempo) — sem card genérico quando ainda não há nenhum
+      depoimento aprovado, mostra "Seja o primeiro a deixar o seu" em vez de uma seção vazia.
+    - **Testado de ponta a ponta com um depoimento real temporário** (removido depois do teste):
+      envio público real via `curl` (sem token), aprovação via API admin, confirmado que só então
+      o depoimento aparece na leitura pública — e visualmente com Playwright, tanto em
+      `/depoimentos/` quanto no teaser da página Sobre.
+  - [ ] **Testemunho/entrevista mais longa — não construído, segue bloqueado.** A categoria
+    `testemunho` já existe no campo `category` de Notícias, sem uso real hoje — tecnicamente só
+    precisaria de um campo opcional de "entrevistado" (nome + papel, mesmo padrão de
+    `author_name`/`author_role` de Mensagens). **Mas o bloqueio original continua de pé**: só
+    lançar depois de definir quem é o dono da pauta (quem convida e agenda a entrevista, não quem
+    escreve) — sem isso, mesmo risco de abandono já visto em EBD/newsletter/escala. Não avançado
+    nesta rodada por falta dessa confirmação.
 
 - **Fase 19 — cartão de versículo compartilhável**: reaproveita 100% a técnica já construída e em
   produção do cartão de programação semanal (`programacao-semanal.png.ts`, SVG + `sharp`, sem
@@ -1325,7 +1347,9 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
 
 **Fases 0 a 14 e a Fase 17 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
 fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
-construído"). **Das fases 18 a 24, nada foi construído ainda.** O detalhe completo de cada achado (com a
+construído"). **A Fase 18 está parcial** (depoimentos curtos construídos; testemunho/entrevista
+segue bloqueado, ver o `[ ]` na própria entrada). **Das fases 19 a 24, nada foi construído ainda.**
+O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
 fontes consultadas.
