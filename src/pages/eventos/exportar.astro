@@ -2,8 +2,10 @@
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DIRECTUS_URL } from "@/lib/directus";
+import { siteConfig } from "@/config/site";
+import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
+import { coordenadaDeLinkMaps } from "@/lib/googleMapsLink";
 
 const allPosts = visiblePosts(await getAllMensagens());
 
@@ -15,6 +17,33 @@ const categorias = [
   { value: "area", label: "Área/Regional" },
   { value: "", label: "Sem categoria definida" },
 ];
+
+/* Fase 24.5 — resolvido em tempo de build (Node, sem CORS) porque o link do
+   Maps às vezes é um link curto (maps.app.goo.gl), e seguir o redirecionamento
+   dele direto do navegador de quem exporta o PDF esbarraria em CORS (o
+   destino final, google.com/maps/place/..., não libera isso pra leitura via
+   fetch de outro site). Só eventos sem congregação têm link próprio (Fase
+   24.3) — congregação ainda não entra no critério de mapa confirmado.
+   Resultado vira um objeto {id: {lat,lng}} embutido na página, que o script
+   do navegador usa direto, sem precisar resolver nada sozinho. */
+interface EventoComLink {
+  id: number;
+  location_maps_url: string | null;
+  congregacao: number | null;
+}
+const eventosComLink = await fetchItems<EventoComLink>(
+  "eventos",
+  "filter[location_maps_url][_nnull]=true&fields=id,location_maps_url,congregacao",
+);
+const coordenadasPorEvento: Record<number, { lat: number; lng: number }> = {};
+await Promise.all(
+  eventosComLink
+    .filter((e) => !e.congregacao && e.location_maps_url)
+    .map(async (e) => {
+      const coordenada = await coordenadaDeLinkMaps(e.location_maps_url!);
+      if (coordenada) coordenadasPorEvento[e.id] = coordenada;
+    }),
+);
 ---
 
 <BaseLayout
@@ -33,7 +62,13 @@ const categorias = [
         </p>
       </header>
 
-      <form class="mt-8 grid gap-6 max-w-xl" data-exportar-form data-directus-url={DIRECTUS_URL}>
+      <form
+        class="mt-8 grid gap-6 max-w-xl"
+        data-exportar-form
+        data-directus-url={DIRECTUS_URL}
+        data-coordenadas={JSON.stringify(coordenadasPorEvento)}
+        data-maps-key={siteConfig.googleMapsEmbedKey}
+      >
         <div class="grid gap-2 sm:grid-cols-2">
           <div class="grid gap-2">
             <label class="text-sm font-semibold" for="exportar-de">De (mês)</label>
@@ -65,6 +100,29 @@ const categorias = [
           </div>
         </fieldset>
 
+        <fieldset class="grid gap-2">
+          <legend class="text-sm font-semibold">Agrupar por</legend>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="radio" name="exportar-agrupar" value="mes" checked data-exportar-agrupar /> Cronológico (por mês)
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="radio" name="exportar-agrupar" value="responsavel" data-exportar-agrupar /> Por responsável (Diretoria, Área, Departamento, Congregação…)
+          </label>
+        </fieldset>
+
+        <fieldset class="grid gap-2">
+          <legend class="text-sm font-semibold">Local no mapa</legend>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="radio" name="exportar-mapa" value="quando-disponivel" checked data-exportar-mapa /> Mostrar mini-mapa quando o evento tiver
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="radio" name="exportar-mapa" value="so-com-mapa" data-exportar-mapa /> Só eventos com mapa
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="radio" name="exportar-mapa" value="so-sem-mapa" data-exportar-mapa /> Só eventos sem mapa/local marcado
+          </label>
+        </fieldset>
+
         <div class="grid gap-2">
           <label class="text-sm font-semibold" for="exportar-titulo">Título do PDF (opcional)</label>
           <input
@@ -92,26 +150,46 @@ const categorias = [
     import { configurarAcessibilidadePdf } from "@/lib/pdf";
 
     interface EventoExport {
+      id: number;
       title: string;
       event_date: string | null;
       end_date: string | null;
       time: string | null;
       location: string | null;
+      location_maps_url: string | null;
       responsavel: string | null;
       tipo_responsavel: string | null;
       congregacao: { name: string } | null;
+    }
+
+    interface Coordenada {
+      lat: number;
+      lng: number;
     }
 
     const form = document.querySelector<HTMLFormElement>("[data-exportar-form]");
     if (!form) throw new Error("formulário de exportação ausente");
 
     const directusUrl = form.dataset.directusUrl ?? "";
+    const googleMapsKey = form.dataset.mapsKey ?? "";
+    // Fase 24.5 — coordenadas já resolvidas em tempo de build (ver frontmatter
+    // desta página) — {} se nenhum evento sem congregação tiver link colado.
+    const coordenadasPorEvento: Record<number, Coordenada> = JSON.parse(form.dataset.coordenadas || "{}");
     const deInput = form.querySelector<HTMLInputElement>("[data-exportar-de]")!;
     const ateInput = form.querySelector<HTMLInputElement>("[data-exportar-ate]")!;
     const categoriaInputs = form.querySelectorAll<HTMLInputElement>("[data-exportar-categoria]");
+    const agruparInputs = form.querySelectorAll<HTMLInputElement>("[data-exportar-agrupar]");
+    const mapaInputs = form.querySelectorAll<HTMLInputElement>("[data-exportar-mapa]");
     const tituloInput = form.querySelector<HTMLInputElement>("[data-exportar-titulo]");
     const contagem = form.querySelector<HTMLElement>("[data-exportar-contagem]")!;
     const submitBtn = form.querySelector<HTMLButtonElement>("[data-exportar-submit]")!;
+
+    const agruparPor = () => (Array.from(agruparInputs).find((i) => i.checked)?.value ?? "mes") as "mes" | "responsavel";
+    const filtroMapa = () =>
+      (Array.from(mapaInputs).find((i) => i.checked)?.value ?? "quando-disponivel") as
+        | "quando-disponivel"
+        | "so-com-mapa"
+        | "so-sem-mapa";
 
     const mesAtual = () => new Date().toISOString().slice(0, 7);
     const somarMeses = (mesIso: string, n: number) => {
@@ -144,7 +222,7 @@ const categorias = [
 
     async function carregarEventos() {
       const res = await fetch(
-        `${directusUrl}/items/eventos?fields=title,event_date,end_date,time,responsavel,tipo_responsavel,congregacao.name&filter[event_date][_nnull]=true&sort=event_date&limit=-1`,
+        `${directusUrl}/items/eventos?fields=id,title,event_date,end_date,time,location,location_maps_url,responsavel,tipo_responsavel,congregacao.name&filter[event_date][_nnull]=true&sort=event_date&limit=-1`,
       );
       const json = await res.json();
       eventos = json.data ?? [];
@@ -156,15 +234,23 @@ const categorias = [
       return new Set([...categoriaInputs].filter((input) => input.checked).map((input) => input.value));
     }
 
+    function temMapa(evento: EventoExport) {
+      return Boolean(coordenadasPorEvento[evento.id]);
+    }
+
     function eventosFiltrados() {
       const de = deInput.value;
       const ate = ateInput.value;
       const ativas = categoriasAtivas();
+      const mapa = filtroMapa();
       return eventos.filter((evento) => {
         const mesEvento = (evento.event_date ?? "").slice(0, 7);
         if (de && mesEvento < de) return false;
         if (ate && mesEvento > ate) return false;
-        return ativas.has(evento.tipo_responsavel ?? "");
+        if (!ativas.has(evento.tipo_responsavel ?? "")) return false;
+        if (mapa === "so-com-mapa" && !temMapa(evento)) return false;
+        if (mapa === "so-sem-mapa" && temMapa(evento)) return false;
+        return true;
       });
     }
 
@@ -177,7 +263,9 @@ const categorias = [
       submitBtn.disabled = filtrados.length === 0;
     }
 
-    [deInput, ateInput, ...categoriaInputs].forEach((el) => el.addEventListener("change", atualizarContagem));
+    [deInput, ateInput, ...categoriaInputs, ...agruparInputs, ...mapaInputs].forEach((el) =>
+      el.addEventListener("change", atualizarContagem),
+    );
 
     const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
     const monthFormatter = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -190,6 +278,12 @@ const categorias = [
       area: "Área/Regional",
       "": "Sem categoria",
     };
+    // Mesma ordem/rótulo do array `categorias` da página (frontmatter Astro,
+    // não acessível aqui — script do navegador é um escopo separado).
+    const ordemCategorias = ["diretoria", "conselho", "congregacao", "departamento", "area", ""].map((value) => ({
+      value,
+      label: rotuloCategoria[value],
+    }));
 
     // Cores da identidade visual do site (ver --accent/--accent-strong/
     // --muted-foreground/--border em src/styles/global.css), em RGB pra
@@ -234,9 +328,128 @@ const categorias = [
       }
     }
 
+    // Fase 24.5 — mini-mapa por evento, buscado só pros eventos que vão
+    // realmente aparecer no PDF (não pra todo mundo com link cadastrado) —
+    // a Static Maps API libera CORS de verdade (testado), diferente da
+    // Geocoding/Autocomplete, então isso roda direto no navegador sem
+    // precisar de nenhum passo em tempo de build.
+    async function buscarImagemMapa(coordenada: Coordenada): Promise<string | null> {
+      try {
+        const url = `https://maps.googleapis.com/maps/api/staticmap?center=${coordenada.lat},${coordenada.lng}&zoom=15&size=160x160&markers=color:0x8f6f1f%7C${coordenada.lat},${coordenada.lng}&key=${googleMapsKey}`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    }
+
+    // --- Layout da tabela ---
+    const COL_LARGURA = { data: 56, evento: 168, responsavel: 92 };
+    const MAPA_TAMANHO = 46;
+
+    function desenharCabecalhoTabela(doc: InstanceType<typeof jsPDF>, margem: number, larguraUtil: number, y: number) {
+      const alturaCabecalho = 20;
+      doc.setFillColor(...COR_ACCENT);
+      doc.rect(margem, y, larguraUtil, alturaCabecalho, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(255, 255, 255);
+      let x = margem + 6;
+      doc.text("Data", x, y + 13);
+      x += COL_LARGURA.data;
+      doc.text("Evento", x, y + 13);
+      x += COL_LARGURA.evento;
+      doc.text("Responsável", x, y + 13);
+      x += COL_LARGURA.responsavel;
+      doc.text("Local", x, y + 13);
+      doc.setTextColor(...COR_TEXTO);
+      return y + alturaCabecalho;
+    }
+
+    async function desenharLinhaEvento(
+      doc: InstanceType<typeof jsPDF>,
+      evento: EventoExport,
+      margem: number,
+      larguraUtil: number,
+      y: number,
+      alturaPagina: number,
+      mostrarMapa: boolean,
+      imagensCache: Map<number, string | null>,
+    ): Promise<number> {
+      const colX = {
+        data: margem,
+        evento: margem + COL_LARGURA.data,
+        responsavel: margem + COL_LARGURA.data + COL_LARGURA.evento,
+        local: margem + COL_LARGURA.data + COL_LARGURA.evento + COL_LARGURA.responsavel,
+      };
+      const larguraLocal = larguraUtil - COL_LARGURA.data - COL_LARGURA.evento - COL_LARGURA.responsavel;
+
+      const dataTexto = evento.event_date ? dateFormatter.format(new Date(evento.event_date)) : "--/--";
+      const horaTexto = evento.time ?? "";
+      const local = evento.congregacao?.name || evento.location || "—";
+      const categoria = rotuloCategoria[evento.tipo_responsavel ?? ""] ?? "—";
+
+      const coordenada = coordenadasPorEvento[evento.id];
+      const incluirMapa = mostrarMapa && Boolean(coordenada);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const linhasEvento = doc.splitTextToSize(evento.title, COL_LARGURA.evento - 8);
+      const linhasResp = doc.splitTextToSize(categoria, COL_LARGURA.responsavel - 8);
+      const linhasLocal = doc.splitTextToSize(local, larguraLocal - 8);
+
+      const linhasTexto = Math.max(linhasEvento.length, linhasResp.length, linhasLocal.length, 2);
+      const alturaTexto = linhasTexto * 11 + 10;
+      const alturaComMapa = incluirMapa ? linhasLocal.length * 11 + MAPA_TAMANHO + 14 : 0;
+      const alturaLinha = Math.max(alturaTexto, alturaComMapa);
+
+      if (y + alturaLinha > alturaPagina - margem) {
+        doc.addPage();
+        y = desenharCabecalhoTabela(doc, margem, larguraUtil, margem);
+      }
+
+      doc.setDrawColor(...COR_BORDA);
+      doc.rect(margem, y, larguraUtil, alturaLinha);
+      [colX.evento, colX.responsavel, colX.local].forEach((x) => doc.line(x, y, x, y + alturaLinha));
+
+      doc.setTextColor(...COR_TEXTO);
+      doc.text(dataTexto, colX.data + 4, y + 12);
+      if (horaTexto) doc.text(horaTexto, colX.data + 4, y + 23);
+
+      doc.text(linhasEvento, colX.evento + 4, y + 12);
+      doc.setTextColor(...COR_TEXTO_MUTED);
+      doc.text(linhasResp, colX.responsavel + 4, y + 12);
+      doc.setTextColor(...COR_TEXTO);
+      doc.text(linhasLocal, colX.local + 4, y + 12);
+
+      if (incluirMapa && coordenada) {
+        if (!imagensCache.has(evento.id)) imagensCache.set(evento.id, await buscarImagemMapa(coordenada));
+        const imagem = imagensCache.get(evento.id);
+        const mapaY = y + linhasLocal.length * 11 + 8;
+        if (imagem) {
+          doc.addImage(imagem, "PNG", colX.local + 4, mapaY, MAPA_TAMANHO, MAPA_TAMANHO);
+          if (evento.location_maps_url) {
+            doc.link(colX.local + 4, mapaY, MAPA_TAMANHO, MAPA_TAMANHO, { url: evento.location_maps_url });
+          }
+        }
+      }
+
+      return y + alturaLinha;
+    }
+
     async function gerarPdf() {
       const filtrados = eventosFiltrados();
       if (filtrados.length === 0) return;
+
+      const mostrarMapa = filtroMapa() !== "so-sem-mapa";
+      const imagensCache = new Map<number, string | null>();
 
       const logo = await carregarLogo();
       const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -265,56 +478,54 @@ const categorias = [
       doc.setFontSize(10);
       doc.setTextColor(...COR_TEXTO_MUTED);
       doc.text(`${deInput.value} a ${ateInput.value} · gerado em ${new Date().toLocaleDateString("pt-BR")}`, margem, y);
-      y += 24;
+      y += 20;
       doc.setTextColor(...COR_TEXTO);
 
-      let mesAtualLabel = "";
-      filtrados.forEach((evento) => {
-        const mesLabel = evento.event_date ? monthFormatter.format(new Date(evento.event_date)) : "Sem data";
-        if (mesLabel !== mesAtualLabel) {
-          mesAtualLabel = mesLabel;
-          if (y > alturaPagina - margem - 60) {
-            doc.addPage();
-            y = margem;
+      // Agrupamento: cronológico (mês) já vem ordenado por event_date do
+      // Directus; por responsável usa a mesma ordem/rótulos já cadastrados
+      // (Diretoria → Conselho → Congregação → Departamento → Área → sem
+      // categoria), cada grupo em ordem cronológica por dentro.
+      const grupos: { label: string; itens: EventoExport[] }[] = [];
+      if (agruparPor() === "responsavel") {
+        ordemCategorias.forEach((c) => {
+          const itens = filtrados.filter((e) => (e.tipo_responsavel ?? "") === c.value);
+          if (itens.length) grupos.push({ label: c.label, itens });
+        });
+      } else {
+        let grupoAtual: { label: string; itens: EventoExport[] } | null = null;
+        filtrados.forEach((evento) => {
+          const label = evento.event_date ? monthFormatter.format(new Date(evento.event_date)) : "Sem data";
+          if (!grupoAtual || grupoAtual.label !== label) {
+            grupoAtual = { label, itens: [] };
+            grupos.push(grupoAtual);
           }
-          y += 8;
-          doc.setFillColor(...COR_ACCENT);
-          doc.rect(margem, y - 10, 3, 13, "F");
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.setTextColor(...COR_ACCENT_ESCURO);
-          doc.text(mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), margem + 10, y);
-          doc.setTextColor(...COR_TEXTO);
-          y += 16;
-        }
+          grupoAtual.itens.push(evento);
+        });
+      }
 
-        const data = evento.event_date ? dateFormatter.format(new Date(evento.event_date)) : "--/--";
-        const local = evento.congregacao?.name || evento.location || "";
-        const categoria = rotuloCategoria[evento.tipo_responsavel ?? ""] ?? "";
-        const linha1 = `${data}${evento.time ? ` às ${evento.time}` : ""} — ${evento.title}`;
-        const linha2 = [local, categoria].filter(Boolean).join(" · ");
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10.5);
-        const linhas1 = doc.splitTextToSize(linha1, larguraUtil);
-        const linhas2 = linha2 ? doc.splitTextToSize(linha2, larguraUtil) : [];
-        const alturaBloco = (linhas1.length + linhas2.length) * 13 + 8;
-
-        if (y + alturaBloco > alturaPagina - margem) {
+      for (const grupo of grupos) {
+        if (y > alturaPagina - margem - 80) {
           doc.addPage();
           y = margem;
         }
-
+        y += 6;
+        doc.setFillColor(...COR_ACCENT);
+        doc.rect(margem, y - 10, 3, 13, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(...COR_ACCENT_ESCURO);
+        const rotuloGrupo = grupo.label.charAt(0).toUpperCase() + grupo.label.slice(1);
+        doc.text(rotuloGrupo, margem + 10, y);
         doc.setTextColor(...COR_TEXTO);
-        doc.text(linhas1, margem, y);
-        y += linhas1.length * 13;
-        if (linhas2.length) {
-          doc.setTextColor(...COR_TEXTO_MUTED);
-          doc.text(linhas2, margem, y);
-          y += linhas2.length * 13;
+        y += 14;
+
+        y = desenharCabecalhoTabela(doc, margem, larguraUtil, y);
+
+        for (const evento of grupo.itens) {
+          y = await desenharLinhaEvento(doc, evento, margem, larguraUtil, y, alturaPagina, mostrarMapa, imagensCache);
         }
-        y += 8;
-      });
+        y += 14;
+      }
 
       desenharRodape(doc, margem);
 
@@ -322,9 +533,17 @@ const categorias = [
       doc.save(nomeArquivo);
     }
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      gerarPdf();
+      submitBtn.disabled = true;
+      const textoOriginal = submitBtn.textContent;
+      submitBtn.textContent = "Gerando PDF…";
+      try {
+        await gerarPdf();
+      } finally {
+        submitBtn.textContent = textoOriginal;
+        atualizarContagem();
+      }
     });
 
     carregarEventos().catch(() => {
