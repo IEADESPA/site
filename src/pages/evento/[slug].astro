@@ -73,7 +73,9 @@ interface Evento {
 
 export async function getStaticPaths() {
   const events = await fetchItems<Evento>("eventos", "fields=*,congregacao.*");
-  return events.filter(hasEventPage).map((event) => ({ params: { slug: event.slug }, props: { event } }));
+  // slug é opcional no Directus (evento recém-criado, ainda sem slug definido)
+  // — sem essa checagem, um evento assim quebraria o build inteiro.
+  return events.filter((event) => event.slug && hasEventPage(event)).map((event) => ({ params: { slug: event.slug }, props: { event } }));
 }
 
 interface Props {

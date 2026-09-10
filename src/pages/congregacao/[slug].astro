@@ -27,7 +27,11 @@ interface Congregacao {
 
 export async function getStaticPaths() {
   const congregacoes = await fetchItems<Congregacao>("congregacoes");
-  return congregacoes.map((congregacao) => ({ params: { slug: congregacao.slug }, props: { congregacao } }));
+  // slug é opcional no Directus — sem essa checagem, uma congregação sem
+  // slug ainda definido quebraria o build inteiro.
+  return congregacoes
+    .filter((congregacao) => congregacao.slug)
+    .map((congregacao) => ({ params: { slug: congregacao.slug }, props: { congregacao } }));
 }
 
 interface Props {

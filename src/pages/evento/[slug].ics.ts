@@ -17,7 +17,10 @@ interface Evento {
 
 export async function getStaticPaths() {
   const events = await fetchItems<Evento>("eventos");
-  return events.filter((event) => event.event_date).map((event) => ({ params: { slug: event.slug }, props: { event } }));
+  // slug é opcional no Directus — sem essa checagem, um evento com data mas
+  // sem slug ainda definido quebraria o build inteiro (bug real encontrado
+  // na Fase 24.5, corrigido aqui e em todo lugar que gera rota por slug).
+  return events.filter((event) => event.slug && event.event_date).map((event) => ({ params: { slug: event.slug }, props: { event } }));
 }
 
 interface Props {

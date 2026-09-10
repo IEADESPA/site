@@ -42,7 +42,9 @@ const isGovernanca = (categoria: string) => categoria === "governanca";
 
 export async function getStaticPaths() {
   const orgaos = await fetchItems<Orgao>("ministerios");
-  return orgaos.map((orgao) => ({ params: { slug: orgao.slug }, props: { orgao } }));
+  // slug é opcional no Directus — sem essa checagem, um órgão sem slug
+  // ainda definido quebraria o build inteiro.
+  return orgaos.filter((orgao) => orgao.slug).map((orgao) => ({ params: { slug: orgao.slug }, props: { orgao } }));
 }
 
 interface Props {

@@ -1761,10 +1761,26 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       link curto (`maps.app.goo.gl`) direto do navegador de quem gera o PDF esbarraria nisso. Só a
       *imagem* do mini-mapa (Static Maps API) é buscada no navegador na hora de gerar — essa API
       libera CORS de verdade (confirmado por `curl`, header `Access-Control-Allow-Origin: *`).
-    - **Bug real encontrado e corrigido durante o teste, não relacionado a esta fase**: um evento
-      de teste sem `slug` quebrava a geração de `.ics` (`evento/[slug].ics.ts` não filtra por slug
-      antes de gerar as rotas) — não foi corrigido agora (fora do escopo desta sub-fase), só evitado
-      nos dados de teste; fica registrado aqui pra não esquecer.
+    - **Bug real encontrado durante o teste, não relacionado a esta fase — corrigido depois, a
+      pedido do usuário, junto com uma varredura por outros iguais**: um evento de teste sem `slug`
+      quebrava a geração de `.ics`. Investigando o alcance real do problema: `slug` é opcional
+      (`is_nullable: true`) no Directus em **três** coleções — `eventos`, `congregacoes` e
+      `ministerios` — então qualquer página construída a partir de uma rota por slug dessas
+      coleções corria o mesmo risco, não só o `.ics`. Auditadas todas as 17 páginas com rota
+      dinâmica do site: **11 delas** tinham exatamente essa falha (nenhuma filtrava por slug
+      presente antes de gerar a rota) — `evento/[slug].astro`, `evento/[slug].ics.ts`,
+      `cancelar-inscricao`, `certificado`, `checkin`, `cracha`, `pesquisa`, `qrcode`,
+      `verificar-certificado` (todas em cima de `eventos`), `congregacao/[slug].astro` e
+      `orgao/[slug].astro`. Corrigidas as 11 com um filtro `.filter((x) => x.slug)` antes de montar
+      as rotas. As outras 6 páginas com rota dinâmica (`camiseta` — slug obrigatório no banco desde
+      que foi criado, Fase 22 —, `noticia` — usa o `id`, sempre presente —, `mensagem` — usa `id` do
+      Astro Content Collections, também sempre presente —, `pregador`, `tema` — slugs calculados em
+      código, não vêm direto do banco —, e `painel/[local]` — lista fixa, não vem do banco)
+      conferidas e confirmadas seguras por construção, sem precisar de mudança.
+    - **Testado de ponta a ponta com dado real**: criado um evento de teste real (`event_date`
+      preenchido, `aceita_inscricao: true`, `body` preenchido, **sem slug**) — build quebrava antes
+      da correção (confirmado o erro exato do Astro) e completou limpo depois, sem gerar nenhuma
+      página pra esse evento (nem quebrada, nem indevida) — evento de teste apagado depois.
     - **Testado de ponta a ponta com dados reais**: criados dois eventos de teste (um com link do
       Maps colado, outro sem), gerado o PDF de verdade com Playwright contra produção, e o PDF
       baixado analisado com `pdftotext`/inspeção binária — confirmado: cabeçalho da tabela e texto
