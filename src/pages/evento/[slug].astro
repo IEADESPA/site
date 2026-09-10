@@ -8,6 +8,7 @@ import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { COVER_WIDTHS, congregacaoEndereco, DIRECTUS_URL, ENVIAR_CONFIRMACAO_URL, TELEFONE_HASH_URL, directusAssetSrcset, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
 import { hasEventPage } from "@/lib/eventos";
+import { coordenadaDeLinkMaps } from "@/lib/googleMapsLink";
 
 interface Congregacao {
   id: number;
@@ -54,6 +55,7 @@ interface Evento {
   time: string | null;
   end_time: string | null;
   location: string | null;
+  location_maps_url: string | null;
   congregacao: Congregacao | null;
   responsavel: string | null;
   description: string;
@@ -95,6 +97,14 @@ const timeRange = event.time ? `${event.time}${event.end_time ? ` às ${event.en
 // `location` (espaço alugado, sede, etc.).
 const localNome = event.congregacao ? event.congregacao.name : event.location;
 const localEndereco = event.congregacao ? congregacaoEndereco(event.congregacao) : null;
+
+// Fase 24.3 — local avulso (sem congregação) pode vir com um link do Google
+// Maps colado por quem cadastrou, em vez de só o texto do endereço — mais
+// preciso do que geocodificar o texto (que já se mostrou impreciso, ver
+// README). Só se aplica a evento com local próprio, não a congregação.
+const localCoordenada = !event.congregacao && event.location_maps_url
+  ? await coordenadaDeLinkMaps(event.location_maps_url)
+  : null;
 
 // Inscrição fecha por prazo vencido (data pública do evento, sem precisar
 // contar inscrições — não expõe nada da coleção privada) ou por decisão
@@ -186,6 +196,14 @@ const structuredData = startDate
           )}
           {event.responsavel && <li><strong class="text-foreground">Responsável:</strong> {event.responsavel}</li>}
         </ul>
+
+        {
+          localCoordenada && (
+            <div class="mt-4 overflow-hidden rounded-[var(--radius-md)] border border-border">
+              <div id="evento-map" style="height:240px" data-evento-map />
+            </div>
+          )
+        }
 
         <div class="mt-6 flex flex-wrap gap-3">
           {event.registration_url && (
@@ -442,6 +460,63 @@ const structuredData = startDate
     </article>
   </main>
   <SiteFooter />
+
+  {
+    localCoordenada && (
+      <script
+        is:inline
+        define:vars={{
+          googleMapsKey: siteConfig.googleMapsEmbedKey,
+          lat: localCoordenada.lat,
+          lng: localCoordenada.lng,
+          tituloLocal: localNome,
+          mapsLinkHref: event.location_maps_url,
+        }}
+      >
+        window.initEventoMap = function initEventoMap() {
+          const container = document.querySelector("[data-evento-map]");
+          if (!container) return;
+
+          const posicao = { lat: Number(lat), lng: Number(lng) };
+          const map = new google.maps.Map(container, {
+            center: posicao,
+            zoom: 15,
+            disableDefaultUI: false,
+            fullscreenControl: true,
+            streetViewControl: false,
+            mapTypeControl: false,
+          });
+
+          const marker = new google.maps.Marker({
+            position: posicao,
+            map,
+            title: tituloLocal,
+            icon: {
+              path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z",
+              fillColor: "#8f6f1f",
+              fillOpacity: 1,
+              strokeColor: "#6b5417",
+              strokeWeight: 1,
+              scale: 1.8,
+              anchor: new google.maps.Point(12, 22),
+            },
+          });
+
+          if (mapsLinkHref) {
+            const infoWindow = new google.maps.InfoWindow({
+              content: `<div style="font-family: system-ui, sans-serif;"><a href="${mapsLinkHref}" target="_blank" rel="noreferrer" style="font-weight:600;color:#8f6f1f;">Ver rota &rarr;</a></div>`,
+            });
+            marker.addListener("click", () => infoWindow.open(map, marker));
+          }
+        };
+
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsKey}&callback=initEventoMap`;
+        script.async = true;
+        document.head.appendChild(script);
+      </script>
+    )
+  }
 
   {
     event.aceita_inscricao && inscricaoAberta && (

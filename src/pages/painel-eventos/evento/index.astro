@@ -128,6 +128,16 @@ const tipoPerguntaOpcoes = [
           </div>
         </div>
 
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-location-maps-url">Link do Google Maps do local (opcional)</label>
+          <input id="f-location-maps-url" class="field" placeholder="https://maps.app.goo.gl/..." />
+          <p class="text-xs text-muted-foreground">
+            No Google Maps, ache o pino certo do local → "Compartilhar" → "Copiar link" → cole
+            aqui. Só digitar o endereço às vezes cai na rua errada — colando o link, o mapa da
+            página do evento usa a coordenada exata que você mesmo conferiu.
+          </p>
+        </div>
+
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="grid gap-2">
             <label class="text-sm font-semibold" for="f-responsavel">Responsável (nome/ministério)</label>
@@ -452,6 +462,7 @@ const tipoPerguntaOpcoes = [
       end_time: string | null;
       congregacao: number | null;
       location: string | null;
+      location_maps_url: string | null;
       responsavel: string | null;
       tipo_responsavel: string | null;
       vagas_limite: number | null;
@@ -556,6 +567,7 @@ const tipoPerguntaOpcoes = [
     const fEndTime = el<HTMLInputElement>("f-end-time");
     const fCongregacao = el<HTMLSelectElement>("f-congregacao");
     const fLocation = el<HTMLInputElement>("f-location");
+    const fLocationMapsUrl = el<HTMLInputElement>("f-location-maps-url");
     const fResponsavel = el<HTMLInputElement>("f-responsavel");
     const fTipoResponsavel = el<HTMLSelectElement>("f-tipo-responsavel");
     const fVagas = el<HTMLInputElement>("f-vagas");
@@ -591,6 +603,7 @@ const tipoPerguntaOpcoes = [
       fEndTime.value = evento.end_time ?? "";
       fCongregacao.value = evento.congregacao ? String(evento.congregacao) : "";
       fLocation.value = evento.location ?? "";
+      fLocationMapsUrl.value = evento.location_maps_url ?? "";
       fResponsavel.value = evento.responsavel ?? "";
       fTipoResponsavel.value = evento.tipo_responsavel ?? "";
       fVagas.value = evento.vagas_limite ? String(evento.vagas_limite) : "";
@@ -617,6 +630,7 @@ const tipoPerguntaOpcoes = [
         end_time: fEndTime.value.trim() || null,
         congregacao: fCongregacao.value ? Number(fCongregacao.value) : null,
         location: fLocation.value.trim() || null,
+        location_maps_url: fLocationMapsUrl.value.trim() || null,
         responsavel: fResponsavel.value.trim() || null,
         tipo_responsavel: fTipoResponsavel.value || null,
         vagas_limite: fVagas.value ? Number(fVagas.value) : null,

@@ -1688,9 +1688,30 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       metadados), e a foto baixada e conferida visualmente — mostra a fachada de verdade, com a
       placa "Assembleia de Deus — Templo Central" legível, confirmando que o enquadramento
       automático (sem heading manual) funcionou.
-  - [ ] **Fase 24.3 — mapa real em eventos com endereço próprio**: eventos com `location` livre (ex.:
-    um batismo num rio, sem congregação vinculada) ganham mapa de verdade na própria página do
-    evento, em vez de só o texto do endereço — mesma Geocoding API já testada e funcionando.
+  - [x] **Fase 24.3 — mapa real em eventos com endereço próprio — construído, com uma mudança de
+    abordagem pedida pelo usuário**: o plano original era geocodificar o texto do `location` (mesma
+    Geocoding API da Sede/congregações), mas o usuário apontou o mesmo problema real já visto nas
+    congregações: **texto de endereço, mesmo digitado certo, às vezes geocodifica pra rua errada,
+    a 200m do lugar de verdade** — "a pessoa sempre cai na rua de baixo, nunca na rua certa".
+    Abordagem trocada por uma mais confiável: em vez de geocodificar texto, **quem cadastra o
+    evento cola o link do Google Maps** (Compartilhar → Copiar link, depois de já ter achado o
+    pino certo) — a coordenada usada é a que a própria pessoa conferiu com os olhos, não uma
+    adivinhação do Google. Novo campo `location_maps_url` em `eventos` (opcional, só pra local
+    avulso — sem efeito quando o evento está vinculado a uma congregação), preenchido no painel de
+    eventos.
+    - **Novo módulo `src/lib/googleMapsLink.ts`**: resolve o link (segue redirecionamento se for
+      link curto `maps.app.goo.gl`, sem CORS porque roda em tempo de build) e extrai a coordenada,
+      nesta ordem de confiança: `!3d..!4d..` (coordenada exata do pino/marcador) → `@lat,lng`
+      (centro da tela, menos preciso) → `q=lat,lng`. Reaproveitável por qualquer coleção que
+      precise da mesma extração no futuro (ex.: congregações, quando chegar a hora).
+    - **Testado com link real**: o link já confirmado da Sede (Fase 24) resolvido e comparado —
+      o formato `!3d!4d` (pino exato) devolveu a coordenada correta (`-6.0888917, -49.8624825`,
+      igual à já cadastrada), diferente do formato `@` (centro da tela), que estava puxado ~250m —
+      prova concreta, com dado real, de por que a ordem de prioridade importa. Testados também os
+      formatos `q=lat,lng` e `@lat,lng` isolados, com URLs construídas à mão.
+    - **Testado de ponta a ponta**: criado um evento de teste real com local avulso + o link
+      colado, gerado o build de verdade, e confirmado no HTML final que o mapa recebeu a coordenada
+      exata do pino (não a do centro da tela) — evento de teste apagado depois.
   - [ ] **Fase 24.4 — autocomplete de endereço nos formulários internos**: usar a **Places API**
     (Autocomplete) nos campos de endereço do painel (evento, e futuramente congregação) pra sugerir
     o endereço certo enquanto quem edita digita — ataca a própria causa do problema encontrado nesta
