@@ -1805,10 +1805,22 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     - **Testado**: build gerado de verdade, conferido no HTML final que `og:image`/`twitter:image`
       apontam pra URL certa da Street View com o tamanho novo, e a própria URL baixada com sucesso
       (200, imagem de verdade).
-  - [ ] **Fase 24.7 — rota traçada na própria tela**: usar a **Directions API** pra desenhar a rota
-    de verdade dentro do mapa da Sede (Fase 24.1), pedindo a localização do navegador de quem visita
-    (mesmo mecanismo de geolocalização já usado em outras partes do site) — em vez de só abrir o
-    Google Maps externo pra ver a rota.
+  - [x] **Fase 24.7 — rota traçada na própria tela — construído**: botão "Traçar rota até aqui"
+    abaixo do mapa da Sede, em `/contato/` — pede a localização do navegador (`navigator.geolocation`,
+    usado pela primeira vez no site — a nota anterior de "mesmo mecanismo já usado em outras
+    partes" estava desatualizada, não existia ainda), traça a rota de verdade dentro do próprio
+    mapa via **Directions API** (`DirectionsService`/`DirectionsRenderer`), e mostra
+    distância/tempo estimado de carro. O link "Ver rota" (abre o Google Maps externo) continua
+    existindo como alternativa, inclusive pra quem não liberar localização.
+    - **De quebra, a pedido do usuário**: mapa da Sede aumentado de 280px pra 420px de altura — 
+      estava "muito pequeno".
+    - **Bug real de configuração encontrado e corrigido antes de testar**: a Content-Security-Policy
+      do site (`Permissions-Policy`) tinha `geolocation=()` — **geolocalização desligada pra todo o
+      site**, de uma configuração anterior que não previa precisar disso. Corrigido pra
+      `geolocation=(self)` — sem isso, o navegador negaria a permissão sozinho, sem nem perguntar
+      pra quem visita, e o bug só apareceria depois do deploy (é a mesma classe de problema já visto
+      com a CSP bloqueando o script do Maps, na Fase 24.1).
+    - *(teste de ponta a ponta pendente — feito depois do deploy, ver commit seguinte)*
   - [ ] **Fase 24.8 — mapa único com todos os eventos de local próprio**: uma visão de mapa em
     `/eventos/` com um pino por evento que tem `location` própria (marchas, batismos etc.) — não
     inclui congregação, só eventos.
