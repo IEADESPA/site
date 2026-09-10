@@ -11,6 +11,7 @@
 //    faltava, comparado a Sympla/Even3/Eventbrite — ver README, Fase 21).
 import webpush from "web-push";
 import { EmailClient } from "@azure/communication-email";
+import { renderEmailShell, escaparHtml } from "./emailTemplate.mjs";
 
 const { DIRECTUS_URL, DIRECTUS_ADMIN_TOKEN, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, SITE_URL, ACS_CONNECTION_STRING } = process.env;
 
@@ -154,12 +155,21 @@ async function main() {
     if (!event || !inscrito.email) continue;
 
     const local = [event.time, event.location].filter(Boolean).join(" · ");
+    const assunto = `Amanhã: ${event.title}`;
+    const corpoHtml = `
+      <p style="margin:0 0 16px;font-size:15px;color:#3a3226;line-height:1.5;">
+        ${escaparHtml(inscrito.nome)}, não esqueça! <strong>${escaparHtml(event.title)}</strong> é amanhã${local ? `, ${escaparHtml(local)}` : ""}.
+      </p>
+      <p style="margin:0;font-size:14px;">
+        <a href="${SITE_URL}/evento/${event.slug}/" style="color:#8f6f1f;">Ver detalhes do evento</a>
+      </p>`;
     try {
       const poller = await emailClient.beginSend({
         senderAddress: REMETENTE,
         content: {
-          subject: `Amanhã: ${event.title}`,
+          subject: assunto,
           plainText: `${inscrito.nome}, não esqueça! ${event.title}${local ? ` — ${local}` : ""}.\n\n${SITE_URL}/evento/${event.slug}/`,
+          html: renderEmailShell({ titulo: assunto, corpoHtml }),
         },
         recipients: { to: [{ address: inscrito.email }] },
       });

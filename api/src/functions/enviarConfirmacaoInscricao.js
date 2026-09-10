@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { EmailClient } = require("@azure/communication-email");
 const { permitir, ipDoPedido } = require("../lib/rateLimit");
+const { renderEmailShell, renderCodigoBox, escaparHtml } = require("../lib/emailTemplate");
 
 const ACS_CONNECTION_STRING = process.env.ACS_CONNECTION_STRING;
 const REMETENTE = process.env.ACS_REMETENTE || "DoNotReply@ieadespa.org.br";
@@ -43,23 +44,32 @@ app.http("enviar-confirmacao-inscricao", {
       return { status: 400, jsonBody: { erro: "Parâmetros ausentes." } };
     }
 
-    const linhas = pessoas
-      .map((p) => {
-        const situacao = p.pendenteAprovacao
-          ? " — aguardando aprovação da equipe organizadora"
-          : p.aguardandoVaga
-          ? " — lista de espera (avisamos se abrir vaga)"
-          : " — confirmada";
-        return `${p.nome}: código ${p.codigo}${situacao}`;
-      })
-      .join("\n");
+    const situacaoDe = (p) =>
+      p.pendenteAprovacao
+        ? "Aguardando aprovação da equipe organizadora"
+        : p.aguardandoVaga
+        ? "Lista de espera — avisamos se abrir vaga"
+        : "Confirmada";
 
     const assunto = pessoas.length === 1 ? `Inscrição em ${eventoTitulo}` : `Inscrições em ${eventoTitulo}`;
-    const corpo = [
+    const periodoLocal = [eventoPeriodo, eventoLocal].filter(Boolean).join(" — ");
+
+    const corpoHtml = `
+      <p style="margin:0 0 16px;font-size:15px;color:#3a3226;line-height:1.5;">
+        Recebemos ${pessoas.length === 1 ? "sua inscrição" : "as inscrições do grupo"} em
+        <strong>${escaparHtml(eventoTitulo)}</strong>${periodoLocal ? `, ${escaparHtml(periodoLocal)}` : ""}.
+      </p>
+      ${pessoas.map((p) => renderCodigoBox({ nome: p.nome, codigo: p.codigo, situacao: situacaoDe(p) })).join("")}
+      <p style="margin:16px 0 0;font-size:13px;color:#8a8172;line-height:1.5;">
+        Guarde o(s) código(s) acima — é o que confirma sua presença na entrada do evento.
+      </p>`;
+
+    const linhasTexto = pessoas.map((p) => `${p.nome}: código ${p.codigo} — ${situacaoDe(p)}`).join("\n");
+    const corpoTexto = [
       `Recebemos ${pessoas.length === 1 ? "sua inscrição" : "as inscrições do grupo"} em "${eventoTitulo}".`,
-      [eventoPeriodo, eventoLocal].filter(Boolean).join(" — "),
+      periodoLocal,
       "",
-      linhas,
+      linhasTexto,
       "",
       "Guarde o(s) código(s) acima — é o que confirma sua presença na entrada do evento.",
     ]
@@ -70,7 +80,11 @@ app.http("enviar-confirmacao-inscricao", {
       const client = new EmailClient(ACS_CONNECTION_STRING);
       const poller = await client.beginSend({
         senderAddress: REMETENTE,
-        content: { subject: assunto, plainText: corpo },
+        content: {
+          subject: assunto,
+          plainText: corpoTexto,
+          html: renderEmailShell({ titulo: assunto, corpoHtml }),
+        },
         recipients: { to: [{ address: email }] },
       });
       await poller.pollUntilDone();
