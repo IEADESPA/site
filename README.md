@@ -1460,7 +1460,7 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   aceita, quem pode fixar/desafixar da home, quantos itens fixados ao mesmo tempo) — por isso ficam
   só como intenção registrada, não como escopo fechado igual às Fases 21 e 22.
 
-- **Fase 24 — mapas de verdade com Google Maps Platform (última fase planejada)**: pedida pelo
+- **Fase 24 — mapas de verdade com Google Maps Platform**: pedida pelo
   usuário, condicionada a ele configurar antes um projeto no Google Cloud com faturamento ativado —
   **só registro, não construir agora**, e com uma correção importante feita antes de registrar
   qualquer escopo.
@@ -1510,9 +1510,31 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
+- **Fase 25 — newsletter/e-mail em massa + nome de exibição do remetente (última fase
+  planejada)**: registrada depois que o e-mail transacional da Fase 21 (Azure Communication
+  Services) já ficou funcionando de ponta a ponta — **só registro, análise fica pra quando chegar
+  na fase**, não decidido ainda se compensa construir.
+  1. **Newsletter/aviso em massa por e-mail** — revisitar a rejeição anterior (ver "Newsletter por
+     e-mail" em "Mais personalizações pesquisadas" mais abaixo): o motivo de então (cota de 300
+     contatos do plano grátis do Brevo) deixou de existir, porque agora já existe um provedor
+     transacional de verdade dentro do ecossistema Azure (ACS Email, Fase 21). O que falta pra
+     decidir se vale a pena: uma coleção de inscritos, uma tela/formulário de inscrição, um
+     mecanismo de descadastro de um clique (token único por pessoa, sem exigir login — mesmo
+     espírito do cancelamento de inscrição em evento, só mais simples, porque o pior caso de
+     descadastro indevido é baixo risco), e uma decisão de **o quê** e **quando** mandar (toda
+     notícia nova? resumo semanal?) — esse último ponto é o que mais precisa de conversa antes de
+     virar escopo fechado.
+  2. **Nome de exibição do remetente dos e-mails automáticos** — hoje aparece genérico
+     (`DoNotReply`) na caixa de entrada de quem recebe, em vez de algo como "IEADESPA". O nome de
+     exibição de um remetente ACS Email é configurado na tela "MailFrom addresses" do recurso Email
+     Communication Services (coluna "Display Name" da linha do remetente, ver Fase 21) — não é algo
+     que o código consiga sobrescrever por chamada (`@azure/communication-email` só aceita o
+     endereço em `senderAddress`, sem campo de nome de exibição). O usuário tentou editar esse campo
+     no Portal e não encontrou como; fica pra revisitar junto desta fase.
+
 **Fases 0 a 14 e 17 a 21 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
 fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
-construído"). **Das fases 22 a 24, nada foi construído ainda.** O detalhe completo de cada achado
+construído"). **Das fases 22 a 25, nada foi construído ainda.** O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
