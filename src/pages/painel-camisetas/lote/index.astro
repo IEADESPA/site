@@ -1,0 +1,296 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DIRECTUS_URL, fetchItems } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getAllMensagens());
+const eventos = await fetchItems<{ id: number; title: string }>("eventos", "fields=id,title&sort=-event_date");
+const ministerios = await fetchItems<{ id: number; name: string }>("ministerios", "fields=id,name&sort=name");
+---
+
+<BaseLayout title="Editar lote — Gestão de camisetas" description="Área restrita da equipe." noindex>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas" style="max-width: 42rem;" data-directus-url={DIRECTUS_URL}>
+      <header class="pagehead">
+        <p class="eyebrow"><a href="/painel-camisetas/" class="text-accent">← Gestão de camisetas</a></p>
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 class="pagehead-title" data-painel-titulo>Lote</h1>
+          <a href="/painel-camisetas/lote/pedidos/" class="btn btn-outline" data-link-pedidos hidden>Ver pedidos</a>
+        </div>
+        <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
+      </header>
+
+      <div hidden data-painel-erro class="gallery-empty mt-8">
+        <p class="text-sm text-muted-foreground">Lote não encontrado.</p>
+      </div>
+
+      <form hidden class="mt-8 grid gap-5 max-w-2xl" data-lote-form>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-nome">Nome</label>
+          <input id="f-nome" class="field" required />
+        </div>
+
+        <div class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-slug">Endereço (slug)</label>
+            <input id="f-slug" class="field" placeholder="nome-do-lote" />
+          </div>
+          <button type="button" class="btn btn-outline" data-gerar-slug>Gerar do nome</button>
+        </div>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-descricao">Descrição (aparece na página pública)</label>
+          <textarea id="f-descricao" rows="4" class="field"></textarea>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-evento">Vincular a um evento (opcional)</label>
+            <select id="f-evento" class="field">
+              <option value="">— Nenhum —</option>
+              {eventos.map((e) => <option value={e.id}>{e.title}</option>)}
+            </select>
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-ministerio">Vincular a um ministério (opcional)</label>
+            <select id="f-ministerio" class="field">
+              <option value="">— Nenhum —</option>
+              {ministerios.map((m) => <option value={m.id}>{m.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <p class="text-xs text-muted-foreground">
+          Um lote pode ter nenhum, um, ou os dois vínculos ao mesmo tempo — ex.: uniforme fixo de um
+          ministério não precisa de evento nenhum; camiseta de uma marcha pode ter só o evento.
+        </p>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-tamanhos">Tamanhos (separados por vírgula)</label>
+            <input id="f-tamanhos" class="field" placeholder="PP, P, M, G, GG, XG" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-modelos">Modelos (separados por vírgula)</label>
+            <input id="f-modelos" class="field" placeholder="Masculino, Feminino" />
+          </div>
+        </div>
+        <p class="text-xs text-muted-foreground">Deixe um campo em branco pra não pedir essa escolha no formulário público.</p>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-valor-custo">Valor de custo (não aparece ao público)</label>
+            <input id="f-valor-custo" type="number" step="0.01" min="0" class="field" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-semibold" for="f-valor-venda">Valor de venda (aparece ao público)</label>
+            <input id="f-valor-venda" type="number" step="0.01" min="0" class="field" />
+          </div>
+        </div>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-pedidos-ate">Pedidos até (opcional)</label>
+          <input id="f-pedidos-ate" type="date" class="field" />
+        </div>
+
+        <div class="grid gap-3">
+          <label class="flex items-center gap-2 text-sm">
+            <input id="f-chegou" type="checkbox" /> O lote inteiro já chegou do fornecedor
+          </label>
+          <p class="text-xs text-muted-foreground">
+            Marca isso quando a encomenda inteira chegar — libera "entregue" pedido por pedido na
+            aba de pedidos, e passa a aparecer pra quem consultar em "Meus pedidos".
+          </p>
+        </div>
+
+        <div class="grid gap-3">
+          <label class="flex items-center gap-2 text-sm">
+            <input id="f-ativo" type="checkbox" /> Ativo (aparece na listagem pública e aceita novo pedido)
+          </label>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <button type="submit" class="btn btn-solid" data-lote-salvar>Salvar lote</button>
+          <p class="text-sm" data-lote-status role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="mt-6" style="border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem;">
+          <p class="text-sm font-semibold text-red-700">Excluir lote</p>
+          <p class="mt-1 text-sm text-muted-foreground">Remove o lote e todos os pedidos ligados a ele. Não pode ser desfeito.</p>
+          <button type="button" class="btn btn-outline mt-3" data-excluir-lote>Excluir lote</button>
+          <p class="mt-2 text-sm" data-excluir-status role="status" aria-live="polite"></p>
+        </div>
+      </form>
+    </div>
+  </main>
+  <SiteFooter />
+
+  <script>
+    import { exigirAutenticacao } from "@/lib/painelAuth";
+
+    const AUTH = { tokenKey: "painel_camisetas_token", loginPath: "/painel-camisetas/entrar/" };
+
+    interface Lote {
+      id: number;
+      nome: string;
+      slug: string | null;
+      descricao: string | null;
+      evento: number | null;
+      ministerio: number | null;
+      tamanhos: string[] | null;
+      modelos: string[] | null;
+      valor_custo: number | null;
+      valor_venda: number | null;
+      pedidos_ate: string | null;
+      chegou: boolean;
+      ativo: boolean;
+    }
+
+    const container = document.querySelector<HTMLElement>("[data-directus-url]");
+    if (!container) throw new Error("contêiner do painel ausente");
+    const directusUrl = container.dataset.directusUrl ?? "";
+
+    const idParam = new URLSearchParams(window.location.search).get("id");
+    const loteId = idParam ? Number(idParam) : null;
+
+    const carregando = document.querySelector<HTMLElement>("[data-painel-carregando]");
+    const erroEl = document.querySelector<HTMLElement>("[data-painel-erro]");
+    const tituloEl = document.querySelector<HTMLElement>("[data-painel-titulo]");
+    const form = document.querySelector<HTMLFormElement>("[data-lote-form]");
+    const statusEl = document.querySelector<HTMLElement>("[data-lote-status]");
+
+    const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const fNome = el<HTMLInputElement>("f-nome");
+    const fSlug = el<HTMLInputElement>("f-slug");
+    const fDescricao = el<HTMLTextAreaElement>("f-descricao");
+    const fEvento = el<HTMLSelectElement>("f-evento");
+    const fMinisterio = el<HTMLSelectElement>("f-ministerio");
+    const fTamanhos = el<HTMLInputElement>("f-tamanhos");
+    const fModelos = el<HTMLInputElement>("f-modelos");
+    const fValorCusto = el<HTMLInputElement>("f-valor-custo");
+    const fValorVenda = el<HTMLInputElement>("f-valor-venda");
+    const fPedidosAte = el<HTMLInputElement>("f-pedidos-ate");
+    const fChegou = el<HTMLInputElement>("f-chegou");
+    const fAtivo = el<HTMLInputElement>("f-ativo");
+
+    function slugify(texto: string): string {
+      return texto
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+
+    document.querySelector("[data-gerar-slug]")?.addEventListener("click", () => {
+      fSlug.value = slugify(fNome.value);
+    });
+
+    function csvParaLista(valor: string): string[] {
+      return valor
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+    }
+
+    function preencherFormulario(lote: Lote) {
+      fNome.value = lote.nome ?? "";
+      fSlug.value = lote.slug ?? "";
+      fDescricao.value = lote.descricao ?? "";
+      fEvento.value = lote.evento ? String(lote.evento) : "";
+      fMinisterio.value = lote.ministerio ? String(lote.ministerio) : "";
+      fTamanhos.value = (lote.tamanhos ?? []).join(", ");
+      fModelos.value = (lote.modelos ?? []).join(", ");
+      fValorCusto.value = lote.valor_custo != null ? String(lote.valor_custo) : "";
+      fValorVenda.value = lote.valor_venda != null ? String(lote.valor_venda) : "";
+      fPedidosAte.value = lote.pedidos_ate ?? "";
+      fChegou.checked = Boolean(lote.chegou);
+      fAtivo.checked = Boolean(lote.ativo);
+    }
+
+    function lerFormulario() {
+      return {
+        nome: fNome.value.trim(),
+        slug: fSlug.value.trim() || slugify(fNome.value),
+        descricao: fDescricao.value.trim() || null,
+        evento: fEvento.value ? Number(fEvento.value) : null,
+        ministerio: fMinisterio.value ? Number(fMinisterio.value) : null,
+        tamanhos: csvParaLista(fTamanhos.value),
+        modelos: csvParaLista(fModelos.value),
+        valor_custo: fValorCusto.value ? Number(fValorCusto.value) : null,
+        valor_venda: fValorVenda.value ? Number(fValorVenda.value) : null,
+        pedidos_ate: fPedidosAte.value || null,
+        chegou: fChegou.checked,
+        ativo: fAtivo.checked,
+      };
+    }
+
+    async function iniciar() {
+      const tokenObtido = await exigirAutenticacao(directusUrl, AUTH);
+      if (!tokenObtido) return;
+      const token: string = tokenObtido;
+
+      if (!loteId) {
+        if (carregando) carregando.hidden = true;
+        if (erroEl) erroEl.hidden = false;
+        return;
+      }
+
+      const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        if (carregando) carregando.hidden = true;
+        if (erroEl) erroEl.hidden = false;
+        return;
+      }
+      const lote: Lote = (await res.json()).data;
+
+      if (tituloEl) tituloEl.textContent = lote.nome;
+      preencherFormulario(lote);
+
+      const linkPedidos = document.querySelector<HTMLAnchorElement>("[data-link-pedidos]");
+      if (linkPedidos) {
+        linkPedidos.href = `/painel-camisetas/lote/pedidos/?id=${loteId}`;
+        linkPedidos.hidden = false;
+      }
+
+      if (carregando) carregando.hidden = true;
+      if (form) form.hidden = false;
+
+      form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (statusEl) statusEl.textContent = "Salvando…";
+        try {
+          const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(lerFormulario()),
+          });
+          if (!res.ok) throw new Error("falha ao salvar");
+          if (statusEl) statusEl.textContent = "✅ Salvo.";
+        } catch {
+          if (statusEl) statusEl.textContent = "Não foi possível salvar agora.";
+        }
+      });
+
+      document.querySelector("[data-excluir-lote]")?.addEventListener("click", async () => {
+        const excluirStatus = document.querySelector<HTMLElement>("[data-excluir-status]");
+        if (!confirm(`Excluir "${lote.nome}"? Isso apaga o lote e todos os pedidos ligados a ele. Não pode ser desfeito.`)) return;
+        if (excluirStatus) excluirStatus.textContent = "Excluindo…";
+        try {
+          const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error("falha ao excluir");
+          window.location.href = "/painel-camisetas/";
+        } catch {
+          if (excluirStatus) excluirStatus.textContent = "Não foi possível excluir agora.";
+        }
+      });
+    }
+
+    iniciar();
+  </script>
+</BaseLayout>

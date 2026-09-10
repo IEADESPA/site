@@ -132,6 +132,8 @@ const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
   { title: "Assista ao vivo", excerpt: "Transmissão ao vivo dos cultos pelo YouTube.", href: "/ao-vivo/" },
   { title: "Doações", excerpt: "Dízimos, ofertas e chave Pix da igreja.", href: "/doacoes/" },
   { title: "Galeria", excerpt: "Fotos de cultos e eventos da igreja.", href: "/galeria/" },
+  { title: "Camisetas e uniformes", excerpt: "Lotes de camiseta/uniforme abertos — peça a sua e acompanhe o pedido.", href: "/camisetas/" },
+  { title: "Meus pedidos de camiseta", excerpt: "Confira o andamento do seu pedido de camiseta, só com o telefone.", href: "/meus-pedidos-camiseta/" },
   { title: "Transparência", excerpt: "Diretoria e prestação de contas.", href: "/transparencia/" },
   { title: "Primeira vez aqui?", excerpt: "Informações para quem vai visitar pela primeira vez.", href: "/visitante/" },
   {

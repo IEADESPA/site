@@ -1,0 +1,362 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DIRECTUS_URL } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+const allPosts = visiblePosts(await getAllMensagens());
+---
+
+<BaseLayout title="Pedidos — Gestão de camisetas" description="Área restrita da equipe." noindex>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas" data-directus-url={DIRECTUS_URL}>
+      <header class="pagehead">
+        <p class="eyebrow"><a href="/painel-camisetas/" class="text-accent">← Gestão de camisetas</a></p>
+        <h1 class="pagehead-title" data-painel-titulo>Pedidos</h1>
+        <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
+      </header>
+
+      <div hidden data-painel-erro class="gallery-empty mt-8">
+        <p class="text-sm text-muted-foreground">Lote não encontrado.</p>
+      </div>
+
+      <div hidden data-painel-conteudo>
+        <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-stats-grid>
+          <div class="stat-card">
+            <p class="stat-numero" data-stat="total">0</p>
+            <p class="stat-label">Pedidos</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-numero" data-stat="arrecadado">R$ 0</p>
+            <p class="stat-label">Arrecadado</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-numero" data-stat="esperado">R$ 0</p>
+            <p class="stat-label">Esperado (total do lote)</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-numero" data-stat="lucro">R$ 0</p>
+            <p class="stat-label">Lucro estimado</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-numero" data-stat="devendo">0</p>
+            <p class="stat-label">Devendo (fiado ou parcial)</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-numero" data-stat="entregues">0</p>
+            <p class="stat-label">Já entregues</p>
+          </div>
+        </div>
+
+        <div class="mt-8">
+          <h2 class="section-title">Por tamanho</h2>
+          <p class="mt-1 text-sm text-muted-foreground">Pra saber quantas unidades a mais pedir de folga/encaixe.</p>
+          <div class="mt-3 flex flex-wrap gap-2" data-tamanhos-resumo></div>
+        </div>
+
+        <div class="mt-8">
+          <h2 class="section-title">Todos os pedidos</h2>
+          <div class="mt-4 flex flex-wrap gap-2" data-filtros>
+            <button type="button" class="filtro-chip is-active" data-filtro="todos">Todos</button>
+            <button type="button" class="filtro-chip" data-filtro="devendo">Devendo</button>
+            <button type="button" class="filtro-chip" data-filtro="nao-entregues">Não entregues</button>
+          </div>
+          <div class="mt-4 overflow-x-auto">
+            <table class="historico-tabela" data-pedidos-tabela>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Tamanho</th>
+                  <th>Modelo</th>
+                  <th>Pago</th>
+                  <th>Situação</th>
+                  <th>Entregue</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-pedidos-corpo></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+
+  <script>
+    import { exigirAutenticacao } from "@/lib/painelAuth";
+
+    const AUTH = { tokenKey: "painel_camisetas_token", loginPath: "/painel-camisetas/entrar/" };
+
+    interface Lote {
+      id: number;
+      nome: string;
+      valor_custo: number | null;
+      valor_venda: number | null;
+      chegou: boolean;
+    }
+
+    interface Pedido {
+      id: number;
+      nome: string;
+      tamanho: string | null;
+      modelo: string | null;
+      valor_pago: number;
+      entregue: boolean;
+    }
+
+    const container = document.querySelector<HTMLElement>("[data-directus-url]");
+    if (!container) throw new Error("contêiner do painel ausente");
+    const directusUrl = container.dataset.directusUrl ?? "";
+
+    const idParam = new URLSearchParams(window.location.search).get("id");
+    const loteId = idParam ? Number(idParam) : null;
+
+    const carregando = document.querySelector<HTMLElement>("[data-painel-carregando]");
+    const erroEl = document.querySelector<HTMLElement>("[data-painel-erro]");
+    const conteudoEl = document.querySelector<HTMLElement>("[data-painel-conteudo]");
+    const tituloEl = document.querySelector<HTMLElement>("[data-painel-titulo]");
+    const corpoEl = document.querySelector<HTMLElement>("[data-pedidos-corpo]");
+    const tamanhosResumoEl = document.querySelector<HTMLElement>("[data-tamanhos-resumo]");
+
+    let token = "";
+    let lote: Lote;
+    let pedidos: Pedido[] = [];
+    let filtroAtivo: "todos" | "devendo" | "nao-entregues" = "todos";
+
+    function escapeHtml(value: string) {
+      return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+    }
+
+    const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+    function situacao(p: Pedido): { texto: string; devendo: boolean } {
+      const venda = lote.valor_venda ?? 0;
+      if (p.valor_pago >= venda && venda > 0) return { texto: "Quitado", devendo: false };
+      if (p.valor_pago > 0) return { texto: "Parcial", devendo: true };
+      return { texto: "Fiado", devendo: true };
+    }
+
+    function atualizarStats() {
+      const stat = (nome: string) => document.querySelector<HTMLElement>(`[data-stat="${nome}"]`);
+      const venda = lote.valor_venda ?? 0;
+      const custo = lote.valor_custo ?? 0;
+
+      const arrecadado = pedidos.reduce((soma, p) => soma + (Number(p.valor_pago) || 0), 0);
+      const esperado = pedidos.length * venda;
+      const lucro = pedidos.length * (venda - custo);
+      const devendo = pedidos.filter((p) => situacao(p).devendo).length;
+      const entregues = pedidos.filter((p) => p.entregue).length;
+
+      const total = stat("total");
+      if (total) total.textContent = String(pedidos.length);
+      const arr = stat("arrecadado");
+      if (arr) arr.textContent = brl(arrecadado);
+      const esp = stat("esperado");
+      if (esp) esp.textContent = brl(esperado);
+      const luc = stat("lucro");
+      if (luc) luc.textContent = brl(lucro);
+      const dev = stat("devendo");
+      if (dev) dev.textContent = String(devendo);
+      const ent = stat("entregues");
+      if (ent) ent.textContent = `${entregues} / ${pedidos.length}`;
+
+      if (tamanhosResumoEl) {
+        const contagem = new Map<string, number>();
+        pedidos.forEach((p) => {
+          const chave = p.tamanho || "Sem tamanho";
+          contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
+        });
+        tamanhosResumoEl.innerHTML =
+          Array.from(contagem.entries())
+            .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
+            .map(([tamanho, qtd]) => `<span class="tamanho-chip">${escapeHtml(tamanho)}: <strong>${qtd}</strong></span>`)
+            .join("") || `<span class="text-sm text-muted-foreground">Nenhum pedido ainda.</span>`;
+      }
+    }
+
+    function linhaPedidoHtml(p: Pedido): string {
+      const s = situacao(p);
+      return `
+        <tr data-pedido-id="${p.id}">
+          <td>${escapeHtml(p.nome)}</td>
+          <td>${escapeHtml(p.tamanho ?? "—")}</td>
+          <td>${escapeHtml(p.modelo ?? "—")}</td>
+          <td>
+            <input type="number" step="0.01" min="0" class="field pedido-valor-input" value="${p.valor_pago}" data-campo-valor />
+          </td>
+          <td>${s.texto}</td>
+          <td>
+            <label class="flex items-center gap-1 text-sm">
+              <input type="checkbox" data-campo-entregue ${p.entregue ? "checked" : ""} ${lote.chegou ? "" : "disabled"} />
+              ${lote.chegou ? "" : "<span class='text-xs text-muted-foreground'>(lote não chegou)</span>"}
+            </label>
+          </td>
+          <td class="flex gap-3">
+            <button type="button" class="link-sweep text-sm font-semibold text-accent" data-salvar-pedido>Salvar</button>
+            <button type="button" class="link-sweep text-sm font-semibold" data-excluir-pedido>Excluir</button>
+          </td>
+        </tr>
+      `;
+    }
+
+    function renderizarTabela() {
+      if (!corpoEl) return;
+      const filtrados = pedidos.filter((p) => {
+        if (filtroAtivo === "devendo") return situacao(p).devendo;
+        if (filtroAtivo === "nao-entregues") return !p.entregue;
+        return true;
+      });
+      corpoEl.innerHTML = filtrados.length
+        ? filtrados.map(linhaPedidoHtml).join("")
+        : `<tr><td colspan="7" class="text-sm text-muted-foreground">Nenhum pedido nesse filtro.</td></tr>`;
+    }
+
+    document.querySelectorAll<HTMLButtonElement>("[data-filtro]").forEach((botao) => {
+      botao.addEventListener("click", () => {
+        filtroAtivo = botao.dataset.filtro as typeof filtroAtivo;
+        document.querySelectorAll("[data-filtro]").forEach((b) => b.classList.toggle("is-active", b === botao));
+        renderizarTabela();
+      });
+    });
+
+    corpoEl?.addEventListener("click", async (event) => {
+      const target = event.target as HTMLElement;
+      const linha = target.closest<HTMLElement>("tr[data-pedido-id]");
+      if (!linha) return;
+      const pedidoId = Number(linha.dataset.pedidoId);
+
+      if (target.matches("[data-salvar-pedido]")) {
+        const valorInput = linha.querySelector<HTMLInputElement>("[data-campo-valor]");
+        const entregueInput = linha.querySelector<HTMLInputElement>("[data-campo-entregue]");
+        const novoValor = Number(valorInput?.value || 0);
+        const novoEntregue = Boolean(entregueInput?.checked);
+
+        target.textContent = "Salvando…";
+        try {
+          const res = await fetch(`${directusUrl}/items/camiseta_pedidos/${pedidoId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ valor_pago: novoValor, entregue: novoEntregue }),
+          });
+          if (!res.ok) throw new Error("falha ao salvar");
+          const pedido = pedidos.find((p) => p.id === pedidoId);
+          if (pedido) {
+            pedido.valor_pago = novoValor;
+            pedido.entregue = novoEntregue;
+          }
+          atualizarStats();
+          renderizarTabela();
+        } catch {
+          target.textContent = "Salvar";
+          alert("Não foi possível salvar agora.");
+        }
+      }
+
+      if (target.matches("[data-excluir-pedido]")) {
+        if (!confirm("Excluir este pedido? Não pode ser desfeito.")) return;
+        try {
+          const res = await fetch(`${directusUrl}/items/camiseta_pedidos/${pedidoId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error("falha ao excluir");
+          pedidos = pedidos.filter((p) => p.id !== pedidoId);
+          atualizarStats();
+          renderizarTabela();
+        } catch {
+          alert("Não foi possível excluir agora.");
+        }
+      }
+    });
+
+    async function iniciar() {
+      const tokenObtido = await exigirAutenticacao(directusUrl, AUTH);
+      if (!tokenObtido) return;
+      token = tokenObtido;
+
+      if (!loteId) {
+        if (carregando) carregando.hidden = true;
+        if (erroEl) erroEl.hidden = false;
+        return;
+      }
+
+      const resLote = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}?fields=id,nome,valor_custo,valor_venda,chegou`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resLote.ok) {
+        if (carregando) carregando.hidden = true;
+        if (erroEl) erroEl.hidden = false;
+        return;
+      }
+      lote = (await resLote.json()).data;
+      if (tituloEl) tituloEl.textContent = `Pedidos — ${lote.nome}`;
+
+      const resPedidos = await fetch(
+        `${directusUrl}/items/camiseta_pedidos?filter[lote][_eq]=${loteId}&fields=id,nome,tamanho,modelo,valor_pago,entregue&sort=nome&limit=-1`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      pedidos = (await resPedidos.json()).data ?? [];
+
+      if (carregando) carregando.hidden = true;
+      if (conteudoEl) conteudoEl.hidden = false;
+
+      atualizarStats();
+      renderizarTabela();
+    }
+
+    iniciar();
+  </script>
+
+  <style is:global>
+    .stat-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+    }
+    .stat-numero {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .stat-label {
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+      color: var(--muted-foreground);
+    }
+    .tamanho-chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8125rem;
+    }
+    .filtro-chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.8125rem;
+      background: transparent;
+      cursor: pointer;
+    }
+    .filtro-chip.is-active {
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .pedido-valor-input {
+      width: 6rem;
+    }
+    .historico-tabela {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .historico-tabela th,
+    .historico-tabela td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+  </style>
+</BaseLayout>

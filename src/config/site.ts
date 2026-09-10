@@ -82,6 +82,7 @@ export const footerNavigation = [
       { label: "Kids", href: "/kids/" },
       { label: "Assista ao vivo", href: "/ao-vivo/" },
       { label: "Galeria", href: "/galeria/" },
+      { label: "Camisetas e uniformes", href: "/camisetas/" },
     ],
   },
   {
@@ -98,6 +99,7 @@ export const footerNavigation = [
     items: [
       { label: "Painel de conteúdo", href: DIRECTUS_ADMIN_URL },
       { label: "Gestão de eventos", href: "/painel-eventos/" },
+      { label: "Gestão de camisetas", href: "/painel-camisetas/" },
     ],
   },
 ];

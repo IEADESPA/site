@@ -67,6 +67,15 @@ export const CANCELAR_INSCRICAO_URL = "/api/cancelar-inscricao";
 export const ENVIAR_CONFIRMACAO_URL = "/api/enviar-confirmacao-inscricao";
 
 /**
+ * Fase 22 — gestão de camiseta/uniforme. `camiseta_pedidos` não tem leitura
+ * pública (protege telefone e valor pago), então a consulta "meus pedidos"
+ * passa por aqui — de propósito só com telefone, sem código nenhum (decisão
+ * do usuário: simplicidade acima de uma segunda camada de identidade, ver
+ * README Fase 22).
+ */
+export const CONSULTAR_PEDIDOS_CAMISETA_URL = "/api/consultar-pedidos-camiseta";
+
+/**
  * Busca uma URL do Directus com tentativas automáticas em caso de erro
  * transitório (5xx ou falha de rede) — o Directus no plano gratuito
  * ocasionalmente fica "sob pressão" por alguns segundos, e sem isso um

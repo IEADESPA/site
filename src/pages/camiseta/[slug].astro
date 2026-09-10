@@ -1,0 +1,169 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { DIRECTUS_URL, TELEFONE_HASH_URL, fetchItems } from "@/lib/directus";
+import { getAllMensagens, visiblePosts } from "@/lib/posts";
+
+interface Lote {
+  id: number;
+  slug: string;
+  nome: string;
+  descricao: string | null;
+  modelos: string[] | null;
+  tamanhos: string[] | null;
+  valor_venda: number | null;
+  pedidos_ate: string | null;
+  evento: { title: string } | null;
+  ministerio: { name: string } | null;
+}
+
+export async function getStaticPaths() {
+  const lotes = await fetchItems<Lote>(
+    "camiseta_lotes",
+    "filter[ativo][_eq]=true&fields=*,evento.title,ministerio.name",
+  );
+  return lotes.map((lote) => ({ params: { slug: lote.slug }, props: { lote } }));
+}
+
+interface Props {
+  lote: Lote;
+}
+
+const { lote } = Astro.props;
+const allPosts = visiblePosts(await getAllMensagens());
+const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() < Date.now() : false;
+---
+
+<BaseLayout title={lote.nome} description={lote.descricao ?? `Faça seu pedido de ${lote.nome}.`}>
+  <SiteHeader posts={allPosts} />
+  <main id="content" class="outer">
+    <div class="canvas camiseta-canvas" data-directus-url={DIRECTUS_URL}>
+      <header class="pagehead">
+        <p class="eyebrow">{lote.evento?.title ?? lote.ministerio?.name ?? "Camiseta/uniforme"}</p>
+        <h1 class="pagehead-title">{lote.nome}</h1>
+        {lote.descricao && <p class="pagehead-description">{lote.descricao}</p>}
+      </header>
+
+      <ul class="mt-6 grid gap-2 text-sm">
+        {lote.valor_venda != null && (
+          <li><strong class="text-foreground">Valor:</strong> R$ {Number(lote.valor_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</li>
+        )}
+        {lote.pedidos_ate && (
+          <li><strong class="text-foreground">Pedidos até:</strong> {dateFormatter.format(new Date(lote.pedidos_ate))}</li>
+        )}
+      </ul>
+
+      {
+        prazoEncerrado ? (
+          <p class="mt-6 text-sm leading-relaxed text-muted-foreground">O prazo para fazer pedido deste lote já encerrou.</p>
+        ) : (
+          <form class="mt-8 grid gap-4 max-w-md" data-pedido-form data-lote-id={lote.id}>
+            <div class="grid gap-2">
+              <label class="text-sm font-semibold" for="pedido-nome">Nome</label>
+              <input id="pedido-nome" name="nome" type="text" autocomplete="name" required class="field" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-semibold" for="pedido-telefone">Telefone / WhatsApp</label>
+              <input id="pedido-telefone" name="telefone" type="tel" autocomplete="tel" required class="field" />
+              <p class="text-xs text-muted-foreground">
+                É só com esse telefone que você confere depois se já chegou e quanto falta pagar —
+                sem senha, em{" "}
+                <a href="/meus-pedidos-camiseta/" class="underline underline-offset-2">Meus pedidos</a>.
+              </p>
+            </div>
+            {
+              lote.tamanhos && lote.tamanhos.length > 0 && (
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="pedido-tamanho">Tamanho</label>
+                  <select id="pedido-tamanho" class="field" required>
+                    <option value="">Selecione…</option>
+                    {lote.tamanhos.map((tamanho) => <option value={tamanho}>{tamanho}</option>)}
+                  </select>
+                </div>
+              )
+            }
+            {
+              lote.modelos && lote.modelos.length > 0 && (
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="pedido-modelo">Modelo</label>
+                  <select id="pedido-modelo" class="field" required>
+                    <option value="">Selecione…</option>
+                    {lote.modelos.map((modelo) => <option value={modelo}>{modelo}</option>)}
+                  </select>
+                </div>
+              )
+            }
+            <div class="flex flex-wrap items-center gap-4">
+              <button type="submit" class="btn btn-solid">Fazer pedido</button>
+              <p class="text-sm leading-relaxed text-muted-foreground" role="status" aria-live="polite" data-pedido-status />
+            </div>
+          </form>
+        )
+      }
+
+      <div class="prose mt-16">
+        <p><a href="/camisetas/">&larr; Voltar para Camisetas e uniformes</a></p>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+
+  {
+    !prazoEncerrado && (
+      <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, telefoneHashUrl: TELEFONE_HASH_URL, loteId: lote.id }}>
+        const form = document.querySelector("[data-pedido-form]");
+
+        form?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const data = new FormData(form);
+          const button = form.querySelector('button[type="submit"]');
+          const status = form.querySelector("[data-pedido-status]");
+          const tamanhoEl = document.getElementById("pedido-tamanho");
+          const modeloEl = document.getElementById("pedido-modelo");
+
+          if (button) button.disabled = true;
+          if (status) status.textContent = "Enviando…";
+
+          try {
+            const hashRes = await fetch(telefoneHashUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ telefone: data.get("telefone") }),
+            });
+            if (!hashRes.ok) throw new Error("falha ao proteger telefone");
+            const telefoneHash = (await hashRes.json()).valor;
+
+            const res = await fetch(`${directusUrl}/items/camiseta_pedidos`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                lote: loteId,
+                nome: String(data.get("nome")).trim(),
+                telefone: telefoneHash,
+                tamanho: tamanhoEl ? tamanhoEl.value : null,
+                modelo: modeloEl ? modeloEl.value : null,
+              }),
+            });
+            if (!res.ok) throw new Error("falha ao criar pedido");
+
+            if (status) status.textContent = "✅ Pedido registrado! Acompanhe em \"Meus pedidos\", com o seu telefone.";
+            form.reset();
+          } catch {
+            if (status) status.textContent = "Não foi possível enviar agora. Tente novamente em instantes.";
+            if (button) button.disabled = false;
+          }
+        });
+      </script>
+    )
+  }
+
+  <style>
+    .camiseta-canvas {
+      max-width: 40rem;
+    }
+  </style>
+</BaseLayout>

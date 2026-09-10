@@ -1400,9 +1400,55 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   [Eventbrite — Waitlist](https://www.eventbrite.com/features/waitlist/),
   [Eventbrite — Registration](https://www.eventbrite.com/features/registration/).
 
-- **Fase 22 — gestão de camisetas/uniformes**: pedida pelo usuário, hoje resolvida só por planilha
-  (Excel) — o objetivo explícito é sair do Excel. **Só escopo e planejamento, não é pra construir
-  agora.**
+- [x] **Fase 22 — gestão de camisetas/uniformes**: construída depois que o e-mail transacional da
+  Fase 21 já estava funcionando — o usuário pediu explicitamente pra ficar "muito bem feito", já
+  que a igreja pretende usar a partir do próximo lançamento de camiseta.
+
+  **Duas decisões de arquitetura que o README tinha deixado em aberto, confirmadas com o usuário
+  antes de construir (ver pergunta feita e resposta, abaixo do texto original da análise)**:
+  1. **Módulo próprio**, não uma extensão do módulo de eventos — um "lote de camiseta"
+     (`camiseta_lotes`) pode se vincular a um evento (`evento`, opcional), a um ministério/órgão
+     (`ministerio`, opcional), aos dois, ou a nenhum — cobre tanto o uniforme fixo de um
+     ministério (sem evento nenhum) quanto a camiseta pontual de uma marcha (vinculada a um
+     evento), sem forçar nenhum dos dois casos a existir artificialmente dentro do outro.
+  2. **Identidade só por telefone, sem código** — decisão explícita do usuário: "só digita o
+     telefone e pronto". Mais simples que o padrão de eventos (código + telefone), com o risco
+     aceito conscientemente (quem souber o telefone de outra pessoa vê o pedido dela). Login de
+     verdade (conta de membro, recuperação de senha por e-mail) foi cogitado e descartado por
+     enquanto — o usuário observou que isso é "outro nível" de investimento (login geral pro site,
+     fluxo de "esqueci a senha" por e-mail) e decidiu registrar como possível fase futura separada,
+     não construir agora.
+
+  **O que foi construído**:
+  - Duas coleções novas no Directus: `camiseta_lotes` (nome, slug, descrição, `evento`/`ministerio`
+    opcionais, `modelos`/`tamanhos` como listas, `valor_custo` — nunca público — `valor_venda`,
+    `pedidos_ate`, `chegou` do lote inteiro, `ativo`) e `camiseta_pedidos` (nome, telefone-hash,
+    tamanho, modelo, `valor_pago`, `entregue` da peça daquela pessoa), com `ON DELETE CASCADE` já
+    criado corretamente desde o início (não via PATCH depois — ver o bug já documentado na Fase 20).
+  - Público: `/camisetas/` (lista os lotes ativos), `/camiseta/[slug]/` (detalhe + formulário de
+    pedido — nome, telefone, tamanho, modelo), e `/meus-pedidos-camiseta/` (consulta só com
+    telefone, sem código, mostrando tamanho/modelo, situação de pagamento — quitado/parcial/fiado —
+    e situação de entrega — não chegou/chegou mas não retirado/já retirado).
+  - Nova Azure Function `consultar-pedidos-camiseta` (mesmo papel de `verificar-inscricao`: como
+    `camiseta_pedidos` não tem leitura pública, a consulta por telefone passa por aqui, comparando
+    hash com o token de admin).
+  - Painel de gestão novo, `/painel-camisetas/` (login, lista de lotes, edição de lote, e a aba de
+    pedidos com estatísticas — total arrecadado, total esperado, lucro estimado, quantos devendo,
+    quantos já entregues, e contagem por tamanho pra saber quanto pedir de folga/encaixe) — mesma
+    conta do Directus já usada em `/painel-eventos/`, sem senha nova nenhuma. `src/lib/painelAuth.ts`
+    foi generalizado (token e caminho de login configuráveis por painel, com os valores antigos como
+    padrão) pra servir os dois painéis sem duplicar a lógica de autenticação inteira.
+  - Links adicionados na navegação (rodapé "Participe" e "Equipe") e no índice de busca do site.
+  - `privacidade.astro` atualizado com o novo dado tratado.
+
+  **Testado de ponta a ponta com dados reais** (criados e apagados depois, via API com token de
+  admin): criado um lote de teste com tamanhos/modelos/valores reais; confirmado que `/camisetas/`
+  e `/camiseta/[slug]/` renderizam certo; criado um pedido de teste com hash de telefone gerado de
+  verdade (mesma função `gerarHash` do projeto); confirmado que `camiseta_pedidos` **não** tem
+  leitura pública (403 numa tentativa direta); reproduzida a lógica exata da Function de consulta
+  contra os dados reais — telefone certo encontra o pedido, telefone errado não encontra nada;
+  simulado o painel marcando pagamento parcial; excluído o lote de teste e confirmado que o
+  `CASCADE` apagou o pedido junto, sem deixar registro órfão.
 
   **Por que não é só "mais um campo no evento"**: uma camiseta/uniforme muitas vezes não pertence a
   um evento só — um ministério pode ter um uniforme único que vale pro ano inteiro, pra toda
@@ -1532,9 +1578,9 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      endereço em `senderAddress`, sem campo de nome de exibição). O usuário tentou editar esse campo
      no Portal e não encontrou como; fica pra revisitar junto desta fase.
 
-**Fases 0 a 14 e 17 a 21 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
+**Fases 0 a 14, 17 a 22 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
 fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
-construído"). **Das fases 22 a 25, nada foi construído ainda.** O detalhe completo de cada achado
+construído"). **Das fases 23 a 25, nada foi construído ainda.** O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
