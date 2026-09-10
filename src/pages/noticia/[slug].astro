@@ -89,6 +89,13 @@ const structuredData = {
         <h1 class="article-title">{data.title}</h1>
         <p class="article-excerpt">{data.excerpt}</p>
 
+        {data.entrevistado && (
+          <p class="mt-3 text-sm text-muted-foreground">
+            Entrevista com <strong class="text-foreground">{data.entrevistado.nome}</strong>
+            {data.entrevistado.papel && <>, {data.entrevistado.papel}</>}
+          </p>
+        )}
+
         {orgaoRelacionado && (
           <p class="mt-5">
             <a href={`/orgao/${orgaoRelacionado.slug}/`} class="pill">Sobre: {orgaoRelacionado.name}</a>

@@ -1062,8 +1062,9 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     troca pelo `<iframe>` de verdade (YouTube tocando), e a mesma miniatura aparece corretamente em
     `/ao-vivo/`, linkando de volta pra página da mensagem.
 
-- **Fase 18 — formato editorial: testemunho e depoimentos curtos.** Dois formatos distintos, dois
-  tamanhos de esforço — só um dos dois foi construído nesta rodada:
+- [x] **Fase 18 — formato editorial: testemunho e depoimentos curtos.** Dois formatos distintos,
+  dois tamanhos de esforço, os dois construídos (o segundo só depois de corrigir um raciocínio
+  errado meu sobre o primeiro — ver abaixo):
   - [x] **Depoimento curto (mural de depoimentos) — construído e testado.** Clona de verdade a
     arquitetura já provada do Mural de oração (coleção nova `depoimentos` no Directus, com
     moderação: criação pública restrita a `nome`/`texto`/`consentimento_lgpd`, leitura pública só
@@ -1091,13 +1092,23 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       envio público real via `curl` (sem token), aprovação via API admin, confirmado que só então
       o depoimento aparece na leitura pública — e visualmente com Playwright, tanto em
       `/depoimentos/` quanto no teaser da página Sobre.
-  - [ ] **Testemunho/entrevista mais longa — não construído, segue bloqueado.** A categoria
-    `testemunho` já existe no campo `category` de Notícias, sem uso real hoje — tecnicamente só
-    precisaria de um campo opcional de "entrevistado" (nome + papel, mesmo padrão de
-    `author_name`/`author_role` de Mensagens). **Mas o bloqueio original continua de pé**: só
-    lançar depois de definir quem é o dono da pauta (quem convida e agenda a entrevista, não quem
-    escreve) — sem isso, mesmo risco de abandono já visto em EBD/newsletter/escala. Não avançado
-    nesta rodada por falta dessa confirmação.
+  - [x] **Testemunho/entrevista mais longa — construído.** ⚠️ **Correção de raciocínio**: o
+    bloqueio original ("só lançar depois de definir quem é o dono da pauta") **foi um erro de
+    categoria meu, apontado e corrigido pelo usuário** — a exigência de confirmar um mantenedor
+    dedicado só faz sentido pra recurso com cadência esperada de verdade (EBD semanal, newsletter,
+    escala de culto). Entrevista é conteúdo ocasional/atemporal, publicada quando surgir algo —
+    exatamente como qualquer notícia comum, sem "dono" nenhum garantindo periodicidade. Não havia
+    motivo real pra bloquear.
+    - Dois campos novos em Notícias (`entrevistado_nome`, `entrevistado_papel`, ambos opcionais —
+      só preencher em notícias de categoria "Testemunho"), mesmo padrão de `author_name`/
+      `author_role` já usado em Mensagens. Exibido como uma linha "Entrevista com Fulano, papel"
+      logo abaixo do resumo, em `/noticia/[slug]/`.
+    - Convenção editorial de perguntas em destaque no corpo markdown não exige nenhum código —
+      já é só usar negrito (`**Pergunta:**`) na hora de escrever, recurso que o Markdown/`marked`
+      já suportam.
+    - **Testado com uma notícia real temporária** (categoria "testemunho", `entrevistado_nome`/
+      `entrevistado_papel` preenchidos, removida depois do teste): build real confirmando a linha
+      "Entrevista com..." no HTML gerado, e Playwright confirmando visualmente o resultado.
 
 - **Fase 19 — cartão de versículo compartilhável**: reaproveita 100% a técnica já construída e em
   produção do cartão de programação semanal (`programacao-semanal.png.ts`, SVG + `sharp`, sem
@@ -1345,11 +1356,10 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 14 e a Fase 17 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
+**Fases 0 a 14, 17 e 18 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
 fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
-construído"). **A Fase 18 está parcial** (depoimentos curtos construídos; testemunho/entrevista
-segue bloqueado, ver o `[ ]` na própria entrada). **Das fases 19 a 24, nada foi construído ainda.**
-O detalhe completo de cada achado (com a
+construído"). **Das fases 19 a 24, nada foi construído ainda.** O detalhe completo de cada achado
+(com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
 fontes consultadas.

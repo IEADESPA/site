@@ -24,6 +24,8 @@ interface DirectusNoticia {
   draft: boolean;
   body: string;
   orgao_relacionado: number | null;
+  entrevistado_nome: string | null;
+  entrevistado_papel: string | null;
 }
 
 export interface NoticiaData {
@@ -36,6 +38,8 @@ export interface NoticiaData {
   featured: boolean;
   draft: boolean;
   orgaoRelacionado: number | null;
+  /** Só preenchido em notícias baseadas numa entrevista (categoria "Testemunho"). */
+  entrevistado?: { nome: string; papel: string | null };
 }
 
 export interface Noticia {
@@ -60,6 +64,7 @@ function toNoticia(n: DirectusNoticia): Noticia {
       featured: n.featured,
       draft: n.draft,
       orgaoRelacionado: n.orgao_relacionado,
+      entrevistado: n.entrevistado_nome ? { nome: n.entrevistado_nome, papel: n.entrevistado_papel } : undefined,
     },
   };
 }
