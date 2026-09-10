@@ -1789,9 +1789,22 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       publicação não tinha sido feita ainda, e confirmado certo depois do deploy de verdade);
       imagem do mini-mapa embutida (3 imagens no PDF: logo + mapa); anotação de link presente, com
       a URL exata do link colado no evento de teste. Eventos de teste apagados depois.
-  - [ ] **Fase 24.6 — imagem de compartilhamento de `/contato/`**: usar Street View ou Static Maps
-    como imagem social (`og:image`) da página de contato, pra o link ficar mais reconhecível quando
-    compartilhado no WhatsApp/redes.
+  - [x] **Fase 24.6 — imagem de compartilhamento de `/contato/` — construído**: a mesma foto real da
+    fachada (Street View, Fase 24.2) vira a imagem social (`og:image`/`twitter:image`) da página de
+    contato, num tamanho mais próximo do formato que WhatsApp/redes esperam (640×335, ~1.91:1) — em
+    vez da imagem genérica padrão do site. `BaseLayout` já aceitava um `image` por página; só
+    precisou passar a URL da Street View quando a Sede tem cobertura confirmada (mesmo `temStreetView`
+    da Fase 24.2), com o padrão do site como reserva quando não tem.
+    - **Preocupação real verificada antes de confiar nisso**: quem busca a imagem pra gerar a
+      pré-visualização é o **servidor do WhatsApp/Facebook/Twitter**, não o navegador de quem
+      compartilha — então a chave restrita por domínio poderia rejeitar, já que o bot não manda o
+      `Referer` do nosso site. Testado por `curl` **sem nenhum cabeçalho `Referer`** (do jeito que
+      esses bots buscam) e confirmado que a API libera — a restrição de referenciador do Google só
+      bloqueia quando existe um `Referer` que não bate com o site permitido, não quando ele
+      simplesmente não existe.
+    - **Testado**: build gerado de verdade, conferido no HTML final que `og:image`/`twitter:image`
+      apontam pra URL certa da Street View com o tamanho novo, e a própria URL baixada com sucesso
+      (200, imagem de verdade).
   - [ ] **Fase 24.7 — rota traçada na própria tela**: usar a **Directions API** pra desenhar a rota
     de verdade dentro do mapa da Sede (Fase 24.1), pedindo a localização do navegador de quem visita
     (mesmo mecanismo de geolocalização já usado em outras partes do site) — em vez de só abrir o

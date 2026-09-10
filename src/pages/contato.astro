@@ -43,12 +43,22 @@ const horarioResumo = sedeProgramacaoCompacta(programacao)
 // como complemento do mapa em vez de substituí-lo.
 const temStreetView = Boolean(config.lat && config.lng) && (await hasStreetViewCoverage(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey));
 const streetViewUrl = temStreetView ? streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey, "400x260") : null;
+
+// Fase 24.6 — mesma foto real da fachada, num tamanho mais parecido com o
+// formato que WhatsApp/redes esperam pra pré-visualização de link (~1.91:1),
+// em vez da imagem genérica padrão do site — quem recebe o link já reconhece
+// o prédio antes de clicar. Confirmado por `curl` sem cabeçalho `Referer`
+// nenhum (do jeito que um bot de rede social busca a imagem) que a chave
+// restrita por domínio ainda libera a imagem — só bloqueia quando o
+// `Referer` existe e não bate com o site, não quando ele nem existe.
+const ogImageUrl = temStreetView ? streetViewImageUrl(Number(config.lat), Number(config.lng), siteConfig.googleMapsEmbedKey, "640x335") : undefined;
 ---
 
 <BaseLayout
   title="Contato"
   description={`Fale com a ${siteConfig.name} e veja como chegar até nós.`}
   structuredData={structuredData}
+  image={ogImageUrl}
 >
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
