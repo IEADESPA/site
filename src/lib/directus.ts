@@ -56,6 +56,17 @@ export const TELEFONE_HASH_URL = "/api/telefone-hash";
 export const CANCELAR_INSCRICAO_URL = "/api/cancelar-inscricao";
 
 /**
+ * Fase 21 — e-mail de confirmação de inscrição (opcional). Chamada só
+ * depois que a(s) inscrição(ões) já foram gravadas com sucesso no Directus
+ * — nunca bloqueia nem faz parte da inscrição em si, e uma falha aqui é
+ * ignorada silenciosamente pelo navegador (ver `evento/[slug].astro`).
+ * Envia de verdade via Azure Communication Services (Email) — não existe
+ * mais fallback de terceiro nem gatilho por Directus Flow (ver README,
+ * Fase 21 e Fase 6, sobre por que Flows não servem pra isso).
+ */
+export const ENVIAR_CONFIRMACAO_URL = "/api/enviar-confirmacao-inscricao";
+
+/**
  * Busca uma URL do Directus com tentativas automáticas em caso de erro
  * transitório (5xx ou falha de rede) — o Directus no plano gratuito
  * ocasionalmente fica "sob pressão" por alguns segundos, e sem isso um

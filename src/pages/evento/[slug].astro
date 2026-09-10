@@ -6,7 +6,7 @@ import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
-import { COVER_WIDTHS, congregacaoEndereco, DIRECTUS_URL, TELEFONE_HASH_URL, directusAssetSrcset, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
+import { COVER_WIDTHS, congregacaoEndereco, DIRECTUS_URL, ENVIAR_CONFIRMACAO_URL, TELEFONE_HASH_URL, directusAssetSrcset, directusAssetUrl, enderecoCompleto, fetchConfiguracoes, fetchItems } from "@/lib/directus";
 import { hasEventPage } from "@/lib/eventos";
 
 interface Congregacao {
@@ -335,6 +335,11 @@ const structuredData = startDate
                   <label class="text-sm font-semibold" for="inscricao-telefone">Telefone / WhatsApp</label>
                   <input id="inscricao-telefone" name="telefone" type="tel" autocomplete="tel" required class="field" />
                 </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="inscricao-email">E-mail (opcional)</label>
+                  <input id="inscricao-email" name="email" type="email" autocomplete="email" class="field" />
+                  <p class="text-xs text-muted-foreground">Só pra te mandar um comprovante da inscrição por e-mail — não é obrigatório.</p>
+                </div>
 
                 {
                   event.faixas_valor && event.faixas_valor.length > 0 && (
@@ -445,6 +450,10 @@ const structuredData = startDate
         define:vars={{
           directusUrl: DIRECTUS_URL,
           telefoneHashUrl: TELEFONE_HASH_URL,
+          enviarConfirmacaoUrl: ENVIAR_CONFIRMACAO_URL,
+          eventoTitulo: event.title,
+          eventoPeriodo: [event.event_date ? dateFormatter.format(new Date(event.event_date)) : null, timeRange].filter(Boolean).join(", "),
+          eventoLocal: localNome,
           vagasLimite: event.vagas_limite,
           requerAprovacao: event.requer_aprovacao,
           vapidPublicKey: "BHjTzvfXIx0DAkcCgfJDNQO5N09SmO0jIPuTP8L6rxnEaITMn95fQH6kHFnbrEJE-Fdroim5bNnaKp5wwowXdak",
@@ -661,6 +670,8 @@ const structuredData = startDate
               if (!hashRes.ok) throw new Error("falha ao proteger telefone");
               const telefoneHash = (await hashRes.json()).valor;
 
+              const email = String(data.get("email") || "").trim();
+
               for (const nome of nomes) {
                 const codigo = gerarCodigo();
                 let aguardandoVaga = false;
@@ -693,6 +704,7 @@ const structuredData = startDate
                     evento: eventoId,
                     nome,
                     telefone: telefoneHash,
+                    email: email || null,
                     codigo,
                     valor: valorFinal,
                     cupom_usado: cupomAplicado,
@@ -745,6 +757,23 @@ const structuredData = startDate
                     .join("<br />");
                   status.innerHTML = `${resultados.length} pessoas inscritas! Anote o código de cada uma — vai usar na entrada do evento:<br />${linhas}`;
                 }
+              }
+
+              // Confirmação por e-mail (Fase 21): melhor esforço, nunca
+              // bloqueia nem aparece pra quem se inscreveu se falhar — a
+              // inscrição em si já está gravada antes desta chamada.
+              if (email) {
+                fetch(enviarConfirmacaoUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    email,
+                    eventoTitulo,
+                    eventoPeriodo,
+                    eventoLocal,
+                    pessoas: resultados.map((r) => ({ nome: r.nome, codigo: r.codigo, aguardandoVaga: r.aguardandoVaga, pendenteAprovacao: r.pendenteAprovacao })),
+                  }),
+                }).catch(() => {});
               }
 
               // Lembrete automático só pra quem se inscreveu primeiro (a

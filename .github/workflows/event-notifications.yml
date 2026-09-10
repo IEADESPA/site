@@ -20,8 +20,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Instala o web-push
-        run: npm install web-push@3.6.7
+      - name: Instala as dependências (web-push + Azure Communication Services Email)
+        run: npm install web-push@3.6.7 @azure/communication-email@1.0.0
 
       - name: Envia os avisos de eventos de amanhã
         env:
@@ -30,4 +30,5 @@ jobs:
           VAPID_PUBLIC_KEY: BHjTzvfXIx0DAkcCgfJDNQO5N09SmO0jIPuTP8L6rxnEaITMn95fQH6kHFnbrEJE-Fdroim5bNnaKp5wwowXdak
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           SITE_URL: https://www.ieadespa.org.br
+          ACS_CONNECTION_STRING: ${{ secrets.ACS_CONNECTION_STRING }}
         run: node .github/scripts/send-event-reminders.mjs

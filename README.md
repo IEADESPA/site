@@ -1267,25 +1267,33 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       linha "Verifique a autenticidade em www.ieadespa.org.br/verificar-certificado/.../ com o
       código ..." sai certa no PDF baixado.
 
-  **E-mail de confirmação + lembrete: não construído, e por um motivo concreto, não por
-  prioridade** — diferente dos itens acima, isso não é só escrever código: exigiria uma peça de
-  infraestrutura que não existe hoje (um serviço de envio de e-mail transacional de verdade), e eu
-  não tenho como provisionar isso sozinho. Duas rotas possíveis, nenhuma que eu possa fazer sem a
-  igreja:
-  1. **Azure Communication Services (Email)** — dentro do ecossistema Azure já usado pelo projeto
-     inteiro, mas precisa de um recurso novo criado no Portal Azure + um domínio verificado (DNS) —
-     eu não tenho acesso ao Portal Azure pra criar recursos, só à API do Directus e ao GitHub.
-  2. **Um provedor de e-mail transacional de terceiro com plano grátis** (ex.: Brevo, Resend) —
-     tecnicamente mais simples, mas contraria o limite já registrado na Fase 10 ("sem depender de
-     recurso de terceiro pago **fora do ecossistema do Azure**") — um provedor de terceiro, mesmo
-     grátis, ainda é fora do Azure.
-
-  Mesmo padrão já usado pra Fase 24 (Google Maps): registrado, não construído, esperando um
-  pré-requisito que só a igreja consegue prover (criar o recurso de e-mail no Azure, ou autorizar
-  explicitamente sair do ecossistema Azure pra um provedor de terceiro). Assim que existir, o
-  código é simples de acrescentar — os dois pontos de entrada já existem prontos (o momento da
-  inscrição, em `evento/[slug].astro`, e o lembrete diário já automatizado por push em
-  `.github/scripts/send-event-reminders.mjs`).
+  - [x] **E-mail de confirmação + lembrete** — o bloqueio de infraestrutura registrado abaixo foi
+    resolvido: a igreja criou o recurso **Azure Communication Services (Email)** no Portal Azure,
+    verificou o domínio `ieadespa.org.br` (TXT + 2 CNAME de DKIM + SPF mesclado no registro já
+    existente — **sem mexer no MX**, que continua servindo o e-mail normal da igreja, já que ACS
+    Email é só envio) e criou o remetente `DoNotReply@ieadespa.org.br`. Com isso:
+    - Campo `email` novo em `inscricoes_eventos` (opcional — a verificação de identidade continua
+      sendo só código + telefone, nunca e-mail) e input opcional a mais no formulário público de
+      `/evento/[slug]/`.
+    - Nova Azure Function `enviar-confirmacao-inscricao` (`api/src/functions/
+      enviarConfirmacaoInscricao.js`, biblioteca `@azure/communication-email`): chamada pelo
+      navegador só depois que a inscrição já foi gravada com sucesso no Directus — melhor esforço,
+      uma falha aqui nunca aparece nem trava quem se inscreveu. Manda um e-mail com o(s) código(s)
+      de check-in e a situação de cada pessoa (confirmada / lista de espera / aguardando aprovação).
+    - `.github/scripts/send-event-reminders.mjs` ganhou um terceiro mecanismo (além dos dois de
+      push já existentes): lembrete por e-mail um dia antes do evento, pra quem deixou e-mail —
+      independente de ter ativado push ou não. Novo secret `ACS_CONNECTION_STRING` no GitHub Actions
+      (`.github/workflows/event-notifications.yml`) e como Application Setting na Function App
+      (mesmo padrão do `DIRECTUS_ADMIN_TOKEN`).
+    - `privacidade.astro` atualizado com o novo dado tratado (e-mail opcional de inscrição) e pra
+      quê serve.
+    - Custo real: Azure Communication Services Email cobra só por consumo (sem mensalidade fixa) —
+      ~US$ 0,25 por 1.000 e-mails enviados, o que no volume de eventos da igreja fica bem abaixo de
+      US$ 1-2/mês.
+    - **Não testado de ponta a ponta com envio real** nesta rodada (só `npm run check`/`npm run
+      build` limpos e um `require()` de sanidade no arquivo da Function) — falta confirmar o envio
+      de verdade assim que a connection string estiver aplicada como Application Setting na Function
+      App e como secret no GitHub Actions.
 
   Item 6 (múltiplos portões/dispositivos de check-in) segue **não construído** — não por falta de
   tempo, mas porque a própria pesquisa de mercado desta fase já concluiu que não vale a pena nesse

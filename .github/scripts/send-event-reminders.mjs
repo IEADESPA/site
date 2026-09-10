@@ -1,21 +1,26 @@
 // Roda uma vez por dia (ver .github/workflows/event-notifications.yml).
-// Dois mecanismos de aviso, por notificação push do navegador, sobre
-// eventos especiais que acontecem amanhã:
+// Três mecanismos de aviso sobre eventos especiais que acontecem amanhã:
 // 1. Quem ativou o aviso geral em /eventos/ (push_subscriptions) — só de
 //    eventos cujo responsável está na lista de preferência da pessoa, ou
 //    de todos, se ela não restringiu nada.
 // 2. Quem se inscreveu naquele evento específico e ativou o lembrete na
 //    própria página de inscrição (push_* em inscricoes_eventos) — sempre
 //    só daquele evento, nunca dos outros.
+// 3. Quem se inscreveu e deixou e-mail (Fase 21) — lembrete por e-mail,
+//    independente de ter ativado push ou não (é o "segundo canal" que
+//    faltava, comparado a Sympla/Even3/Eventbrite — ver README, Fase 21).
 import webpush from "web-push";
+import { EmailClient } from "@azure/communication-email";
 
-const { DIRECTUS_URL, DIRECTUS_ADMIN_TOKEN, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, SITE_URL } = process.env;
+const { DIRECTUS_URL, DIRECTUS_ADMIN_TOKEN, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, SITE_URL, ACS_CONNECTION_STRING } = process.env;
 
-if (!DIRECTUS_URL || !DIRECTUS_ADMIN_TOKEN || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !SITE_URL) {
+if (!DIRECTUS_URL || !DIRECTUS_ADMIN_TOKEN || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !SITE_URL || !ACS_CONNECTION_STRING) {
   throw new Error("Faltam variáveis de ambiente obrigatórias (ver README).");
 }
 
 webpush.setVapidDetails("mailto:seta@ieadespa.org", VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+const emailClient = new EmailClient(ACS_CONNECTION_STRING);
+const REMETENTE = "DoNotReply@ieadespa.org.br";
 
 function amanhaISO() {
   const d = new Date();
@@ -132,6 +137,36 @@ async function main() {
       body: JSON.stringify({ push_endpoint: null, push_p256dh: null, push_auth: null }),
     });
     console.log("Removido lembrete de inscrição expirado:", id);
+  }
+
+  // --- Mecanismo 3: lembrete por e-mail (Fase 21) ---
+  const comEmailRes = await fetch(
+    `${DIRECTUS_URL}/items/inscricoes_eventos?filter[_and][0][evento][_in]=${eventIds}&filter[_and][1][aguardando_vaga][_eq]=false&filter[_and][2][email][_nnull]=true&fields=nome,evento,email&limit=-1`,
+    { headers: { Authorization: `Bearer ${DIRECTUS_ADMIN_TOKEN}` } },
+  );
+  if (!comEmailRes.ok) throw new Error(`Falha ao buscar inscritos com e-mail: ${comEmailRes.status}`);
+  const { data: comEmail } = await comEmailRes.json();
+
+  console.log(`Mecanismo por e-mail: ${comEmail.length} inscrito(s) com e-mail cadastrado.`);
+
+  for (const inscrito of comEmail) {
+    const event = eventsPorId.get(inscrito.evento);
+    if (!event || !inscrito.email) continue;
+
+    const local = [event.time, event.location].filter(Boolean).join(" · ");
+    try {
+      const poller = await emailClient.beginSend({
+        senderAddress: REMETENTE,
+        content: {
+          subject: `Amanhã: ${event.title}`,
+          plainText: `${inscrito.nome}, não esqueça! ${event.title}${local ? ` — ${local}` : ""}.\n\n${SITE_URL}/evento/${event.slug}/`,
+        },
+        recipients: { to: [{ address: inscrito.email }] },
+      });
+      await poller.pollUntilDone();
+    } catch (err) {
+      console.error("Falha ao enviar lembrete por e-mail:", inscrito.email, err);
+    }
   }
 
   console.log("Concluído.");

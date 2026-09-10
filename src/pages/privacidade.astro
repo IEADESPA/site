@@ -35,11 +35,11 @@ const tratamentos: Tratamento[] = [
     acesso: "Só a equipe responsável por cada tipo de assunto (contato geral, pedidos de oração).",
   },
   {
-    dado: "Inscrição em evento — nome, telefone, respostas às perguntas do evento (quando houver)",
-    finalidade: "Confirmar sua vaga, fazer seu check-in na entrada, e permitir que você emita certificado/crachá ou responda a pesquisa de satisfação depois do evento.",
-    baseLegal: "Execução de procedimento preliminar/contrato a pedido do titular (Art. 7º, V) — você mesmo inicia a inscrição.",
-    retencao: "O telefone é guardado como hash (explicado abaixo) e retido por prazo indeterminado, de propósito — é a chave que permite pedir uma segunda via do certificado ou de qualquer documento do evento anos depois. Nome, código, presença e respostas seguem a mesma regra: nada é apagado automaticamente ao fim do evento.",
-    acesso: "A equipe responsável pelo evento. O telefone, especificamente, nunca é lido por ninguém, nem pela equipe — só é comparado (por hash) no momento em que você mesmo o digita para conferir sua identidade.",
+    dado: "Inscrição em evento — nome, telefone, e-mail (opcional), respostas às perguntas do evento (quando houver)",
+    finalidade: "Confirmar sua vaga, fazer seu check-in na entrada, permitir que você emita certificado/crachá ou responda a pesquisa de satisfação depois do evento, e — só se você deixar o e-mail — te enviar um comprovante da inscrição e um lembrete um dia antes do evento.",
+    baseLegal: "Execução de procedimento preliminar/contrato a pedido do titular (Art. 7º, V) — você mesmo inicia a inscrição e decide se deixa o e-mail.",
+    retencao: "O telefone é guardado como hash (explicado abaixo) e retido por prazo indeterminado, de propósito — é a chave que permite pedir uma segunda via do certificado ou de qualquer documento do evento anos depois. Nome, código, presença, e-mail e respostas seguem a mesma regra: nada é apagado automaticamente ao fim do evento.",
+    acesso: "A equipe responsável pelo evento. O telefone, especificamente, nunca é lido por ninguém, nem pela equipe — só é comparado (por hash) no momento em que você mesmo o digita para conferir sua identidade. O e-mail, quando deixado, é usado só pelo envio automático de confirmação/lembrete (Azure Communication Services) — nunca por uma pessoa lendo a lista de inscritos com outro propósito.",
   },
   {
     dado: "Depoimento — texto, nome (sempre publicado, sem opção de anônimo) e, se enviada depois, foto",
