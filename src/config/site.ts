@@ -87,6 +87,7 @@ export const footerNavigation = [
   {
     label: "Institucional",
     items: [
+      { label: "Dúvidas frequentes", href: "/duvidas-frequentes/" },
       { label: "Transparência", href: "/transparencia/" },
       { label: "Pregadores", href: "/pregadores/" },
       { label: "Privacidade", href: "/privacidade/" },

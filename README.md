@@ -965,17 +965,39 @@ pesquisa transversal mais abaixo:
     `staticwebapp.config.json` só se aplica ali, não no `astro preview`), ícone maskable acessível
     em `/maskable-icon.png`, `astro check` sem erro novo.
 
-- **Fase 14 — WhatsApp e automação de FAQ**: o link `wa.me` institucional já existe em `/contato/`
-  (usa o telefone cadastrado no Directus, não um número fixo no código) mas está enterrado como
-  texto simples entre "Outros contatos" — destacar mais e usar mensagem pré-preenchida por contexto
-  (`?text=`, como o `?assunto=` já faz no formulário interno) resolve a maior parte do valor sem
-  nenhuma automação de verdade. Botão flutuante de WhatsApp é melhoria menor, só em páginas de
-  contato/institucionais (não em conteúdo devocional, onde seria ruído). Chatbot de FAQ automatizado
-  (regras ou IA) **avaliado e não recomendado** — exige volume de perguntas que uma igreja pequena
-  sem equipe técnica não tem, e a API paga por conversa não cabe no orçamento; o FAQ estático já
-  existente na página Visitante, reforçado pelo link de WhatsApp, já cobre a necessidade real.
-  Ponto de atenção de LGPD (liga com a Fase 7): confirmar que o número cadastrado é uma linha
-  institucional, não o celular pessoal de um líder específico.
+- [x] **Fase 14 — WhatsApp e automação de FAQ.** Revisada com o usuário antes de construir, porque
+  a pesquisa original (linha acima, riscada por completo) sugeria "destacar mais" o link de
+  WhatsApp — e o usuário apontou o problema real que a pesquisa não tinha considerado: o número
+  cadastrado hoje **é o celular pessoal do presidente da igreja**, não uma linha institucional.
+  Promover mais esse link (mensagem pré-preenchida, botão flutuante) aumentaria exposição a
+  spam/trote direto no celular pessoal de uma pessoa específica, não da instituição — o oposto do
+  que valeria a pena. Chatbot de FAQ automatizado segue **não recomendado**, pelo mesmo motivo já
+  identificado antes (custo por conversa, sem volume que justifique, sem equipe técnica pra manter).
+  Decisão final, confirmada com o usuário:
+  - **O link de WhatsApp em `/contato/` continua exatamente como estava** — discreto, texto simples
+    sob "Outros contatos", sem botão flutuante, sem mensagem pré-preenchida, sem nenhum destaque
+    novo. Trocar o número por uma linha institucional é decisão da igreja (fora do escopo de
+    código); o site não força isso, só não promove mais o que já existe.
+  - **Todo o esforço da fase foi pra ampliar de verdade o FAQ**, de 8 para **26 perguntas**, com um
+    princípio rígido: nenhuma resposta nova inventa fato institucional — cada pergunta nova só
+    cobre algo que já é real e já está publicado em outro lugar do próprio site (horário, Pix,
+    RSS, PWA, VLibras, mural de oração, check-in de evento etc.). A única exceção pedindo cautela
+    (faixa etária do Kids) foi respondida reproduzindo o mesmo aviso "ainda a confirmar com a
+    liderança" que já existe em `/kids/`, sem inventar uma idade.
+  - **Nova página dedicada `/duvidas-frequentes/`** (não mais dentro de `/visitante/`) — pedido
+    explícito do usuário: com esse volume de perguntas, colocar tudo na página de visitante ficaria
+    longo demais, e criar mais um item no cabeçalho (já cheio) não era opção. Vira uma subpágina,
+    linkada em `/visitante/` ("Próximos passos") e no rodapé (grupo "Institucional"), igual o
+    padrão já usado por Transparência/Pregadores/Privacidade. Nova coleção Directus `faq`
+    (`pergunta`, `resposta`, `categoria`, `sort`, `draft` — mesmo padrão de `mensagens`/`noticias`,
+    leitura pública), agrupada por categoria com âncora de navegação no topo da página, e a mesma
+    estrutura `FAQPage` (SEO) que antes vivia em `/visitante/` migrou junto pra cá. O campo antigo
+    `visitantes.faq` (Directus) ficou órfão — o dado já foi migrado pra coleção nova, só falta
+    remover o campo antigo do schema (bloqueado neste momento por ser uma exclusão de schema;
+    decisão de quando fazer isso fica com quem administra o Directus).
+  - **Testado**: `astro check` sem erro novo, build real confirmando as 26 perguntas + o JSON-LD
+    `FAQPage` (26 perguntas) no HTML gerado, Playwright contra `astro preview` conferindo
+    visualmente a página nova, a página de visitante sem o FAQ antigo, e o link novo no rodapé.
 
 - **Fase 15 — comunidade (pequenos grupos)**: pequenos grupos/células teriam modelo de dado simples
   (nome/tema, líder, dia, bairro aproximado — não endereço exato, por privacidade), mas **depende de
@@ -1289,7 +1311,7 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 13 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 14 a
+**Fases 0 a 14 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **Das fases 15 a
 24, nada foi construído ainda.** O detalhe completo de cada achado (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as

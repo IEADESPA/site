@@ -14,7 +14,6 @@ interface Visitante {
   boas_vindas: string;
   o_que_esperar: string;
   estrutura: string;
-  faq: { pergunta: string; resposta: string }[];
 }
 
 const allPosts = visiblePosts(await getAllMensagens());
@@ -31,26 +30,13 @@ const nextSteps = [
   { label: "Programação semanal", description: "Veja os dias e horários de cada culto.", href: "/eventos/" },
   { label: "Congregações", description: "Encontre a congregação mais próxima de você.", href: "/congregacoes/" },
   { label: "Como chegar", description: "Endereço, rota e horários da sede.", href: "/contato/" },
+  { label: "Dúvidas frequentes", description: "Perguntas comuns de quem está pensando em visitar.", href: "/duvidas-frequentes/" },
 ];
-
-// FAQPage — deixa a pergunta/resposta elegível pro Google mostrar direto
-// no resultado de busca (rich result de "perguntas frequentes"), sem
-// precisar de nenhum conteúdo novo: já é o mesmo texto que já existe aqui.
-const faqStructuredData = visitante.faq?.length > 0 && {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: visitante.faq.map((item) => ({
-    "@type": "Question",
-    name: item.pergunta,
-    acceptedAnswer: { "@type": "Answer", text: item.resposta },
-  })),
-};
 ---
 
 <BaseLayout
   title="Primeira vez aqui?"
   description={`Informações para quem vai visitar a ${siteConfig.name} pela primeira vez.`}
-  structuredData={faqStructuredData || undefined}
 >
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
@@ -97,23 +83,9 @@ const faqStructuredData = visitante.faq?.length > 0 && {
         </section>
       )}
 
-      {visitante.faq?.length > 0 && (
-        <section class="mt-14" aria-labelledby="faq-heading">
-          <h2 id="faq-heading" class="section-title">Perguntas frequentes</h2>
-          <div class="mt-5 grid gap-3">
-            {visitante.faq.map((item) => (
-              <details class="faq-item">
-                <summary>{item.pergunta}</summary>
-                <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{item.resposta}</p>
-              </details>
-            ))}
-          </div>
-        </section>
-      )}
-
       <section class="mt-16" aria-labelledby="next-steps-heading">
         <h2 id="next-steps-heading" class="section-title">Próximos passos</h2>
-        <div class="mt-5 grid gap-5 sm:grid-cols-3">
+        <div class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {nextSteps.map((step) => (
             <a href={step.href} class="quick-link card-elevated link-title">
               <span class="link-title__text block text-base font-semibold tracking-tight">{step.label}</span>
@@ -144,21 +116,6 @@ const faqStructuredData = visitante.faq?.length > 0 && {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1.1rem 1.25rem;
-  }
-
-  .faq-item {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 1rem 1.25rem;
-  }
-
-  .faq-item summary {
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  .faq-item summary::marker {
-    color: var(--accent);
   }
 
   .quick-link {

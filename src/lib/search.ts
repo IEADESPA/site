@@ -134,6 +134,11 @@ const STATIC_PAGES: { title: string; excerpt: string; href: string }[] = [
   { title: "Galeria", excerpt: "Fotos de cultos e eventos da igreja.", href: "/galeria/" },
   { title: "Transparência", excerpt: "Diretoria e prestação de contas.", href: "/transparencia/" },
   { title: "Primeira vez aqui?", excerpt: "Informações para quem vai visitar pela primeira vez.", href: "/visitante/" },
+  {
+    title: "Dúvidas frequentes",
+    excerpt: "Perguntas comuns sobre visitar, participar e usar o site, organizadas por assunto.",
+    href: "/duvidas-frequentes/",
+  },
   { title: "Contato", excerpt: "Formulário, endereço e mapa.", href: "/contato/" },
   {
     title: "Pedido de oração",
