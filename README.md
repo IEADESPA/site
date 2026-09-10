@@ -1853,9 +1853,10 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
     - **Testado com dado real**: criados 3 eventos de teste (dois no mesmo mês e mesmo local — pra
       confirmar o agrupamento — e um em mês diferente, pra confirmar que o filtro de mês funciona);
       build gerado de verdade, conferido no HTML final que os 3 pontos saem com a coordenada e o
-      `monthKey` certos. Teste local (sem deploy) confirmou que o script roda sem erro de lógica —
-      só bloqueado pelo `RefererNotAllowedMapError` esperado em localhost (mesma limitação de
-      sempre); eventos de teste apagados depois de confirmar em produção.
+      `monthKey` certos. **Confirmado visualmente contra produção** (Playwright, pulando pro mês de
+      abril/2027 pelo seletor do calendário e tirando um print da área do mapa): o pino aparece na
+      cor da marca, no lugar certo, agrupando os dois eventos de teste daquele mês — eventos de
+      teste apagados depois.
   - [ ] **Fase 24.9 — "qual congregação mais perto de você"**: usando a localização do navegador
     contra as coordenadas reais das congregações (Distance Matrix ou cálculo direto de distância) —
     **bloqueada atrás da Fase 24 principal**: só faz sentido depois que as congregações tiverem
