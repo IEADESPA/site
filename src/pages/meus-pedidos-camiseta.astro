@@ -39,15 +39,19 @@ const allPosts = visiblePosts(await getAllMensagens());
   <SiteFooter />
 
   <script>
-    interface Pedido {
-      nome: string;
-      lote: string | null;
+    interface Item {
       tamanho: string | null;
       modelo: string | null;
-      valorVenda: number | null;
+      quantidade: number;
+      quantidadePaga: number;
+      quantidadeRetirada: number;
+    }
+
+    interface Pedido {
+      lote: string | null;
+      valorUnitario: number | null;
       valorPago: number;
-      loteChegou: boolean;
-      entregue: boolean;
+      itens: Item[];
     }
 
     const form = document.querySelector<HTMLFormElement>("[data-consulta-form]");
@@ -61,26 +65,38 @@ const allPosts = visiblePosts(await getAllMensagens());
       return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
     }
 
+    function totalPedido(p: Pedido): number {
+      return p.itens.reduce((soma, i) => soma + i.quantidade, 0) * (p.valorUnitario ?? 0);
+    }
+
     function situacaoPagamento(p: Pedido): string {
-      if (p.valorVenda == null) return "";
-      if (p.valorPago >= p.valorVenda) return "Pago";
-      if (p.valorPago > 0) return `Pago parcial (R$ ${p.valorPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de R$ ${p.valorVenda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})`;
+      const total = totalPedido(p);
+      if (total <= 0) return "";
+      if (p.valorPago >= total) return "Pago";
+      if (p.valorPago > 0) {
+        return `Pago parcial (R$ ${p.valorPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})`;
+      }
       return "Fiado — nada pago ainda";
     }
 
-    function situacaoEntrega(p: Pedido): string {
-      if (p.entregue) return "Já retirado/entregue";
-      if (p.loteChegou) return "Chegou — falta retirar";
-      return "Ainda não chegou";
+    function situacaoItem(i: Item): string {
+      if (i.quantidadeRetirada >= i.quantidade) return "Todas as peças já retiradas";
+      if (i.quantidadeRetirada > 0) return `${i.quantidadeRetirada} de ${i.quantidade} já retiradas`;
+      if (i.quantidadePaga > 0) return `${i.quantidadePaga} paga(s), aguardando retirada`;
+      return "Aguardando pagamento";
+    }
+
+    function itemLinhaHtml(i: Item): string {
+      const rotulo = [i.tamanho, i.modelo].filter((v): v is string => Boolean(v)).map(escapeHtml).join(" · ") || "Item";
+      return `<li>${rotulo} — ${i.quantidade}x — ${escapeHtml(situacaoItem(i))}</li>`;
     }
 
     function pedidoCardHtml(p: Pedido): string {
       return `
         <div class="camiseta-pedido-card">
           <p class="camiseta-pedido-lote">${escapeHtml(p.lote ?? "Pedido")}</p>
-          <p class="camiseta-pedido-detalhe">${[p.tamanho, p.modelo].filter((v): v is string => Boolean(v)).map(escapeHtml).join(" · ") || "—"}</p>
+          <ul class="camiseta-pedido-itens">${p.itens.map(itemLinhaHtml).join("")}</ul>
           <p class="camiseta-pedido-detalhe">${escapeHtml(situacaoPagamento(p))}</p>
-          <p class="camiseta-pedido-detalhe">${escapeHtml(situacaoEntrega(p))}</p>
         </div>
       `;
     }
@@ -128,6 +144,12 @@ const allPosts = visiblePosts(await getAllMensagens());
     }
     .camiseta-pedido-detalhe {
       margin-top: 0.25rem;
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+    }
+    .camiseta-pedido-itens {
+      margin: 0.5rem 0 0;
+      padding-left: 1.1rem;
       font-size: 0.875rem;
       color: var(--muted-foreground);
     }

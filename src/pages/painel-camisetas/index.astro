@@ -47,7 +47,6 @@ const allPosts = visiblePosts(await getAllMensagens());
       id: number;
       nome: string;
       ativo: boolean;
-      chegou: boolean;
     }
 
     const container = document.querySelector<HTMLElement>("[data-directus-url]");
@@ -70,7 +69,7 @@ const allPosts = visiblePosts(await getAllMensagens());
 
     async function carregarLotes() {
       if (!listaEl) return;
-      const res = await fetch(`${directusUrl}/items/camiseta_lotes?fields=id,nome,ativo,chegou&sort=-date_created&limit=-1`, {
+      const res = await fetch(`${directusUrl}/items/camiseta_lotes?fields=id,nome,ativo&sort=-date_created&limit=-1`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
@@ -86,9 +85,7 @@ const allPosts = visiblePosts(await getAllMensagens());
           (lote) => `
             <a href="/painel-camisetas/lote/?id=${lote.id}" class="painel-evento-card painel-evento-link">
               <span class="painel-evento-titulo">${escapeHtml(lote.nome)}</span>
-              <span class="painel-evento-data">
-                ${lote.ativo ? "Ativo" : "Inativo"} · ${lote.chegou ? "Lote chegou" : "Ainda não chegou"}
-              </span>
+              <span class="painel-evento-data">${lote.ativo ? "Ativo" : "Inativo"}</span>
             </a>
           `,
         )

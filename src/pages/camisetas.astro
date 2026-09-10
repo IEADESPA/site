@@ -12,7 +12,6 @@ interface Lote {
   descricao: string | null;
   valor_venda: number | null;
   pedidos_ate: string | null;
-  chegou: boolean;
   evento: { title: string } | null;
   ministerio: { name: string } | null;
 }
@@ -20,7 +19,7 @@ interface Lote {
 const allPosts = visiblePosts(await getAllMensagens());
 const lotes = await fetchItems<Lote>(
   "camiseta_lotes",
-  "filter[ativo][_eq]=true&fields=slug,nome,descricao,valor_venda,pedidos_ate,chegou,evento.title,ministerio.name&sort=-date_created",
+  "filter[ativo][_eq]=true&fields=slug,nome,descricao,valor_venda,pedidos_ate,evento.title,ministerio.name&sort=-date_created",
 );
 
 const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });

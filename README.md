@@ -1419,36 +1419,81 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      fluxo de "esqueci a senha" por e-mail) e decidiu registrar como possível fase futura separada,
      não construir agora.
 
-  **O que foi construído**:
+  **O que foi construído (primeira rodada)**:
   - Duas coleções novas no Directus: `camiseta_lotes` (nome, slug, descrição, `evento`/`ministerio`
     opcionais, `modelos`/`tamanhos` como listas, `valor_custo` — nunca público — `valor_venda`,
-    `pedidos_ate`, `chegou` do lote inteiro, `ativo`) e `camiseta_pedidos` (nome, telefone-hash,
-    tamanho, modelo, `valor_pago`, `entregue` da peça daquela pessoa), com `ON DELETE CASCADE` já
-    criado corretamente desde o início (não via PATCH depois — ver o bug já documentado na Fase 20).
+    `pedidos_ate`, `ativo`) e `camiseta_pedidos`, com `ON DELETE CASCADE` já criado corretamente
+    desde o início (não via PATCH depois — ver o bug já documentado na Fase 20).
   - Público: `/camisetas/` (lista os lotes ativos), `/camiseta/[slug]/` (detalhe + formulário de
-    pedido — nome, telefone, tamanho, modelo), e `/meus-pedidos-camiseta/` (consulta só com
-    telefone, sem código, mostrando tamanho/modelo, situação de pagamento — quitado/parcial/fiado —
-    e situação de entrega — não chegou/chegou mas não retirado/já retirado).
+    pedido), e `/meus-pedidos-camiseta/` (consulta só com telefone, sem código).
   - Nova Azure Function `consultar-pedidos-camiseta` (mesmo papel de `verificar-inscricao`: como
     `camiseta_pedidos` não tem leitura pública, a consulta por telefone passa por aqui, comparando
     hash com o token de admin).
-  - Painel de gestão novo, `/painel-camisetas/` (login, lista de lotes, edição de lote, e a aba de
-    pedidos com estatísticas — total arrecadado, total esperado, lucro estimado, quantos devendo,
-    quantos já entregues, e contagem por tamanho pra saber quanto pedir de folga/encaixe) — mesma
-    conta do Directus já usada em `/painel-eventos/`, sem senha nova nenhuma. `src/lib/painelAuth.ts`
-    foi generalizado (token e caminho de login configuráveis por painel, com os valores antigos como
-    padrão) pra servir os dois painéis sem duplicar a lógica de autenticação inteira.
-  - Links adicionados na navegação (rodapé "Participe" e "Equipe") e no índice de busca do site.
-  - `privacidade.astro` atualizado com o novo dado tratado.
+  - Painel de gestão novo, `/painel-camisetas/` — mesma conta do Directus já usada em
+    `/painel-eventos/`, sem senha nova nenhuma. `src/lib/painelAuth.ts` foi generalizado (token e
+    caminho de login configuráveis por painel, com os valores antigos como padrão) pra servir os
+    dois painéis sem duplicar a lógica de autenticação inteira.
+  - Links na navegação (rodapé "Participe" e "Equipe") e no índice de busca do site.
 
-  **Testado de ponta a ponta com dados reais** (criados e apagados depois, via API com token de
-  admin): criado um lote de teste com tamanhos/modelos/valores reais; confirmado que `/camisetas/`
-  e `/camiseta/[slug]/` renderizam certo; criado um pedido de teste com hash de telefone gerado de
-  verdade (mesma função `gerarHash` do projeto); confirmado que `camiseta_pedidos` **não** tem
-  leitura pública (403 numa tentativa direta); reproduzida a lógica exata da Function de consulta
-  contra os dados reais — telefone certo encontra o pedido, telefone errado não encontra nada;
-  simulado o painel marcando pagamento parcial; excluído o lote de teste e confirmado que o
-  `CASCADE` apagou o pedido junto, sem deixar registro órfão.
+  **Segunda rodada, no mesmo dia — o usuário descreveu a necessidade real, bem mais rica que a
+  primeira versão**: um carrinho de verdade (várias combinações de tamanho/modelo num pedido só,
+  com quantidade), congregação de quem pediu (pra saber "quais igrejas pedem mais"), pagamento
+  parcial quando o pedido tem mais de uma peça (só retira o que já foi pago), estoque de reposição
+  chegando aos poucos por tamanho/modelo (sem esperar o lote inteiro), e venda avulsa lançada só
+  pela equipe (presencial, sem passar pelo formulário público) que conta nas mesmas estatísticas
+  mas **não** entra na conta de "quanto falta encomendar do fornecedor" — porque uma venda avulsa
+  usa uma peça que já existe em estoque (sobra de outro lote, por exemplo), não gera uma encomenda
+  nova. Perguntado ao usuário (e respondido) antes de remodelar: (1) carrinho com várias
+  combinações por pedido — confirmado, "como se fosse uma loja mesmo"; (2) estoque granular por
+  tamanho/modelo — confirmado; (3) venda avulsa na mesma lista, não separada — confirmado, só com
+  uma marcação pra não contar como nova encomenda.
+
+  **Modelagem final**:
+  - `camiseta_pedidos` virou o "cabeçalho do carrinho": nome, telefone-hash (agora opcional — só
+    pedido público exige, venda avulsa não tem telefone nenhum), `congregacao` (opcional, vínculo
+    com a coleção que já existe), `valor_pago` (um valor só, cobrindo todos os itens do carrinho),
+    `avulso` (marca quando foi a equipe que lançou, não o formulário público).
+  - `camiseta_itens_pedido` (nova): as linhas do carrinho — `pedido`, `tamanho`, `modelo`,
+    `quantidade`, `quantidade_retirada` (quantas dessa linha já foram entregues fisicamente).
+  - `camiseta_estoque` (nova): quantidade física recebida por lote+tamanho+modelo, cumulativa,
+    lançada manualmente pela equipe conforme a mercadoria chega — independente de o lote "estar
+    completo" ou não.
+  - **Alocação de pagamento parcial contra várias peças**: como existe um valor pago só pra várias
+    linhas do carrinho, a conta de "quantas peças de cada linha já estão pagas" é calculada (não
+    guardada) em ordem de cadastro dos itens — o primeiro item consome o pagamento primeiro. Ex.:
+    carrinho com 5x G-feminino a R$ 50, pago R$ 150 → 3 peças "pagas", 2 ainda não — reproduz
+    exatamente o exemplo dado pelo usuário (pediu 5, pagou 3, leva 3, ficam 2 reservadas). A
+    quantidade retirável nunca passa da quantidade paga, e quem decide quando marcar retirada é a
+    equipe (o sistema só calcula o limite, não bloqueia — mesmo espírito de confiança na equipe já
+    usado nas aprovações manuais de evento).
+  - **Reserva liberada por falta de pagamento/retirada** não precisou de um mecanismo próprio: como
+    o estoque físico só é debitado no momento da retirada de verdade (nunca no momento do pedido),
+    uma reserva que nunca é paga/retirada simplesmente nunca consome estoque nenhum — outra pessoa
+    pode receber a mesma peça física livremente. "Liberar" uma reserva velha é só excluir o pedido
+    (ação que já existia) — não foi preciso um botão dedicado.
+
+  **Testado de ponta a ponta com dados reais**, reproduzindo o exemplo exato dado pelo usuário
+  (criados e apagados depois, via API com token de admin):
+  - **Bug real encontrado e corrigido**: o pedido público (`camiseta_pedidos`) não tinha nenhuma
+    permissão pública de leitura — Directus responde `204 Sem Conteúdo` num `create` sem permissão
+    de leitura, então o navegador nunca conseguia saber o `id` do pedido recém-criado pra anexar os
+    itens do carrinho a ele. Corrigido com uma permissão pública de leitura bem restrita (só o
+    campo `id`, nada sensível) — mesmo padrão que `inscricoes_eventos` já usava e que eu não tinha
+    replicado na primeira rodada.
+  - **Bug real encontrado e corrigido**: os campos reversos `itens` (em `camiseta_pedidos`) e
+    `estoque` (em `camiseta_lotes`) nunca tinham sido criados como campo — a relação existia no
+    banco, mas consultar `fields=itens.*`/`fields=estoque.*` dava erro de permissão até pro próprio
+    token de admin, porque o alias nunca tinha sido registrado. Corrigido criando os dois campos
+    `alias`/`o2m` que faltavam.
+  - **Bug real encontrado e corrigido**: `telefone` era um campo obrigatório no banco — quebrava a
+    venda avulsa, que de propósito não tem telefone nenhum. Corrigido tornando o campo opcional.
+  - Depois dos três ajustes: criado um lote de teste; simulado o pedido público de 5x G-feminino
+    com hash de telefone gerado de verdade; equipe marcando R$ 150 pagos (3 de 5) — replicada a
+    lógica exata da Function de consulta e confirmado `quantidadePaga: 3`; registrada uma entrada
+    de estoque de 10 G-feminino; registrada uma venda avulsa de 2 G-feminino já retiradas —
+    confirmado que ela soma no arrecadado/lucro mas **não** soma na conta de "falta encomendar"
+    (ficou em 0, porque as 5 pedidas já cabem nas 10 em estoque); excluído o lote de teste e
+    confirmado que o `CASCADE` apagou pedidos, itens **e** estoque juntos, sem registro órfão.
 
   **Por que não é só "mais um campo no evento"**: uma camiseta/uniforme muitas vezes não pertence a
   um evento só — um ministério pode ter um uniforme único que vale pro ano inteiro, pra toda

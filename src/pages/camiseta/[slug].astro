@@ -19,6 +19,11 @@ interface Lote {
   ministerio: { name: string } | null;
 }
 
+interface Congregacao {
+  id: number;
+  name: string;
+}
+
 export async function getStaticPaths() {
   const lotes = await fetchItems<Lote>(
     "camiseta_lotes",
@@ -33,9 +38,14 @@ interface Props {
 
 const { lote } = Astro.props;
 const allPosts = visiblePosts(await getAllMensagens());
+const congregacoes = (await fetchItems<Congregacao>("congregacoes", "fields=id,name&sort=name")).sort((a, b) =>
+  a.name.localeCompare(b.name, "pt-BR"),
+);
 const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() < Date.now() : false;
+const tamanhos = lote.tamanhos ?? [];
+const modelos = lote.modelos ?? [];
 ---
 
 <BaseLayout title={lote.nome} description={lote.descricao ?? `Faça seu pedido de ${lote.nome}.`}>
@@ -50,7 +60,7 @@ const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() <
 
       <ul class="mt-6 grid gap-2 text-sm">
         {lote.valor_venda != null && (
-          <li><strong class="text-foreground">Valor:</strong> R$ {Number(lote.valor_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</li>
+          <li><strong class="text-foreground">Valor por peça:</strong> R$ {Number(lote.valor_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</li>
         )}
         {lote.pedidos_ate && (
           <li><strong class="text-foreground">Pedidos até:</strong> {dateFormatter.format(new Date(lote.pedidos_ate))}</li>
@@ -61,7 +71,7 @@ const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() <
         prazoEncerrado ? (
           <p class="mt-6 text-sm leading-relaxed text-muted-foreground">O prazo para fazer pedido deste lote já encerrou.</p>
         ) : (
-          <form class="mt-8 grid gap-4 max-w-md" data-pedido-form data-lote-id={lote.id}>
+          <form class="mt-8 grid gap-4 max-w-lg" data-pedido-form data-lote-id={lote.id}>
             <div class="grid gap-2">
               <label class="text-sm font-semibold" for="pedido-nome">Nome</label>
               <input id="pedido-nome" name="nome" type="text" autocomplete="name" required class="field" />
@@ -75,28 +85,22 @@ const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() <
                 <a href="/meus-pedidos-camiseta/" class="underline underline-offset-2">Meus pedidos</a>.
               </p>
             </div>
-            {
-              lote.tamanhos && lote.tamanhos.length > 0 && (
-                <div class="grid gap-2">
-                  <label class="text-sm font-semibold" for="pedido-tamanho">Tamanho</label>
-                  <select id="pedido-tamanho" class="field" required>
-                    <option value="">Selecione…</option>
-                    {lote.tamanhos.map((tamanho) => <option value={tamanho}>{tamanho}</option>)}
-                  </select>
-                </div>
-              )
-            }
-            {
-              lote.modelos && lote.modelos.length > 0 && (
-                <div class="grid gap-2">
-                  <label class="text-sm font-semibold" for="pedido-modelo">Modelo</label>
-                  <select id="pedido-modelo" class="field" required>
-                    <option value="">Selecione…</option>
-                    {lote.modelos.map((modelo) => <option value={modelo}>{modelo}</option>)}
-                  </select>
-                </div>
-              )
-            }
+            <div class="grid gap-2">
+              <label class="text-sm font-semibold" for="pedido-congregacao">Congregação</label>
+              <select id="pedido-congregacao" class="field">
+                <option value="">— Não informar —</option>
+                {congregacoes.map((c) => <option value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            <fieldset class="grid gap-2">
+              <legend class="text-sm font-semibold">Itens do pedido</legend>
+              <div class="grid gap-3" data-itens-lista></div>
+              <button type="button" class="btn btn-outline mt-1" data-item-adicionar>+ Adicionar item</button>
+            </fieldset>
+
+            <p class="text-sm font-semibold" data-pedido-total></p>
+
             <div class="flex flex-wrap items-center gap-4">
               <button type="submit" class="btn btn-solid">Fazer pedido</button>
               <p class="text-sm leading-relaxed text-muted-foreground" role="status" aria-live="polite" data-pedido-status />
@@ -114,16 +118,86 @@ const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() <
 
   {
     !prazoEncerrado && (
-      <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, telefoneHashUrl: TELEFONE_HASH_URL, loteId: lote.id }}>
+      <script
+        is:inline
+        define:vars={{
+          directusUrl: DIRECTUS_URL,
+          telefoneHashUrl: TELEFONE_HASH_URL,
+          loteId: lote.id,
+          tamanhos,
+          modelos,
+          valorVenda: lote.valor_venda,
+        }}
+      >
         const form = document.querySelector("[data-pedido-form]");
+        const itensLista = document.querySelector("[data-itens-lista]");
+        const totalEl = document.querySelector("[data-pedido-total]");
+
+        function linhaItemHtml() {
+          const tamanhoOpcoes = tamanhos.length
+            ? `<option value="">Tamanho…</option>${tamanhos.map((t) => `<option value="${t}">${t}</option>`).join("")}`
+            : `<option value="">—</option>`;
+          const modeloOpcoes = modelos.length
+            ? `<option value="">Modelo…</option>${modelos.map((m) => `<option value="${m}">${m}</option>`).join("")}`
+            : `<option value="">—</option>`;
+          return `
+            <div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center item-linha">
+              <select class="field" data-item-tamanho ${tamanhos.length ? "required" : "disabled"}>${tamanhoOpcoes}</select>
+              <select class="field" data-item-modelo ${modelos.length ? "required" : "disabled"}>${modeloOpcoes}</select>
+              <input type="number" min="1" value="1" class="field item-qtd" data-item-quantidade title="Quantidade" />
+              <button type="button" class="btn btn-outline" data-item-remover>Remover</button>
+            </div>
+          `;
+        }
+
+        function atualizarTotal() {
+          if (!totalEl) return;
+          const linhas = Array.from(document.querySelectorAll(".item-linha"));
+          const totalQtd = linhas.reduce((soma, linha) => soma + (Number(linha.querySelector("[data-item-quantidade]")?.value) || 0), 0);
+          if (valorVenda != null) {
+            const totalValor = totalQtd * Number(valorVenda);
+            totalEl.textContent = totalQtd > 0 ? `Total: ${totalQtd} peça(s) — R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "";
+          } else {
+            totalEl.textContent = totalQtd > 0 ? `Total: ${totalQtd} peça(s)` : "";
+          }
+        }
+
+        itensLista?.insertAdjacentHTML("beforeend", linhaItemHtml());
+
+        document.querySelector("[data-item-adicionar]")?.addEventListener("click", () => {
+          itensLista?.insertAdjacentHTML("beforeend", linhaItemHtml());
+        });
+
+        itensLista?.addEventListener("click", (event) => {
+          if (event.target.matches("[data-item-remover]")) {
+            const linhas = document.querySelectorAll(".item-linha");
+            if (linhas.length > 1) event.target.closest(".item-linha")?.remove();
+            atualizarTotal();
+          }
+        });
+
+        itensLista?.addEventListener("input", atualizarTotal);
+        atualizarTotal();
 
         form?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const data = new FormData(form);
           const button = form.querySelector('button[type="submit"]');
           const status = form.querySelector("[data-pedido-status]");
-          const tamanhoEl = document.getElementById("pedido-tamanho");
-          const modeloEl = document.getElementById("pedido-modelo");
+          const congregacaoEl = document.getElementById("pedido-congregacao");
+
+          const itens = Array.from(document.querySelectorAll(".item-linha"))
+            .map((linha) => ({
+              tamanho: linha.querySelector("[data-item-tamanho]")?.value || null,
+              modelo: linha.querySelector("[data-item-modelo]")?.value || null,
+              quantidade: Number(linha.querySelector("[data-item-quantidade]")?.value) || 0,
+            }))
+            .filter((item) => item.quantidade > 0);
+
+          if (itens.length === 0) {
+            if (status) status.textContent = "Adicione pelo menos um item com quantidade.";
+            return;
+          }
 
           if (button) button.disabled = true;
           if (status) status.textContent = "Enviando…";
@@ -137,21 +211,33 @@ const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() <
             if (!hashRes.ok) throw new Error("falha ao proteger telefone");
             const telefoneHash = (await hashRes.json()).valor;
 
-            const res = await fetch(`${directusUrl}/items/camiseta_pedidos`, {
+            const pedidoRes = await fetch(`${directusUrl}/items/camiseta_pedidos`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 lote: loteId,
                 nome: String(data.get("nome")).trim(),
                 telefone: telefoneHash,
-                tamanho: tamanhoEl ? tamanhoEl.value : null,
-                modelo: modeloEl ? modeloEl.value : null,
+                congregacao: congregacaoEl && congregacaoEl.value ? Number(congregacaoEl.value) : null,
               }),
             });
-            if (!res.ok) throw new Error("falha ao criar pedido");
+            if (!pedidoRes.ok) throw new Error("falha ao criar pedido");
+            const pedidoId = (await pedidoRes.json()).data.id;
+
+            await Promise.all(
+              itens.map((item) =>
+                fetch(`${directusUrl}/items/camiseta_itens_pedido`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ pedido: pedidoId, tamanho: item.tamanho, modelo: item.modelo, quantidade: item.quantidade }),
+                }),
+              ),
+            );
 
             if (status) status.textContent = "✅ Pedido registrado! Acompanhe em \"Meus pedidos\", com o seu telefone.";
             form.reset();
+            document.querySelectorAll(".item-linha").forEach((linha, indice) => { if (indice > 0) linha.remove(); });
+            atualizarTotal();
           } catch {
             if (status) status.textContent = "Não foi possível enviar agora. Tente novamente em instantes.";
             if (button) button.disabled = false;
@@ -161,9 +247,17 @@ const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() <
     )
   }
 
-  <style>
+  <style is:global>
     .camiseta-canvas {
-      max-width: 40rem;
+      max-width: 42rem;
+    }
+    .item-linha {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.75rem;
+    }
+    .item-qtd {
+      width: 5rem;
     }
   </style>
 </BaseLayout>
