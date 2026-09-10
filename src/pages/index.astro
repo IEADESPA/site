@@ -178,14 +178,87 @@ const quickLinks = [
             <blockquote class="verse-card">
               <p class="verse-text" data-verse-text>&ldquo;{versiculoInicial.t}&rdquo;</p>
               <footer class="verse-ref" data-verse-ref>{versiculoInicial.r}</footer>
-              <button type="button" class="verse-listen-btn" data-verse-listen-btn hidden>
-                <LocalIcon name="volume-up-fill" className="h-4 w-4" />
-                <span data-verse-listen-label>Ouvir</span>
-              </button>
+              <div class="verse-actions">
+                <button type="button" class="verse-listen-btn" data-verse-listen-btn hidden>
+                  <LocalIcon name="volume-up-fill" className="h-4 w-4" />
+                  <span data-verse-listen-label>Ouvir</span>
+                </button>
+                <button type="button" class="verse-listen-btn" data-verse-share-btn>
+                  <LocalIcon name="share" className="h-4 w-4" />
+                  <span data-verse-share-label>Compartilhar imagem</span>
+                </button>
+              </div>
             </blockquote>
             <p class="verse-credit">
               Texto: <a href="https://github.com/blivre/BibliaLivre" target="_blank" rel="noreferrer">Bíblia Livre (BLIVRE)</a>, licença CC-BY 3.0 Brasil.
             </p>
+            <script is:inline>
+              (() => {
+                /*
+                 * Gera uma imagem de verdade (`/api/versiculo-imagem`, Azure
+                 * Function com `sharp` — precisa ser calculada a cada
+                 * request, diferente do card de programação semanal, porque
+                 * o versículo muda de dia pra dia) e tenta abrir o menu
+                 * nativo de compartilhar do celular com a imagem já anexada
+                 * (Stories, WhatsApp etc.). Sem suporte a isso (a maioria dos
+                 * navegadores de computador), cai pra baixar o arquivo direto.
+                 */
+                const btn = document.querySelector("[data-verse-share-btn]");
+                const label = document.querySelector("[data-verse-share-label]");
+                if (!btn) return;
+
+                const baixar = (blob) => {
+                  const blobUrl = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = blobUrl;
+                  link.download = "versiculo-do-dia.png";
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  URL.revokeObjectURL(blobUrl);
+                };
+
+                const restaurar = () => {
+                  btn.disabled = false;
+                  if (label) label.textContent = "Compartilhar imagem";
+                };
+
+                btn.addEventListener("click", async () => {
+                  if (label) label.textContent = "Gerando…";
+                  btn.disabled = true;
+                  try {
+                    const res = await fetch("/api/versiculo-imagem");
+                    if (!res.ok) throw new Error("falha ao gerar imagem");
+                    const blob = await res.blob();
+                    const file = new File([blob], "versiculo-do-dia.png", { type: "image/png" });
+
+                    if (navigator.canShare?.({ files: [file] })) {
+                      try {
+                        await navigator.share({ files: [file] });
+                        restaurar();
+                        return;
+                      } catch (err) {
+                        // Pessoa cancelou o próprio menu de compartilhar —
+                        // não é erro nenhum, só não faz nada a mais.
+                        if (err?.name === "AbortError") {
+                          restaurar();
+                          return;
+                        }
+                      }
+                    }
+                    baixar(blob);
+                    restaurar();
+                  } catch {
+                    if (label) label.textContent = "Não foi possível gerar a imagem";
+                    btn.disabled = false;
+                    // Mesmo padrão do botão de copiar código do artigo:
+                    // mensagem de erro visível por um tempo, depois volta ao
+                    // normal sozinha — sem o "finally" apagar o aviso na hora.
+                    window.setTimeout(restaurar, 2500);
+                  }
+                });
+              })();
+            </script>
             <script is:inline>
               (() => {
                 /* Não grava nem guarda áudio nenhum: usa a leitura em voz
@@ -399,11 +472,17 @@ const quickLinks = [
     font-size: 0.875rem;
   }
 
+  .verse-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.9rem;
+  }
+
   .verse-listen-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    margin-top: 0.9rem;
     padding: 0.3rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-full, 999px);
@@ -416,6 +495,11 @@ const quickLinks = [
 
   .verse-listen-btn:hover {
     background: var(--muted);
+  }
+
+  .verse-listen-btn:disabled {
+    cursor: default;
+    opacity: 0.6;
   }
 
   .verse-credit {

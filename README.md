@@ -1110,20 +1110,44 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       `entrevistado_papel` preenchidos, removida depois do teste): build real confirmando a linha
       "Entrevista com..." no HTML gerado, e Playwright confirmando visualmente o resultado.
 
-- **Fase 19 — cartão de versículo compartilhável**: reaproveita 100% a técnica já construída e em
-  produção do cartão de programação semanal (`programacao-semanal.png.ts`, SVG + `sharp`, sem
-  serviço externo) pra gerar uma imagem do versículo do dia já existente, pronta pra Stories/feed,
-  com botão "Compartilhar imagem" ao lado do "Ouvir" (`navigator.share()` com fallback pra
-  download). É o item de maior alcance orgânico por menor esforço encontrado nesta leva — ao
-  contrário de um kit de imprensa formal (avaliado e **descartado**: demanda real baixíssima pra
-  esse porte de igreja, mesmo padrão de outras ideias já rejeitadas), uma imagem de versículo é algo
-  que o próprio público usaria todo dia. Se um dia surgir pedido real de logo/foto em alta
-  resolução por terceiro, resolver com 2-3 arquivos soltos em `public/`, não uma página de imprensa
-  dedicada — e antes de disponibilizar qualquer foto real pra download livre, confirmar que o termo
-  de consentimento de imagem cobre esse uso específico (mais amplo que só aparecer na Galeria).
-  Devocional diário com reflexão original e plano de leitura bíblica anual construído do zero foram
-  pesquisados e **descartados** (ver "Ideias rejeitadas") — o "versículo do dia" já existente
-  cumpre esse papel sem risco de abandono.
+- [x] **Fase 19 — cartão de versículo compartilhável.** Construído e testado com o runtime real do
+  Azure Functions (`func start`, não só `astro preview`), não com a técnica de
+  `programacao-semanal.png.ts` (essa é estática, gerada uma vez no build — funciona pra programação
+  semanal porque quase não muda, mas geraria sempre o mesmo versículo "congelado" do dia do último
+  deploy). Como o versículo muda de período em período (Fase já existente, madrugada/manhã/tarde/
+  noite), a imagem precisa ser calculada a cada pedido de verdade — por isso é uma nova **Azure
+  Function** (`api/src/functions/versiculoImagem.js`, `GET /api/versiculo-imagem`), não um endpoint
+  estático do Astro.
+  - Mesma técnica de sempre (SVG montado na mão + `sharp` → PNG, sem serviço externo nenhum), e o
+    **mesmo critério de seleção do versículo** já usado no `index.astro` (período do dia calculado
+    em horário de Brasília + `epochDays % tamanho`) — a imagem gerada bate exatamente com o
+    versículo mostrado na home nesse mesmo dia, buscando o mesmo arquivo público
+    `/versiculos-{período}.json` que o site já publica.
+  - Botão **"Compartilhar imagem"** ao lado do "Ouvir": busca a imagem, tenta abrir o menu nativo
+    de compartilhar do celular já com a imagem anexada (`navigator.share` com arquivo — funciona
+    pra Stories, WhatsApp etc.), e cai pro download direto do PNG quando o navegador não suporta
+    compartilhar arquivo (a maioria dos computadores). Cancelar o menu de compartilhar não aciona o
+    fallback de download (`AbortError` tratado à parte) — só um erro de verdade (rede fora, etc.)
+    cai pro download.
+  - **Bug real corrigido durante a implementação, antes de qualquer teste**: a primeira versão
+    tinha um `finally` que restaurava o texto do botão pro padrão, apagando a mensagem de erro na
+    hora que ela aparecia — corrigido pro mesmo padrão já usado no botão de copiar código dos
+    artigos (mensagem transitória com `setTimeout`, sem depender de `finally` genérico).
+  - **Testado de ponta a ponta com o runtime real** (`azure-functions-core-tools` via `npx`, já que
+    não estava instalado global — mais o emulador `@azure/static-web-apps-cli` apontando pro
+    servidor de funções real, não só o site estático): a imagem foi gerada de verdade contra o
+    arquivo de versículos em produção, o layout foi ajustado depois de ver a primeira versão
+    renderizada (o texto centralizava contra a altura da tela inteira, sobrando espaço vazio
+    demais embaixo — corrigido pra centralizar só na faixa de conteúdo, abaixo do cabeçalho e
+    acima do rodapé), e o clique no botão foi testado com Playwright, confirmando o download real
+    do PNG (107KB) quando `navigator.share` de arquivo não está disponível.
+  - Kit de imprensa formal segue **descartado** (demanda real baixíssima pra esse porte de igreja);
+    se um dia surgir pedido real de logo/foto em alta resolução por terceiro, resolver com 2-3
+    arquivos soltos em `public/`, não uma página dedicada — e antes de disponibilizar qualquer foto
+    real pra download livre, confirmar que o termo de consentimento de imagem cobre esse uso
+    específico (mais amplo que só aparecer na Galeria). Devocional diário com reflexão original e
+    plano de leitura bíblica anual seguem **descartados** (ver "Ideias rejeitadas") — o "versículo
+    do dia" já existente cumpre esse papel.
 
 - **Fase 20 — acervo histórico ampliado**: pedida pelo usuário depois de ver a linha do tempo visual
   construída pra histórico de liderança de órgão (Fase 1) — a mesma ideia, só que pro acervo da
@@ -1356,9 +1380,9 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-**Fases 0 a 14, 17 e 18 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
+**Fases 0 a 14, 17, 18 e 19 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
 fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
-construído"). **Das fases 19 a 24, nada foi construído ainda.** O detalhe completo de cada achado
+construído"). **Das fases 20 a 24, nada foi construído ainda.** O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
