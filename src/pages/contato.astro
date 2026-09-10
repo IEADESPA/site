@@ -6,11 +6,12 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { DIRECTUS_URL, enderecoCompleto, enderecoMapsQuery, fetchConfiguracoes, mapsHref } from "@/lib/directus";
-import { churchStructuredData, getAllProgramacao, sedeProgramacao } from "@/lib/programacao";
+import { churchStructuredData, getAllProgramacao, sedeProgramacao, sedeProgramacaoCompacta } from "@/lib/programacao";
 
 const allPosts = visiblePosts(await getAllMensagens());
 const config = await fetchConfiguracoes();
-const sedeSchedule = sedeProgramacao(await getAllProgramacao());
+const programacao = await getAllProgramacao();
+const sedeSchedule = sedeProgramacao(programacao);
 const structuredData = churchStructuredData(
   config,
   sedeSchedule,
@@ -21,17 +22,21 @@ const structuredData = churchStructuredData(
 const contact = siteConfig.contact;
 const instagram = siteConfig.socials.find((social) => social.label === "Instagram");
 const isEnabled = contact.enabled;
-/* Fase 24 — quando o perfil real da Sede no Google Maps está confirmado
-   (google_maps_place_query preenchido em Configurações), o mapa referencia
-   esse perfil de verdade via Maps Embed API (chave restrita por domínio,
-   ver README/site.ts) — cartão com fotos/avaliação, não só um pino calculado
-   por texto de endereço. Sem isso preenchido, cai pro embed antigo (busca
-   por endereço, sem chave de API nenhuma) — mesmo critério usado pras
-   congregações: nunca publicar mapa sem perfil confirmado. */
-const mapsEmbedSrc = config.google_maps_place_query
-  ? `https://www.google.com/maps/embed/v1/place?key=${siteConfig.googleMapsEmbedKey}&q=${encodeURIComponent(config.google_maps_place_query)}`
-  : `https://www.google.com/maps?q=${encodeURIComponent(enderecoMapsQuery(config))}&output=embed`;
+/* Fase 24.1 — quando o perfil real da Sede no Google Maps está confirmado
+   (google_maps_place_query preenchido em Configurações) E as coordenadas
+   existem, o mapa vira um mapa de verdade com a Maps JavaScript API —
+   marcador nas cores da igreja, caixinha com horários de culto e "Ver
+   rota" ao clicar — em vez do cartão padrão do Google (Maps Embed API,
+   usada até aqui). Sem isso preenchido, cai pro embed por busca de
+   endereço de sempre, sem chave de API nenhuma — mesmo critério de "nunca
+   publicar mapa sem perfil confirmado" já usado no resto da Fase 24. */
+const usaMapaProprio = Boolean(config.google_maps_place_query && config.lat && config.lng);
+const mapsEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(enderecoMapsQuery(config))}&output=embed`;
 const mapsLinkHref = mapsHref(config);
+
+const horarioResumo = sedeProgramacaoCompacta(programacao)
+  .map((item) => `<strong>${item.label}:</strong> ${item.title}${item.time ? ` — ${item.time}` : ""}`)
+  .join("<br />");
 ---
 
 <BaseLayout
@@ -95,15 +100,21 @@ const mapsLinkHref = mapsHref(config);
           </ul>
 
           <div class="mt-8 overflow-hidden rounded-[var(--radius-md)] border border-border">
-            <iframe
-              title="Mapa com a localização da igreja"
-              src={mapsEmbedSrc}
-              width="100%"
-              height="280"
-              style="border:0"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-            ></iframe>
+            {
+              usaMapaProprio ? (
+                <div id="sede-map" style="height:280px" data-sede-map />
+              ) : (
+                <iframe
+                  title="Mapa com a localização da igreja"
+                  src={mapsEmbedSrc}
+                  width="100%"
+                  height="280"
+                  style="border:0"
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                />
+              )
+            }
           </div>
         </div>
 
@@ -197,6 +208,73 @@ const mapsLinkHref = mapsHref(config);
     </div>
   </main>
   <SiteFooter />
+
+  {
+    usaMapaProprio && (
+      <script
+        is:inline
+        define:vars={{
+          googleMapsKey: siteConfig.googleMapsEmbedKey,
+          lat: config.lat,
+          lng: config.lng,
+          nomeSede: siteConfig.name,
+          horarioResumo,
+          mapsLinkHref,
+        }}
+      >
+        window.initSedeMap = function initSedeMap() {
+          const container = document.querySelector("[data-sede-map]");
+          if (!container) return;
+
+          const posicao = { lat: Number(lat), lng: Number(lng) };
+
+          const map = new google.maps.Map(container, {
+            center: posicao,
+            zoom: 16,
+            disableDefaultUI: false,
+            fullscreenControl: true,
+            streetViewControl: false,
+            mapTypeControl: false,
+          });
+
+          // Marcador nas cores da marca (var(--accent), fixo aqui porque o
+          // script roda antes de qualquer CSS ler custom property de tema).
+          const marker = new google.maps.Marker({
+            position: posicao,
+            map,
+            title: nomeSede,
+            icon: {
+              path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z",
+              fillColor: "#8f6f1f",
+              fillOpacity: 1,
+              strokeColor: "#6b5417",
+              strokeWeight: 1,
+              scale: 1.8,
+              anchor: new google.maps.Point(12, 22),
+            },
+          });
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `
+              <div style="font-family: system-ui, sans-serif; max-width: 220px;">
+                <p style="margin:0 0 6px;font-weight:700;">${nomeSede}</p>
+                <p style="margin:0 0 8px;font-size:0.8125rem;line-height:1.5;">${horarioResumo}</p>
+                <a href="${mapsLinkHref}" target="_blank" rel="noreferrer" style="font-size:0.8125rem;font-weight:600;color:#8f6f1f;">Ver rota &rarr;</a>
+              </div>
+            `,
+          });
+
+          marker.addListener("click", () => infoWindow.open(map, marker));
+          infoWindow.open(map, marker);
+        };
+
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsKey}&callback=initSedeMap`;
+        script.async = true;
+        document.head.appendChild(script);
+      </script>
+    )
+  }
 
   {
     isEnabled && (

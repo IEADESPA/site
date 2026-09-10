@@ -1654,10 +1654,20 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   explicitamente pra ir aos poucos, "pra não ficar pesado numa rodada só"). Sub-fases registradas,
   nenhuma construída ainda:
 
-  - [ ] **Fase 24.1 — mapa da Sede com estilo próprio**: trocar o embed genérico (Maps Embed API,
-    já funcionando) por um mapa de verdade com a **Maps JavaScript API** — marcador customizado nas
-    cores da igreja, caixinha de informação ao clicar (horários de culto, botão "Ver rota"), em vez
-    do cartão padrão do Google.
+  - [x] **Fase 24.1 — mapa da Sede com estilo próprio — construído**: trocado o embed genérico (Maps
+    Embed API) por um mapa de verdade com a **Maps JavaScript API**, em `/contato/` — marcador em
+    forma de pino nas cores da marca (`#8f6f1f`), caixinha de informação que abre sozinha ao carregar
+    (nome da igreja, resumo dos horários de culto — `sedeProgramacaoCompacta`, já usada na home — e
+    link "Ver rota"), clicável de novo no marcador. Só ativa quando `google_maps_place_query` e
+    `lat`/`lng` existem (`usaMapaProprio`); sem isso, cai pro embed por busca de endereço de sempre —
+    mesmo critério de "nunca publicar sem perfil confirmado" do resto da fase.
+    - **Testado**: confirmado por `curl` (com o cabeçalho `Referer` do domínio real, que só `curl`
+      consegue simular — o navegador não permite falsificar isso) que a Maps JavaScript API aceita a
+      chave pro domínio certo. Testado também com Playwright contra o build local — o script
+      carrega e tenta montar o mapa de verdade (confirma que o código roda sem erro de sintaxe/API),
+      mas o **Google recusa o carregamento completo em localhost** (`RefererNotAllowedMapError`),
+      exatamente como esperado — é a mesma limitação de sempre pra chave restrita por domínio, só
+      dá pra confirmar 100% depois do deploy no domínio de verdade.
   - [ ] **Fase 24.2 — foto de rua (Street View) da Sede**: imagem real da fachada via Street View
     Static API, em `/contato/` e/ou `/visitante/` — ajuda quem nunca foi a reconhecer o prédio
     chegando, sem depender de a igreja tirar e enviar uma foto.
