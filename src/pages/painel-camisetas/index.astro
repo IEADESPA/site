@@ -27,7 +27,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       <div hidden data-painel-conteudo>
         <div class="mt-8 flex flex-wrap items-baseline justify-between gap-3">
           <h2 class="section-title">Lotes de camiseta/uniforme</h2>
-          <button type="button" class="btn btn-solid" data-painel-novo-lote>+ Novo lote</button>
+          <button type="button" class="btn btn-solid" data-painel-novo-grupo>+ Nova camiseta</button>
         </div>
 
         <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-painel-lotes-lista>
@@ -59,7 +59,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     const usuarioEl = document.querySelector<HTMLElement>("[data-painel-usuario]");
     const sairBtn = document.querySelector<HTMLButtonElement>("[data-painel-sair]");
     const listaEl = document.querySelector<HTMLElement>("[data-painel-lotes-lista]");
-    const novoBtn = document.querySelector<HTMLButtonElement>("[data-painel-novo-lote]");
+    const novoBtn = document.querySelector<HTMLButtonElement>("[data-painel-novo-grupo]");
 
     let token = "";
 
@@ -69,7 +69,7 @@ const allPosts = visiblePosts(await getAllMensagens());
 
     async function carregarLotes() {
       if (!listaEl) return;
-      const res = await fetch(`${directusUrl}/items/camiseta_lotes?fields=id,nome,ativo&sort=-date_created&limit=-1`, {
+      const res = await fetch(`${directusUrl}/items/camiseta_grupos?fields=id,nome,ativo&sort=-date_created&limit=-1`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
@@ -83,7 +83,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       listaEl.innerHTML = lotes
         .map(
           (lote) => `
-            <a href="/painel-camisetas/lote/?id=${lote.id}" class="painel-evento-card painel-evento-link">
+            <a href="/painel-camisetas/grupo/?id=${lote.id}" class="painel-evento-card painel-evento-link">
               <span class="painel-evento-titulo">${escapeHtml(lote.nome)}</span>
               <span class="painel-evento-data">${lote.ativo ? "Ativo" : "Inativo"}</span>
             </a>
@@ -97,13 +97,13 @@ const allPosts = visiblePosts(await getAllMensagens());
       if (!t) return;
       novoBtn.disabled = true;
       try {
-        const res = await fetch(`${directusUrl}/items/camiseta_lotes`, {
+        const res = await fetch(`${directusUrl}/items/camiseta_grupos`, {
           method: "POST",
           headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ nome: "Novo lote", ativo: true }),
+          body: JSON.stringify({ nome: "Nova camiseta", ativo: true }),
         });
         const json = await res.json();
-        window.location.href = `/painel-camisetas/lote/?id=${json.data.id}`;
+        window.location.href = `/painel-camisetas/grupo/?id=${json.data.id}`;
       } catch {
         novoBtn.disabled = false;
       }

@@ -59,7 +59,7 @@ app.http("consultar-pedidos-camiseta", {
     const headers = { Authorization: `Bearer ${DIRECTUS_ADMIN_TOKEN}` };
 
     const pedidosRes = await fetch(
-      `${DIRECTUS_URL}/items/camiseta_pedidos?fields=id,nome,telefone,valor_pago,avulso,lote.nome,lote.valor_venda&limit=-1`,
+      `${DIRECTUS_URL}/items/camiseta_pedidos?fields=id,nome,telefone,valor_pago,avulso,grupo.nome,grupo.valor_venda&limit=-1`,
       { headers },
     );
     if (!pedidosRes.ok) {
@@ -82,12 +82,12 @@ app.http("consultar-pedidos-camiseta", {
 
     const resultado = meusPedidos.map((p) => {
       const itensDoPedido = todosItens.filter((i) => i.pedido === p.id);
-      const valorUnitario = Number(p.lote?.valor_venda ?? 0);
+      const valorUnitario = Number(p.grupo?.valor_venda ?? 0);
       const itensComAlocacao = alocarPagamento(itensDoPedido, Number(p.valor_pago ?? 0), valorUnitario);
 
       return {
-        lote: p.lote?.nome ?? null,
-        valorUnitario: p.lote?.valor_venda ?? null,
+        lote: p.grupo?.nome ?? null,
+        valorUnitario: p.grupo?.valor_venda ?? null,
         valorPago: p.valor_pago,
         itens: itensComAlocacao.map((i) => ({
           tamanho: i.tamanho,

@@ -1541,15 +1541,38 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   [CreateMyTee — Group Order](https://www.createmytee.com/About/GroupOrder/),
   [Fourthwall — Church Group T-Shirts](https://fourthwall.com/make-your-own/church-group-t-shirts).
 
-- **Fase 23 — opinião pública (enquetes) e destaque de notícias na página inicial**: pedida pelo
-  usuário na mesma conversa, junto com a Fase 22 — **também só registro, não construir agora**.
-  Enquete/opinião pública provavelmente pertence à aba de Notícias, como um tipo de publicação a
-  mais (ao lado do texto normal). Separadamente, o usuário quer poder **fixar/destacar notícias
-  importantes na página inicial** — deu como exemplo o próprio anúncio de camiseta/uniforme (Fase
-  22) ou um evento especial — hoje a home não tem esse tipo de destaque fixável, só o feed normal.
-  As duas ideias precisam de mais conversa antes de virar plano (que tipo de pergunta uma enquete
-  aceita, quem pode fixar/desafixar da home, quantos itens fixados ao mesmo tempo) — por isso ficam
-  só como intenção registrada, não como escopo fechado igual às Fases 21 e 22.
+- **Fase 23 — opinião pública (enquetes) e destaque de eventos/camisetas na página inicial**:
+  pedida pelo usuário junto com a Fase 22. As duas metades tiveram destinos diferentes depois de
+  conversar sobre cada uma:
+
+  **Enquete/opinião pública — adiada de propósito, virou pré-requisito da Fase 26**: sem login de
+  membro, não existe jeito confiável de impedir voto repetido — a única opção seria algo frágil
+  (`localStorage`, burlável limpando os dados ou trocando de aparelho), e o usuário decidiu
+  explicitamente que não compensa construir isso agora ("seria quase uma bagunça de formulário
+  Google"). Fica esperando a Fase 26 (perfil/login integrado) existir.
+
+  - [x] **Destaque de evento/camiseta na página inicial (carrossel) — construído**: depois de
+    conversar, ficou definido que só **eventos e camisetas** entram (não notícia solta — notícia
+    não tem uma "data final" natural que justifique expiração automática, então ficaria inconsistente
+    com o resto). Decisões confirmadas com o usuário antes de construir:
+    - **Carrossel, não um banner único** — o usuário deu o próprio exemplo: uma camiseta pode ficar
+      destacada o ano inteiro, ao mesmo tempo em que um seminário de 3 meses também está destacado.
+    - **Expira sozinho, pela data real da coisa** — evento usa `end_date` (ou `event_date` se não
+      tiver data final); camiseta usa `pedidos_ate`, se tiver um definido. "Inscrições até dia 7,
+      não tem porque aparecer no dia 8" — foi o exemplo dado.
+    - **Remoção manual também precisa existir** — pra quando tiver um motivo (evento cancelado,
+      etc.) sem esperar a data. Cobrido desmarcando "Destacar" (ou "Ativo", no caso de camiseta) no
+      Directus/painel — não expira só por data, tem os dois caminhos.
+    - **Implementação**: campo `destaque` novo em `eventos` e em `camiseta_grupos`. O carrossel
+      (`src/components/DestaqueCarousel.astro`) busca os dois no build, mas a expiração de verdade
+      é conferida no **navegador de quem visita** (comparando a data de hoje do visitante contra a
+      data limite de cada item), não só na data do último build — necessário porque o site é 100%
+      estático e pode passar dias sem reconstruir; sem isso, um destaque venceria só depois do
+      próximo build acontecer por outro motivo, não no dia certo.
+    - **Testado de ponta a ponta com dados reais**: criado um evento de destaque com data **já
+      passada** (não devia aparecer) e outro com data **futura** (devia aparecer), com Playwright
+      abrindo o build de verdade — confirmado que o script no navegador removeu o expirado e manteve
+      só o válido, e que os "pontinhos" do carrossel somem sozinhos quando resta 1 item só.
 
 - **Fase 24 — mapas de verdade com Google Maps Platform**: pedida pelo
   usuário, condicionada a ele configurar antes um projeto no Google Cloud com faturamento ativado —
@@ -1601,8 +1624,8 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      atingir um valor pequeno, ex.: US$ 1) — rede de segurança caso algum uso inesperado passe da
      cota grátis.
 
-- **Fase 25 — newsletter/e-mail em massa + nome de exibição do remetente (última fase
-  planejada)**: registrada depois que o e-mail transacional da Fase 21 (Azure Communication
+- **Fase 25 — newsletter/e-mail em massa + nome de exibição do remetente**: registrada depois que
+  o e-mail transacional da Fase 21 (Azure Communication
   Services) já ficou funcionando de ponta a ponta — **só registro, análise fica pra quando chegar
   na fase**, não decidido ainda se compensa construir.
   1. **Newsletter/aviso em massa por e-mail** — revisitar a rejeição anterior (ver "Newsletter por
@@ -1623,9 +1646,18 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      endereço em `senderAddress`, sem campo de nome de exibição). O usuário tentou editar esse campo
      no Portal e não encontrou como; fica pra revisitar junto desta fase.
 
-**Fases 0 a 14, 17 a 22 já foram construídas e testadas** (ver o `[x]` de cada uma acima). **As
-fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não vai ser
-construído"). **Das fases 23 a 25, nada foi construído ainda.** O detalhe completo de cada achado
+- **Fase 26 — perfil/login integrado para o público em geral (última fase planejada)**: registrada
+  como pré-requisito da metade de enquete da Fase 23 — sem uma conta de verdade pro visitante
+  comum (diferente do login de equipe que já existe em `/painel-eventos/`/`/painel-camisetas/`, e
+  diferente do Portal do Membro externo já linkado na home), não tem como impedir voto repetido
+  numa enquete de forma confiável. **Só registro, não construir agora** — nenhum desenho de escopo
+  feito ainda (o que a conta guarda, como ela se relaciona com o Portal do Membro que já existe
+  externamente, se substitui ou convive com ele) — fica pra quando chegar nesta fase.
+
+**Fases 0 a 14, 17 a 22 e a metade de destaque da 23 já foram construídas e testadas** (ver o `[x]`
+de cada uma acima). **As fases 15 e 16 foram descartadas em definitivo** (não é "falta construir",
+é "não vai ser construído"). **Da metade de enquete da 23 e das fases 24 a 26, nada foi construído
+ainda.** O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as

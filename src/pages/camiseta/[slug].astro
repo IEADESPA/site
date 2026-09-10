@@ -25,11 +25,11 @@ interface Congregacao {
 }
 
 export async function getStaticPaths() {
-  const lotes = await fetchItems<Lote>(
-    "camiseta_lotes",
+  const grupos = await fetchItems<Lote>(
+    "camiseta_grupos",
     "filter[ativo][_eq]=true&fields=*,evento.title,ministerio.name",
   );
-  return lotes.map((lote) => ({ params: { slug: lote.slug }, props: { lote } }));
+  return grupos.map((lote) => ({ params: { slug: lote.slug }, props: { lote } }));
 }
 
 interface Props {
@@ -215,7 +215,7 @@ const modelos = lote.modelos ?? [];
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                lote: loteId,
+                grupo: loteId,
                 nome: String(data.get("nome")).trim(),
                 telefone: telefoneHash,
                 congregacao: congregacaoEl && congregacaoEl.value ? Number(congregacaoEl.value) : null,

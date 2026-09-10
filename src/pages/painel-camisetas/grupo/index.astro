@@ -10,21 +10,21 @@ const eventos = await fetchItems<{ id: number; title: string }>("eventos", "fiel
 const ministerios = await fetchItems<{ id: number; name: string }>("ministerios", "fields=id,name&sort=name");
 ---
 
-<BaseLayout title="Editar lote — Gestão de camisetas" description="Área restrita da equipe." noindex>
+<BaseLayout title="Editar camiseta — Gestão de camisetas" description="Área restrita da equipe." noindex>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas" style="max-width: 42rem;" data-directus-url={DIRECTUS_URL}>
       <header class="pagehead">
         <p class="eyebrow"><a href="/painel-camisetas/" class="text-accent">← Gestão de camisetas</a></p>
         <div class="flex flex-wrap items-baseline justify-between gap-3">
-          <h1 class="pagehead-title" data-painel-titulo>Lote</h1>
-          <a href="/painel-camisetas/lote/pedidos/" class="btn btn-outline" data-link-pedidos hidden>Ver pedidos</a>
+          <h1 class="pagehead-title" data-painel-titulo>Camiseta</h1>
+          <a href="/painel-camisetas/grupo/pedidos/" class="btn btn-outline" data-link-pedidos hidden>Ver pedidos e lotes de compra</a>
         </div>
         <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
       </header>
 
       <div hidden data-painel-erro class="gallery-empty mt-8">
-        <p class="text-sm text-muted-foreground">Lote não encontrado.</p>
+        <p class="text-sm text-muted-foreground">Não encontrado.</p>
       </div>
 
       <form hidden class="mt-8 grid gap-5 max-w-2xl" data-lote-form>
@@ -36,7 +36,7 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
         <div class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
           <div class="grid gap-2">
             <label class="text-sm font-semibold" for="f-slug">Endereço (slug)</label>
-            <input id="f-slug" class="field" placeholder="nome-do-lote" />
+            <input id="f-slug" class="field" placeholder="nome-da-camiseta" />
           </div>
           <button type="button" class="btn btn-outline" data-gerar-slug>Gerar do nome</button>
         </div>
@@ -63,8 +63,8 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
           </div>
         </div>
         <p class="text-xs text-muted-foreground">
-          Um lote pode ter nenhum, um, ou os dois vínculos ao mesmo tempo — ex.: uniforme fixo de um
-          ministério não precisa de evento nenhum; camiseta de uma marcha pode ter só o evento.
+          Uma camiseta pode ter nenhum, um, ou os dois vínculos ao mesmo tempo — ex.: uniforme fixo
+          de um ministério não precisa de evento nenhum; camiseta de uma marcha pode ter só o evento.
         </p>
 
         <div class="grid gap-4 sm:grid-cols-2">
@@ -79,16 +79,15 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
         </div>
         <p class="text-xs text-muted-foreground">Deixe um campo em branco pra não pedir essa escolha no formulário público.</p>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div class="grid gap-2">
-            <label class="text-sm font-semibold" for="f-valor-custo">Valor de custo (não aparece ao público)</label>
-            <input id="f-valor-custo" type="number" step="0.01" min="0" class="field" />
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-semibold" for="f-valor-venda">Valor de venda (aparece ao público)</label>
-            <input id="f-valor-venda" type="number" step="0.01" min="0" class="field" />
-          </div>
+        <div class="grid gap-2">
+          <label class="text-sm font-semibold" for="f-valor-venda">Valor de venda (aparece ao público)</label>
+          <input id="f-valor-venda" type="number" step="0.01" min="0" class="field" />
         </div>
+        <p class="text-xs text-muted-foreground">
+          O custo por peça não fica aqui — cada encomenda feita ao fornecedor vira um "lote de
+          compra" próprio (aba Pedidos e lotes de compra), com seu próprio custo, porque o preço
+          pode mudar de uma encomenda pra outra ao longo do ano.
+        </p>
 
         <div class="grid gap-2">
           <label class="text-sm font-semibold" for="f-pedidos-ate">Pedidos até (opcional)</label>
@@ -101,15 +100,25 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
           </label>
         </div>
 
+        <div class="grid gap-3">
+          <label class="flex items-start gap-2 text-sm">
+            <input id="f-destaque" type="checkbox" class="mt-1" />
+            <span>
+              <strong>Destacar na página inicial</strong> (carrossel) — some sozinho quando "Pedidos
+              até" passar (ou quando "Ativo" for desmarcado, se não tiver prazo definido).
+            </span>
+          </label>
+        </div>
+
         <div class="flex items-center gap-4">
-          <button type="submit" class="btn btn-solid" data-lote-salvar>Salvar lote</button>
+          <button type="submit" class="btn btn-solid" data-lote-salvar>Salvar</button>
           <p class="text-sm" data-lote-status role="status" aria-live="polite"></p>
         </div>
 
         <div class="mt-6" style="border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem;">
-          <p class="text-sm font-semibold text-red-700">Excluir lote</p>
-          <p class="mt-1 text-sm text-muted-foreground">Remove o lote e todos os pedidos ligados a ele. Não pode ser desfeito.</p>
-          <button type="button" class="btn btn-outline mt-3" data-excluir-lote>Excluir lote</button>
+          <p class="text-sm font-semibold text-red-700">Excluir</p>
+          <p class="mt-1 text-sm text-muted-foreground">Remove esta camiseta, seus lotes de compra e todos os pedidos ligados a ela. Não pode ser desfeito.</p>
+          <button type="button" class="btn btn-outline mt-3" data-excluir-lote>Excluir</button>
           <p class="mt-2 text-sm" data-excluir-status role="status" aria-live="polite"></p>
         </div>
       </form>
@@ -122,7 +131,7 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
 
     const AUTH = { tokenKey: "painel_camisetas_token", loginPath: "/painel-camisetas/entrar/" };
 
-    interface Lote {
+    interface Grupo {
       id: number;
       nome: string;
       slug: string | null;
@@ -131,10 +140,10 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
       ministerio: number | null;
       tamanhos: string[] | null;
       modelos: string[] | null;
-      valor_custo: number | null;
       valor_venda: number | null;
       pedidos_ate: string | null;
       ativo: boolean;
+      destaque: boolean;
     }
 
     const container = document.querySelector<HTMLElement>("[data-directus-url]");
@@ -142,7 +151,7 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
     const directusUrl = container.dataset.directusUrl ?? "";
 
     const idParam = new URLSearchParams(window.location.search).get("id");
-    const loteId = idParam ? Number(idParam) : null;
+    const grupoId = idParam ? Number(idParam) : null;
 
     const carregando = document.querySelector<HTMLElement>("[data-painel-carregando]");
     const erroEl = document.querySelector<HTMLElement>("[data-painel-erro]");
@@ -158,10 +167,10 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
     const fMinisterio = el<HTMLSelectElement>("f-ministerio");
     const fTamanhos = el<HTMLInputElement>("f-tamanhos");
     const fModelos = el<HTMLInputElement>("f-modelos");
-    const fValorCusto = el<HTMLInputElement>("f-valor-custo");
     const fValorVenda = el<HTMLInputElement>("f-valor-venda");
     const fPedidosAte = el<HTMLInputElement>("f-pedidos-ate");
     const fAtivo = el<HTMLInputElement>("f-ativo");
+    const fDestaque = el<HTMLInputElement>("f-destaque");
 
     function slugify(texto: string): string {
       return texto
@@ -183,18 +192,18 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
         .filter(Boolean);
     }
 
-    function preencherFormulario(lote: Lote) {
-      fNome.value = lote.nome ?? "";
-      fSlug.value = lote.slug ?? "";
-      fDescricao.value = lote.descricao ?? "";
-      fEvento.value = lote.evento ? String(lote.evento) : "";
-      fMinisterio.value = lote.ministerio ? String(lote.ministerio) : "";
-      fTamanhos.value = (lote.tamanhos ?? []).join(", ");
-      fModelos.value = (lote.modelos ?? []).join(", ");
-      fValorCusto.value = lote.valor_custo != null ? String(lote.valor_custo) : "";
-      fValorVenda.value = lote.valor_venda != null ? String(lote.valor_venda) : "";
-      fPedidosAte.value = lote.pedidos_ate ?? "";
-      fAtivo.checked = Boolean(lote.ativo);
+    function preencherFormulario(grupo: Grupo) {
+      fNome.value = grupo.nome ?? "";
+      fSlug.value = grupo.slug ?? "";
+      fDescricao.value = grupo.descricao ?? "";
+      fEvento.value = grupo.evento ? String(grupo.evento) : "";
+      fMinisterio.value = grupo.ministerio ? String(grupo.ministerio) : "";
+      fTamanhos.value = (grupo.tamanhos ?? []).join(", ");
+      fModelos.value = (grupo.modelos ?? []).join(", ");
+      fValorVenda.value = grupo.valor_venda != null ? String(grupo.valor_venda) : "";
+      fPedidosAte.value = grupo.pedidos_ate ?? "";
+      fAtivo.checked = Boolean(grupo.ativo);
+      fDestaque.checked = Boolean(grupo.destaque);
     }
 
     function lerFormulario() {
@@ -206,10 +215,10 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
         ministerio: fMinisterio.value ? Number(fMinisterio.value) : null,
         tamanhos: csvParaLista(fTamanhos.value),
         modelos: csvParaLista(fModelos.value),
-        valor_custo: fValorCusto.value ? Number(fValorCusto.value) : null,
         valor_venda: fValorVenda.value ? Number(fValorVenda.value) : null,
         pedidos_ate: fPedidosAte.value || null,
         ativo: fAtivo.checked,
+        destaque: fDestaque.checked,
       };
     }
 
@@ -218,26 +227,26 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
       if (!tokenObtido) return;
       const token: string = tokenObtido;
 
-      if (!loteId) {
+      if (!grupoId) {
         if (carregando) carregando.hidden = true;
         if (erroEl) erroEl.hidden = false;
         return;
       }
 
-      const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${directusUrl}/items/camiseta_grupos/${grupoId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         if (carregando) carregando.hidden = true;
         if (erroEl) erroEl.hidden = false;
         return;
       }
-      const lote: Lote = (await res.json()).data;
+      const grupo: Grupo = (await res.json()).data;
 
-      if (tituloEl) tituloEl.textContent = lote.nome;
-      preencherFormulario(lote);
+      if (tituloEl) tituloEl.textContent = grupo.nome;
+      preencherFormulario(grupo);
 
       const linkPedidos = document.querySelector<HTMLAnchorElement>("[data-link-pedidos]");
       if (linkPedidos) {
-        linkPedidos.href = `/painel-camisetas/lote/pedidos/?id=${loteId}`;
+        linkPedidos.href = `/painel-camisetas/grupo/pedidos/?id=${grupoId}`;
         linkPedidos.hidden = false;
       }
 
@@ -248,7 +257,7 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
         event.preventDefault();
         if (statusEl) statusEl.textContent = "Salvando…";
         try {
-          const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, {
+          const res = await fetch(`${directusUrl}/items/camiseta_grupos/${grupoId}`, {
             method: "PATCH",
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify(lerFormulario()),
@@ -262,10 +271,10 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
 
       document.querySelector("[data-excluir-lote]")?.addEventListener("click", async () => {
         const excluirStatus = document.querySelector<HTMLElement>("[data-excluir-status]");
-        if (!confirm(`Excluir "${lote.nome}"? Isso apaga o lote e todos os pedidos ligados a ele. Não pode ser desfeito.`)) return;
+        if (!confirm(`Excluir "${grupo.nome}"? Isso apaga os lotes de compra e todos os pedidos ligados a ela. Não pode ser desfeito.`)) return;
         if (excluirStatus) excluirStatus.textContent = "Excluindo…";
         try {
-          const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, {
+          const res = await fetch(`${directusUrl}/items/camiseta_grupos/${grupoId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           });

@@ -17,8 +17,8 @@ interface Lote {
 }
 
 const allPosts = visiblePosts(await getAllMensagens());
-const lotes = await fetchItems<Lote>(
-  "camiseta_lotes",
+const grupos = await fetchItems<Lote>(
+  "camiseta_grupos",
   "filter[ativo][_eq]=true&fields=slug,nome,descricao,valor_venda,pedidos_ate,evento.title,ministerio.name&sort=-date_created",
 );
 
@@ -41,25 +41,25 @@ const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "num
       </header>
 
       {
-        lotes.length === 0 ? (
+        grupos.length === 0 ? (
           <div class="gallery-empty mt-8">
-            <p class="text-sm text-muted-foreground">Nenhum lote aberto no momento.</p>
+            <p class="text-sm text-muted-foreground">Nenhuma camiseta aberta no momento.</p>
           </div>
         ) : (
           <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {lotes.map((lote) => (
-              <a href={`/camiseta/${lote.slug}/`} class="camiseta-lote-card">
-                <span class="camiseta-lote-nome">{lote.nome}</span>
-                {(lote.evento || lote.ministerio) && (
-                  <span class="camiseta-lote-vinculo">{lote.evento?.title ?? lote.ministerio?.name}</span>
+            {grupos.map((grupo) => (
+              <a href={`/camiseta/${grupo.slug}/`} class="camiseta-lote-card">
+                <span class="camiseta-lote-nome">{grupo.nome}</span>
+                {(grupo.evento || grupo.ministerio) && (
+                  <span class="camiseta-lote-vinculo">{grupo.evento?.title ?? grupo.ministerio?.name}</span>
                 )}
-                {lote.valor_venda != null && (
+                {grupo.valor_venda != null && (
                   <span class="camiseta-lote-valor">
-                    R$ {Number(lote.valor_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    R$ {Number(grupo.valor_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 )}
-                {lote.pedidos_ate && (
-                  <span class="camiseta-lote-prazo">Pedidos até {dateFormatter.format(new Date(lote.pedidos_ate))}</span>
+                {grupo.pedidos_ate && (
+                  <span class="camiseta-lote-prazo">Pedidos até {dateFormatter.format(new Date(grupo.pedidos_ate))}</span>
                 )}
               </a>
             ))}

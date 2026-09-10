@@ -8,18 +8,18 @@ import { getAllMensagens, visiblePosts } from "@/lib/posts";
 const allPosts = visiblePosts(await getAllMensagens());
 ---
 
-<BaseLayout title="Pedidos — Gestão de camisetas" description="Área restrita da equipe." noindex>
+<BaseLayout title="Pedidos e lotes de compra — Gestão de camisetas" description="Área restrita da equipe." noindex>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas" data-directus-url={DIRECTUS_URL}>
       <header class="pagehead">
         <p class="eyebrow"><a href="/painel-camisetas/" class="text-accent">← Gestão de camisetas</a></p>
-        <h1 class="pagehead-title" data-painel-titulo>Pedidos</h1>
+        <h1 class="pagehead-title" data-painel-titulo>Pedidos e lotes de compra</h1>
         <p class="pagehead-description" data-painel-carregando>Verificando sua sessão…</p>
       </header>
 
       <div hidden data-painel-erro class="gallery-empty mt-8">
-        <p class="text-sm text-muted-foreground">Lote não encontrado.</p>
+        <p class="text-sm text-muted-foreground">Não encontrado.</p>
       </div>
 
       <div hidden data-painel-conteudo>
@@ -29,6 +29,10 @@ const allPosts = visiblePosts(await getAllMensagens());
           <div class="stat-card"><p class="stat-numero" data-stat="esperado">R$ 0</p><p class="stat-label">Esperado (total)</p></div>
           <div class="stat-card"><p class="stat-numero" data-stat="lucro">R$ 0</p><p class="stat-label">Lucro estimado</p></div>
         </div>
+        <p class="mt-2 text-xs text-muted-foreground">
+          Lucro estimado usa o custo médio por peça entre os lotes de compra já lançados (o custo
+          real pode variar peça a peça, já que o preço muda de encomenda pra encomenda).
+        </p>
 
         <div class="mt-8 grid gap-6 lg:grid-cols-2">
           <div>
@@ -36,7 +40,7 @@ const allPosts = visiblePosts(await getAllMensagens());
             <p class="mt-1 text-sm text-muted-foreground">Pedido = quantidade pedida (sem contar venda avulsa, que já sai de estoque existente).</p>
             <div class="mt-3 overflow-x-auto">
               <table class="tabela-camiseta">
-                <thead><tr><th>Tamanho</th><th>Modelo</th><th>Pedido</th><th>Em estoque</th><th>Falta encomendar</th></tr></thead>
+                <thead><tr><th>Tamanho</th><th>Modelo</th><th>Pedido</th><th>Recebido (lotes)</th><th>Falta encomendar</th></tr></thead>
                 <tbody data-tamanhos-corpo></tbody>
               </table>
             </div>
@@ -48,19 +52,23 @@ const allPosts = visiblePosts(await getAllMensagens());
         </div>
 
         <div class="mt-8">
-          <h2 class="section-title">Estoque recebido</h2>
-          <p class="mt-1 text-sm text-muted-foreground">Registre aqui as peças que já chegaram fisicamente (do fornecedor, por tamanho/modelo) — não precisa esperar o lote inteiro chegar pra começar a entregar.</p>
+          <h2 class="section-title">Lotes de compra</h2>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Cada encomenda feita ao fornecedor vira um lote de compra aqui, com seu próprio custo —
+            não precisa esperar todos os lotes chegarem pra começar a entregar.
+          </p>
           <div class="mt-4 overflow-x-auto">
             <table class="tabela-camiseta">
-              <thead><tr><th>Tamanho</th><th>Modelo</th><th>Quantidade recebida</th><th></th></tr></thead>
-              <tbody data-estoque-corpo></tbody>
+              <thead><tr><th>Tamanho</th><th>Modelo</th><th>Quantidade</th><th>Custo/peça</th><th></th></tr></thead>
+              <tbody data-lotes-corpo></tbody>
             </table>
           </div>
-          <div class="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] max-w-lg" data-estoque-novo>
-            <input type="text" class="field" placeholder="Tamanho" data-novo-estoque-tamanho />
-            <input type="text" class="field" placeholder="Modelo" data-novo-estoque-modelo />
-            <input type="number" min="0" class="field" placeholder="Qtd" style="width:6rem" data-novo-estoque-quantidade />
-            <button type="button" class="btn btn-outline" data-adicionar-estoque>Adicionar</button>
+          <div class="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto] max-w-2xl" data-lote-novo>
+            <input type="text" class="field" placeholder="Tamanho" data-novo-lote-tamanho />
+            <input type="text" class="field" placeholder="Modelo" data-novo-lote-modelo />
+            <input type="number" min="0" class="field" placeholder="Qtd" style="width:6rem" data-novo-lote-quantidade />
+            <input type="number" step="0.01" min="0" class="field" placeholder="Custo/peça" style="width:7rem" data-novo-lote-custo />
+            <button type="button" class="btn btn-outline" data-adicionar-lote>Adicionar</button>
           </div>
         </div>
 
@@ -89,8 +97,7 @@ const allPosts = visiblePosts(await getAllMensagens());
           </div>
           <p class="text-xs text-muted-foreground">
             Venda avulsa não entra na contagem de "falta encomendar" — o entendimento é que essa
-            peça já saiu de um estoque existente (sobra de outro lote, por exemplo), não de uma
-            encomenda nova ao fornecedor.
+            peça já saiu de um lote de compra existente, não gerou uma encomenda nova.
           </p>
         </div>
 
@@ -111,10 +118,9 @@ const allPosts = visiblePosts(await getAllMensagens());
 
     const AUTH = { tokenKey: "painel_camisetas_token", loginPath: "/painel-camisetas/entrar/" };
 
-    interface Lote {
+    interface Grupo {
       id: number;
       nome: string;
-      valor_custo: number | null;
       valor_venda: number | null;
       tamanhos: string[] | null;
       modelos: string[] | null;
@@ -137,11 +143,12 @@ const allPosts = visiblePosts(await getAllMensagens());
       itens: Item[];
     }
 
-    interface EstoqueLinha {
+    interface LoteCompra {
       id: number;
       tamanho: string | null;
       modelo: string | null;
       quantidade: number;
+      valor_custo: number | null;
     }
 
     const container = document.querySelector<HTMLElement>("[data-directus-url]");
@@ -149,7 +156,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     const directusUrl = container.dataset.directusUrl ?? "";
 
     const idParam = new URLSearchParams(window.location.search).get("id");
-    const loteId = idParam ? Number(idParam) : null;
+    const grupoId = idParam ? Number(idParam) : null;
 
     const carregando = document.querySelector<HTMLElement>("[data-painel-carregando]");
     const erroEl = document.querySelector<HTMLElement>("[data-painel-erro]");
@@ -158,12 +165,12 @@ const allPosts = visiblePosts(await getAllMensagens());
     const listaEl = document.querySelector<HTMLElement>("[data-pedidos-lista]");
     const tamanhosCorpoEl = document.querySelector<HTMLElement>("[data-tamanhos-corpo]");
     const congregacoesResumoEl = document.querySelector<HTMLElement>("[data-congregacoes-resumo]");
-    const estoqueCorpoEl = document.querySelector<HTMLElement>("[data-estoque-corpo]");
+    const lotesCorpoEl = document.querySelector<HTMLElement>("[data-lotes-corpo]");
 
     let token = "";
-    let lote: Lote;
+    let grupo: Grupo;
     let pedidos: Pedido[] = [];
-    let estoque: EstoqueLinha[] = [];
+    let lotesCompra: LoteCompra[] = [];
     let filtroAtivo: "todos" | "devendo" | "pendente-retirada" = "todos";
 
     function escapeHtml(value: string) {
@@ -175,14 +182,19 @@ const allPosts = visiblePosts(await getAllMensagens());
       return p.itens.reduce((s, i) => s + i.quantidade, 0);
     }
     function totalPedido(p: Pedido): number {
-      return totalItens(p) * (lote.valor_venda ?? 0);
+      return totalItens(p) * (grupo.valor_venda ?? 0);
     }
     function devendo(p: Pedido): boolean {
       return Number(p.valor_pago) < totalPedido(p);
     }
+    function custoMedioPorPeca(): number {
+      const totalQtd = lotesCompra.reduce((s, l) => s + l.quantidade, 0);
+      if (totalQtd === 0) return 0;
+      const totalCusto = lotesCompra.reduce((s, l) => s + l.quantidade * Number(l.valor_custo ?? 0), 0);
+      return totalCusto / totalQtd;
+    }
     function temPendenteRetirada(p: Pedido): boolean {
-      // alocação: primeiro item cadastrado consome pagamento primeiro
-      let restante = (lote.valor_venda ?? 0) > 0 ? Number(p.valor_pago) / Number(lote.valor_venda) : 0;
+      let restante = (grupo.valor_venda ?? 0) > 0 ? Number(p.valor_pago) / Number(grupo.valor_venda) : 0;
       for (const item of p.itens) {
         const paga = Math.max(0, Math.min(item.quantidade, Math.floor(restante)));
         restante -= paga;
@@ -193,13 +205,13 @@ const allPosts = visiblePosts(await getAllMensagens());
 
     function atualizarStats() {
       const stat = (nome: string) => document.querySelector<HTMLElement>(`[data-stat="${nome}"]`);
-      const venda = lote.valor_venda ?? 0;
-      const custo = lote.valor_custo ?? 0;
+      const venda = grupo.valor_venda ?? 0;
+      const custoMedio = custoMedioPorPeca();
 
       const arrecadado = pedidos.reduce((s, p) => s + Number(p.valor_pago || 0), 0);
       const totalPecas = pedidos.reduce((s, p) => s + totalItens(p), 0);
       const esperado = totalPecas * venda;
-      const lucro = totalPecas * (venda - custo);
+      const lucro = totalPecas * (venda - custoMedio);
 
       const t = stat("total"); if (t) t.textContent = String(pedidos.length);
       const a = stat("arrecadado"); if (a) a.textContent = brl(arrecadado);
@@ -216,19 +228,19 @@ const allPosts = visiblePosts(await getAllMensagens());
             pedidoPorCombo.set(k, (pedidoPorCombo.get(k) ?? 0) + item.quantidade);
           });
         });
-        const estoquePorCombo = new Map<string, number>();
-        estoque.forEach((e) => estoquePorCombo.set(chave(e.tamanho, e.modelo), (estoquePorCombo.get(chave(e.tamanho, e.modelo)) ?? 0) + e.quantidade));
+        const recebidoPorCombo = new Map<string, number>();
+        lotesCompra.forEach((l) => recebidoPorCombo.set(chave(l.tamanho, l.modelo), (recebidoPorCombo.get(chave(l.tamanho, l.modelo)) ?? 0) + l.quantidade));
 
-        const combos = new Set([...pedidoPorCombo.keys(), ...estoquePorCombo.keys()]);
+        const combos = new Set([...pedidoPorCombo.keys(), ...recebidoPorCombo.keys()]);
         tamanhosCorpoEl.innerHTML = combos.size
           ? Array.from(combos)
               .sort()
               .map((k) => {
                 const [tamanho, modelo] = k.split("|||");
                 const pedido = pedidoPorCombo.get(k) ?? 0;
-                const emEstoque = estoquePorCombo.get(k) ?? 0;
-                const falta = Math.max(0, pedido - emEstoque);
-                return `<tr><td>${escapeHtml(tamanho)}</td><td>${escapeHtml(modelo)}</td><td>${pedido}</td><td>${emEstoque}</td><td>${falta}</td></tr>`;
+                const recebido = recebidoPorCombo.get(k) ?? 0;
+                const falta = Math.max(0, pedido - recebido);
+                return `<tr><td>${escapeHtml(tamanho)}</td><td>${escapeHtml(modelo)}</td><td>${pedido}</td><td>${recebido}</td><td>${falta}</td></tr>`;
               })
               .join("")
           : `<tr><td colspan="5" class="text-sm text-muted-foreground">Nenhum pedido ainda.</td></tr>`;
@@ -248,25 +260,26 @@ const allPosts = visiblePosts(await getAllMensagens());
       }
     }
 
-    function renderizarEstoque() {
-      if (!estoqueCorpoEl) return;
-      estoqueCorpoEl.innerHTML = estoque.length
-        ? estoque
+    function renderizarLotesCompra() {
+      if (!lotesCorpoEl) return;
+      lotesCorpoEl.innerHTML = lotesCompra.length
+        ? lotesCompra
             .map(
-              (e) => `
-                <tr data-estoque-id="${e.id}">
-                  <td>${escapeHtml(e.tamanho ?? "—")}</td>
-                  <td>${escapeHtml(e.modelo ?? "—")}</td>
-                  <td><input type="number" min="0" class="field" style="width:6rem" value="${e.quantidade}" data-campo-quantidade /></td>
+              (l) => `
+                <tr data-lote-id="${l.id}">
+                  <td>${escapeHtml(l.tamanho ?? "—")}</td>
+                  <td>${escapeHtml(l.modelo ?? "—")}</td>
+                  <td><input type="number" min="0" class="field" style="width:6rem" value="${l.quantidade}" data-campo-quantidade /></td>
+                  <td><input type="number" step="0.01" min="0" class="field" style="width:7rem" value="${l.valor_custo ?? 0}" data-campo-custo /></td>
                   <td class="flex gap-3">
-                    <button type="button" class="link-sweep text-sm font-semibold text-accent" data-salvar-estoque>Salvar</button>
-                    <button type="button" class="link-sweep text-sm font-semibold" data-excluir-estoque>Excluir</button>
+                    <button type="button" class="link-sweep text-sm font-semibold text-accent" data-salvar-lote>Salvar</button>
+                    <button type="button" class="link-sweep text-sm font-semibold" data-excluir-lote>Excluir</button>
                   </td>
                 </tr>
               `,
             )
             .join("")
-        : `<tr><td colspan="4" class="text-sm text-muted-foreground">Nenhuma entrada de estoque ainda.</td></tr>`;
+        : `<tr><td colspan="5" class="text-sm text-muted-foreground">Nenhum lote de compra lançado ainda.</td></tr>`;
     }
 
     function itemLinhaHtml(i: Item, quantidadePaga: number): string {
@@ -284,7 +297,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     }
 
     function pedidoCardHtml(p: Pedido): string {
-      let restante = (lote.valor_venda ?? 0) > 0 ? Number(p.valor_pago) / Number(lote.valor_venda) : 0;
+      let restante = (grupo.valor_venda ?? 0) > 0 ? Number(p.valor_pago) / Number(grupo.valor_venda) : 0;
       const itensHtml = p.itens
         .map((item) => {
           const paga = Math.max(0, Math.min(item.quantidade, Math.floor(restante)));
@@ -331,52 +344,54 @@ const allPosts = visiblePosts(await getAllMensagens());
       });
     });
 
-    // --- estoque ---
-    document.querySelector("[data-adicionar-estoque]")?.addEventListener("click", async () => {
-      const tamanho = (document.querySelector<HTMLInputElement>("[data-novo-estoque-tamanho]")?.value ?? "").trim();
-      const modelo = (document.querySelector<HTMLInputElement>("[data-novo-estoque-modelo]")?.value ?? "").trim();
-      const quantidade = Number(document.querySelector<HTMLInputElement>("[data-novo-estoque-quantidade]")?.value || 0);
+    // --- lotes de compra ---
+    document.querySelector("[data-adicionar-lote]")?.addEventListener("click", async () => {
+      const tamanho = (document.querySelector<HTMLInputElement>("[data-novo-lote-tamanho]")?.value ?? "").trim();
+      const modelo = (document.querySelector<HTMLInputElement>("[data-novo-lote-modelo]")?.value ?? "").trim();
+      const quantidade = Number(document.querySelector<HTMLInputElement>("[data-novo-lote-quantidade]")?.value || 0);
+      const valorCusto = Number(document.querySelector<HTMLInputElement>("[data-novo-lote-custo]")?.value || 0);
       if (!quantidade) return;
 
-      const res = await fetch(`${directusUrl}/items/camiseta_estoque`, {
+      const res = await fetch(`${directusUrl}/items/camiseta_lotes`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ lote: loteId, tamanho: tamanho || null, modelo: modelo || null, quantidade }),
+        body: JSON.stringify({ grupo: grupoId, tamanho: tamanho || null, modelo: modelo || null, quantidade, valor_custo: valorCusto }),
       });
       if (res.ok) {
         const novo = (await res.json()).data;
-        estoque.push(novo);
-        renderizarEstoque();
+        lotesCompra.push(novo);
+        renderizarLotesCompra();
         atualizarStats();
       }
     });
 
-    estoqueCorpoEl?.addEventListener("click", async (event) => {
+    lotesCorpoEl?.addEventListener("click", async (event) => {
       const target = event.target as HTMLElement;
-      const linha = target.closest<HTMLElement>("tr[data-estoque-id]");
+      const linha = target.closest<HTMLElement>("tr[data-lote-id]");
       if (!linha) return;
-      const estoqueId = Number(linha.dataset.estoqueId);
+      const loteId = Number(linha.dataset.loteId);
 
-      if (target.matches("[data-salvar-estoque]")) {
+      if (target.matches("[data-salvar-lote]")) {
         const quantidade = Number(linha.querySelector<HTMLInputElement>("[data-campo-quantidade]")?.value || 0);
-        const res = await fetch(`${directusUrl}/items/camiseta_estoque/${estoqueId}`, {
+        const valorCusto = Number(linha.querySelector<HTMLInputElement>("[data-campo-custo]")?.value || 0);
+        const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ quantidade }),
+          body: JSON.stringify({ quantidade, valor_custo: valorCusto }),
         });
         if (res.ok) {
-          const item = estoque.find((e) => e.id === estoqueId);
-          if (item) item.quantidade = quantidade;
+          const item = lotesCompra.find((l) => l.id === loteId);
+          if (item) { item.quantidade = quantidade; item.valor_custo = valorCusto; }
           atualizarStats();
         }
       }
 
-      if (target.matches("[data-excluir-estoque]")) {
-        if (!confirm("Excluir essa entrada de estoque?")) return;
-        const res = await fetch(`${directusUrl}/items/camiseta_estoque/${estoqueId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      if (target.matches("[data-excluir-lote]")) {
+        if (!confirm("Excluir esse lote de compra?")) return;
+        const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
-          estoque = estoque.filter((e) => e.id !== estoqueId);
-          renderizarEstoque();
+          lotesCompra = lotesCompra.filter((l) => l.id !== loteId);
+          renderizarLotesCompra();
           atualizarStats();
         }
       }
@@ -441,8 +456,8 @@ const allPosts = visiblePosts(await getAllMensagens());
     });
 
     function linhaItemAvulsoHtml() {
-      const tamanhos = lote.tamanhos ?? [];
-      const modelos = lote.modelos ?? [];
+      const tamanhos = grupo.tamanhos ?? [];
+      const modelos = grupo.modelos ?? [];
       const tamanhoOpcoes = tamanhos.length ? tamanhos.map((t) => `<option value="${t}">${t}</option>`).join("") : `<option value="">—</option>`;
       const modeloOpcoes = modelos.length ? modelos.map((m) => `<option value="${m}">${m}</option>`).join("") : `<option value="">—</option>`;
       return `
@@ -482,7 +497,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         const res = await fetch(`${directusUrl}/items/camiseta_pedidos`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ lote: loteId, nome, telefone: null, avulso: true, valor_pago: valorPago }),
+          body: JSON.stringify({ grupo: grupoId, nome, telefone: null, avulso: true, valor_pago: valorPago }),
         });
         if (!res.ok) throw new Error("falha ao criar pedido avulso");
         const novoPedido = (await res.json()).data;
@@ -512,40 +527,40 @@ const allPosts = visiblePosts(await getAllMensagens());
       if (!tokenObtido) return;
       token = tokenObtido;
 
-      if (!loteId) {
+      if (!grupoId) {
         if (carregando) carregando.hidden = true;
         if (erroEl) erroEl.hidden = false;
         return;
       }
 
-      const resLote = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}?fields=id,nome,valor_custo,valor_venda,tamanhos,modelos`, {
+      const resGrupo = await fetch(`${directusUrl}/items/camiseta_grupos/${grupoId}?fields=id,nome,valor_venda,tamanhos,modelos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resLote.ok) {
+      if (!resGrupo.ok) {
         if (carregando) carregando.hidden = true;
         if (erroEl) erroEl.hidden = false;
         return;
       }
-      lote = (await resLote.json()).data;
-      if (tituloEl) tituloEl.textContent = `Pedidos — ${lote.nome}`;
+      grupo = (await resGrupo.json()).data;
+      if (tituloEl) tituloEl.textContent = `Pedidos — ${grupo.nome}`;
 
       const resPedidos = await fetch(
-        `${directusUrl}/items/camiseta_pedidos?filter[lote][_eq]=${loteId}&fields=id,nome,valor_pago,avulso,congregacao.name,itens.id,itens.tamanho,itens.modelo,itens.quantidade,itens.quantidade_retirada&sort=nome&limit=-1`,
+        `${directusUrl}/items/camiseta_pedidos?filter[grupo][_eq]=${grupoId}&fields=id,nome,valor_pago,avulso,congregacao.name,itens.id,itens.tamanho,itens.modelo,itens.quantidade,itens.quantidade_retirada&sort=nome&limit=-1`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       pedidos = (await resPedidos.json()).data ?? [];
       pedidos.forEach((p) => { if (!p.itens) p.itens = []; });
 
-      const resEstoque = await fetch(`${directusUrl}/items/camiseta_estoque?filter[lote][_eq]=${loteId}&fields=id,tamanho,modelo,quantidade&limit=-1`, {
+      const resLotes = await fetch(`${directusUrl}/items/camiseta_lotes?filter[grupo][_eq]=${grupoId}&fields=id,tamanho,modelo,quantidade,valor_custo&limit=-1`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      estoque = (await resEstoque.json()).data ?? [];
+      lotesCompra = (await resLotes.json()).data ?? [];
 
       if (carregando) carregando.hidden = true;
       if (conteudoEl) conteudoEl.hidden = false;
 
       atualizarStats();
-      renderizarEstoque();
+      renderizarLotesCompra();
       renderizarPedidos();
     }
 
