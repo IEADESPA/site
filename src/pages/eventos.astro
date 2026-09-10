@@ -8,6 +8,7 @@ import { siteConfig } from "@/config/site";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 import { congregacaoEndereco, DIRECTUS_URL, fetchItems } from "@/lib/directus";
 import { hasEventPage } from "@/lib/eventos";
+import { coordenadaDeLinkMaps } from "@/lib/googleMapsLink";
 import { getAllProgramacao } from "@/lib/programacao";
 
 interface Congregacao {
@@ -19,6 +20,12 @@ interface Congregacao {
   neighborhood_new: string | null;
   city: string | null;
   state: string | null;
+  /** Fase 24.8 — preenchido só depois que a liderança da congregação
+   * confirmar (ou ceder) um perfil real no Google Maps (mesma trava da Fase
+   * 24 inteira). Vazio = eventos dessa congregação não entram no mapa. */
+  google_maps_place_query: string | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 interface Evento {
@@ -28,6 +35,7 @@ interface Evento {
   end_date: string | null;
   time: string | null;
   location: string | null;
+  location_maps_url: string | null;
   congregacao: Congregacao | null;
   responsavel: string | null;
   description: string;
@@ -74,6 +82,43 @@ const eventsByMonth = events.reduce<{ month: string; monthKey: string; items: Ev
 const todayMonthKey = new Date().toISOString().slice(0, 7);
 const defaultMonthKey =
   eventsByMonth.find((group) => group.monthKey >= todayMonthKey)?.monthKey ?? eventsByMonth[0]?.monthKey;
+
+/* Fase 24.8 — mapa único com os eventos que já têm coordenada de verdade,
+   filtrado pelo mesmo mês selecionado no calendário acima. Duas fontes
+   possíveis, nessa ordem de checagem: (1) link próprio do evento (Fase
+   24.3, só evento sem congregação) — o caso de hoje; (2) a congregação do
+   evento já ter perfil confirmado (mesmo campo/regra da Sede, Fase 24.1) —
+   ainda não acontece com nenhuma, mas já funciona sozinho assim que a
+   primeira confirmar, sem precisar mexer neste código de novo. */
+interface PontoMapa {
+  monthKey: string;
+  lat: number;
+  lng: number;
+  title: string;
+  href: string | null;
+}
+
+const pontosMapa: PontoMapa[] = (
+  await Promise.all(
+    events
+      .filter((event) => event.event_date)
+      .map(async (event): Promise<PontoMapa | null> => {
+        const monthKey = (event.event_date as string).slice(0, 7);
+        const href = hasEventPage(event) ? `/evento/${event.slug}/` : null;
+
+        if (!event.congregacao && event.location_maps_url) {
+          const coordenada = await coordenadaDeLinkMaps(event.location_maps_url);
+          if (coordenada) return { monthKey, lat: coordenada.lat, lng: coordenada.lng, title: event.title, href };
+        }
+
+        if (event.congregacao?.google_maps_place_query && event.congregacao.lat && event.congregacao.lng) {
+          return { monthKey, lat: Number(event.congregacao.lat), lng: Number(event.congregacao.lng), title: event.title, href };
+        }
+
+        return null;
+      }),
+  )
+).filter((ponto): ponto is PontoMapa => ponto !== null);
 
 const programacao = await getAllProgramacao();
 const instagram = siteConfig.socials.find((social) => social.label === "Instagram");
@@ -192,6 +237,20 @@ const responsaveisDisponiveis = [...new Set(events.map((e) => e.responsavel).fil
         }
 
         {
+          pontosMapa.length > 0 && (
+            <div
+              class="mt-8 overflow-hidden rounded-[var(--radius-md)] border border-border"
+              data-eventos-mapa-wrap
+              data-pontos={JSON.stringify(pontosMapa)}
+              data-default-month={defaultMonthKey}
+              data-maps-key={siteConfig.googleMapsEmbedKey}
+            >
+              <div id="eventos-mapa" style="height:360px" data-eventos-mapa />
+            </div>
+          )
+        }
+
+        {
           events.length > 0 ? (
             eventsByMonth.map((group) => (
               <div class="mt-10" data-month-group={group.monthKey} hidden={group.monthKey !== defaultMonthKey}>
@@ -262,6 +321,111 @@ const responsaveisDisponiveis = [...new Set(events.map((e) => e.responsavel).fil
           });
         })();
       </script>
+
+      {
+        pontosMapa.length > 0 && (
+          <script is:inline>
+            (() => {
+              const wrap = document.querySelector("[data-eventos-mapa-wrap]");
+              if (!wrap) return;
+
+              const todosPontos = JSON.parse(wrap.dataset.pontos || "[]");
+              const googleMapsKey = wrap.dataset.mapsKey;
+              let monthKeyAtual = wrap.dataset.defaultMonth;
+              let map = null;
+              let marcadores = [];
+
+              function agruparPorCoordenada(pontos) {
+                const grupos = new Map();
+                pontos.forEach((ponto) => {
+                  const chave = `${ponto.lat.toFixed(5)},${ponto.lng.toFixed(5)}`;
+                  if (!grupos.has(chave)) grupos.set(chave, { lat: ponto.lat, lng: ponto.lng, eventos: [] });
+                  grupos.get(chave).eventos.push(ponto);
+                });
+                return Array.from(grupos.values());
+              }
+
+              function redesenharMarcadores() {
+                if (!map) return;
+                marcadores.forEach((m) => m.setMap(null));
+                marcadores = [];
+
+                const pontosDoMes = todosPontos.filter((p) => p.monthKey === monthKeyAtual);
+                const grupos = agruparPorCoordenada(pontosDoMes);
+                if (!grupos.length) return;
+
+                const bounds = new google.maps.LatLngBounds();
+                grupos.forEach((grupo) => {
+                  const posicao = { lat: grupo.lat, lng: grupo.lng };
+                  bounds.extend(posicao);
+                  const marker = new google.maps.Marker({
+                    position: posicao,
+                    map,
+                    icon: {
+                      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z",
+                      fillColor: "#8f6f1f",
+                      fillOpacity: 1,
+                      strokeColor: "#6b5417",
+                      strokeWeight: 1,
+                      scale: 1.8,
+                      anchor: new google.maps.Point(12, 22),
+                    },
+                  });
+
+                  const conteudo =
+                    grupo.eventos.length === 1
+                      ? `<div style="font-family: system-ui, sans-serif;">${
+                          grupo.eventos[0].href
+                            ? `<a href="${grupo.eventos[0].href}" style="font-weight:600;color:#8f6f1f;">${grupo.eventos[0].title}</a>`
+                            : grupo.eventos[0].title
+                        }</div>`
+                      : `<div style="font-family: system-ui, sans-serif;"><p style="margin:0 0 6px;font-weight:700;">${grupo.eventos.length} eventos neste local</p><ul style="margin:0;padding-left:1.1rem;">${grupo.eventos
+                          .map(
+                            (e) =>
+                              `<li style="margin-bottom:4px;">${e.href ? `<a href="${e.href}" style="color:#8f6f1f;font-weight:600;">${e.title}</a>` : e.title}</li>`,
+                          )
+                          .join("")}</ul></div>`;
+
+                  const infoWindow = new google.maps.InfoWindow({ content: conteudo });
+                  marker.addListener("click", () => infoWindow.open(map, marker));
+                  marcadores.push(marker);
+                });
+
+                if (grupos.length === 1) {
+                  map.setCenter(grupos[0]);
+                  map.setZoom(14);
+                } else {
+                  map.fitBounds(bounds);
+                }
+              }
+
+              window.initEventosMapa = function initEventosMapa() {
+                const container = document.querySelector("[data-eventos-mapa]");
+                if (!container) return;
+                map = new google.maps.Map(container, {
+                  center: { lat: -6.0888917, lng: -49.8624825 },
+                  zoom: 12,
+                  disableDefaultUI: false,
+                  fullscreenControl: true,
+                  streetViewControl: false,
+                  mapTypeControl: false,
+                });
+                redesenharMarcadores();
+              };
+
+              window.addEventListener("calendario-mes", (event) => {
+                monthKeyAtual = event.detail.monthKey;
+                redesenharMarcadores();
+              });
+
+              const script = document.createElement("script");
+              script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsKey}&callback=initEventosMapa`;
+              script.async = true;
+              document.head.appendChild(script);
+            })();
+          </script>
+        )
+      }
 
       <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, vapidPublicKey: "BHjTzvfXIx0DAkcCgfJDNQO5N09SmO0jIPuTP8L6rxnEaITMn95fQH6kHFnbrEJE-Fdroim5bNnaKp5wwowXdak" }}>
         (() => {

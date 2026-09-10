@@ -1832,9 +1832,30 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       rota é calculada com sucesso, usando o formato de link público de rota do próprio Google
       Maps (`google.com/maps/dir/?api=1&origin=...&destination=...`) — não é uma API paga, é só um
       formato de URL documentado, sem gastar nada da cota do Maps Platform.
-  - [ ] **Fase 24.8 — mapa único com todos os eventos de local próprio**: uma visão de mapa em
-    `/eventos/` com um pino por evento que tem `location` própria (marchas, batismos etc.) — não
-    inclui congregação, só eventos.
+  - [x] **Fase 24.8 — mapa único com os eventos de local confirmado — construído**: seção de mapa
+    nova em `/eventos/`, logo abaixo do calendário mensal já existente. Perguntas reais do usuário,
+    respondidas antes de construir:
+    - **"Onde fica"** — dentro de `/eventos/`, sem página nova.
+    - **"Ano inteiro poluiria o mapa"** — reaproveita o mesmo filtro de mês que o calendário mensal
+      já tinha (evento `calendario-mes`, já disparado por aquele componente) — o mapa mostra só o
+      mês selecionado, atualizando sozinho quando a pessoa troca de mês no calendário.
+    - **"E se um evento for de congregação — vai aparecer o pino dela, e se a congregação tiver
+      vários eventos, vai empilhar pino?"** — a resposta virou uma decisão de arquitetura maior: só
+      entra no mapa quem tem **coordenada confirmada**, de duas fontes possíveis — (1) o evento tem
+      link próprio (Fase 24.3, sem congregação — o caso de hoje), ou (2) a congregação do evento já
+      tem perfil confirmado (novo campo `google_maps_place_query` em `congregacoes`, mesmo
+      campo/regra já usada pela Sede) — **nenhuma congregação tem isso hoje**, então nenhum evento
+      de congregação aparece ainda, mas o dia que a primeira confirmar, os eventos dela entram
+      sozinhos, sem precisar mexer neste código de novo. E pra quando isso acontecer (uma
+      congregação com vários eventos no mesmo mês), o agrupamento por coordenada já está pronto:
+      vira **um pino só**, com uma caixinha listando todos os eventos daquele lugar ao clicar — em
+      vez de pino empilhado.
+    - **Testado com dado real**: criados 3 eventos de teste (dois no mesmo mês e mesmo local — pra
+      confirmar o agrupamento — e um em mês diferente, pra confirmar que o filtro de mês funciona);
+      build gerado de verdade, conferido no HTML final que os 3 pontos saem com a coordenada e o
+      `monthKey` certos. Teste local (sem deploy) confirmou que o script roda sem erro de lógica —
+      só bloqueado pelo `RefererNotAllowedMapError` esperado em localhost (mesma limitação de
+      sempre); eventos de teste apagados depois de confirmar em produção.
   - [ ] **Fase 24.9 — "qual congregação mais perto de você"**: usando a localização do navegador
     contra as coordenadas reais das congregações (Distance Matrix ou cálculo direto de distância) —
     **bloqueada atrás da Fase 24 principal**: só faz sentido depois que as congregações tiverem
