@@ -2772,14 +2772,26 @@ específicas do contexto pentecostal (manifestações, duração do culto, chama
 texto, sem foto/vídeo do ambiente; "estrutura para famílias" não fala de check-in infantil nem
 triagem de voluntários; horário/endereço só aparece nos "próximos passos", não no topo.
 
-**Mural de oração**: ⚠️ **achado que é bug de verdade, não só sugestão** (ver Fase 0 do plano) — o
-contador "orando por você" incrementa um número calculado no próprio navegador de quem clica, sem
-trava nenhuma do lado do servidor: dá pra chamar a API manualmente e definir qualquer número, e
-nada impede a mesma pessoa clicar várias vezes na mesma visita (o botão só trava durante o próprio
-clique, depois libera de novo). Além disso: sem proteção nenhuma contra spam/envio automatizado no
-formulário de pedido (nem honeypot, nem limite de envios — só moderação humana depois do envio);
-sem caminho "confidencial, só pra equipe pastoral" separado do mural público; mensagem pós-envio
-não diz quanto tempo a moderação costuma levar.
+**Mural de oração**: ✅ **bug do contador corrigido** (achado numa revisão geral pedida pelo
+usuário antes de fechar o projeto) — o contador "orando por você" incrementava via PATCH público
+direto em `orando_count`, com o número calculado no próprio navegador de quem clicava: dava pra
+chamar a API do Directus manualmente e definir qualquer valor (defacement), sem precisar nem
+clicar no botão. Corrigido com uma Function nova (`api/src/functions/orarMural.js`, rota
+`/api/orar-mural`) que sempre incrementa +1 a partir do valor real gravado no servidor — nunca
+aceita um número vindo do cliente — e a permissão pública de `update` em `mural_oracao` foi
+removida do Directus (confirmado: um PATCH direto agora recebe 403). Continua sem exigir login
+(mesmo espírito do resto do site); um limite por IP (`rateLimit.js`) reduz, mas não elimina,
+alguém inflar o contador clicando de navegadores diferentes — aceitável pro que é (um contador
+informal de intercessão, não um dado sensível ou financeiro); o que importava mesmo corrigir era a
+possibilidade de definir um valor arbitrário, e isso não existe mais.
+
+Itens **restantes, não corrigidos** (sugestões, não bugs de segurança): sem proteção contra
+spam/envio automatizado no formulário de pedido além do honeypot (sem limite de envios por
+IP/pessoa); sem caminho "confidencial, só pra equipe pastoral" separado do mural público (já
+existe o toggle "Enviar de forma confidencial" no formulário, então este ponto já está coberto);
+mensagem pós-envio não diz quanto tempo a moderação costuma levar (na prática já diz "em até 2
+dias úteis", também já coberto). Revisado nesta mesma passada — os dois últimos pontos descritos
+como gap já estavam resolvidos no código atual, só desatualizados aqui no README.
 
 **Galeria**: fotos numa grade só, sem agrupar por evento/álbum (vai virar uma parede confusa
 conforme o acervo cresce); nenhuma foto abre em tamanho maior ao clicar (sem lightbox); imagem

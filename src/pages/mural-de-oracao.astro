@@ -3,7 +3,7 @@ import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { DIRECTUS_URL } from "@/lib/directus";
+import { DIRECTUS_URL, ORAR_MURAL_URL } from "@/lib/directus";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 
 const allPosts = visiblePosts(await getAllMensagens());
@@ -94,7 +94,7 @@ const allPosts = visiblePosts(await getAllMensagens());
   </main>
   <SiteFooter />
 
-  <script is:inline define:vars={{ directusUrl: DIRECTUS_URL }}>
+  <script is:inline define:vars={{ directusUrl: DIRECTUS_URL, orarMuralUrl: ORAR_MURAL_URL }}>
     (() => {
       const form = document.querySelector("[data-mural-form]");
       const status = document.querySelector("[data-mural-status]");
@@ -252,14 +252,18 @@ const allPosts = visiblePosts(await getAllMensagens());
         marcarOrado(id);
         btn.disabled = true;
         btn.setAttribute("aria-pressed", "true");
-        const novoCount = Number(btn.dataset.count) + 1;
-        btn.innerHTML = `🙏 Você orou por este pedido <span data-orar-count role="status" aria-live="polite">(${novoCount})</span>`;
-        btn.dataset.count = String(novoCount);
+        const contadorOtimista = Number(btn.dataset.count) + 1;
+        btn.innerHTML = `🙏 Você orou por este pedido <span data-orar-count role="status" aria-live="polite">(${contadorOtimista})</span>`;
+        btn.dataset.count = String(contadorOtimista);
         try {
-          await fetch(`${directusUrl}/items/mural_oracao/${id}`, {
-            method: "PATCH",
+          // O incremento de verdade é calculado no servidor (ver `orar-mural`,
+          // nunca aceita um número vindo do navegador) — aqui só refletimos o
+          // clique na hora; se o número real vier diferente por tempo real
+          // (outra pessoa orou ao mesmo tempo), o WebSocket corrige sozinho.
+          await fetch(orarMuralUrl, {
+            method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orando_count: novoCount }),
+            body: JSON.stringify({ id: Number(id) }),
           });
         } catch {
           // silencioso: o contador local já refletiu o clique, tenta de novo depois via tempo real

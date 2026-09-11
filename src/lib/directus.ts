@@ -83,6 +83,16 @@ export const CONSULTAR_PEDIDOS_CAMISETA_URL = "/api/consultar-pedidos-camiseta";
  * `CONSULTAR_MINHA_CONTA_URL` (usa esse token pra listar inscrições em
  * eventos e pedidos de camiseta feitos com aquele e-mail). Ver `contaAuth.ts`.
  */
+/**
+ * Contador "orando por você" do Mural de oração — antes era um PATCH público
+ * direto em `orando_count` com o valor calculado no navegador (bug real:
+ * dava pra definir qualquer número chamando a API do Directus manualmente,
+ * ver README). Agora o incremento (sempre +1, nunca um valor vindo do
+ * cliente) é calculado nesta Function, e a permissão pública de `update` em
+ * `mural_oracao` foi removida.
+ */
+export const ORAR_MURAL_URL = "/api/orar-mural";
+
 export const SOLICITAR_CODIGO_CONTA_URL = "/api/solicitar-codigo-conta";
 export const CONFIRMAR_CODIGO_CONTA_URL = "/api/confirmar-codigo-conta";
 export const CONSULTAR_MINHA_CONTA_URL = "/api/consultar-minha-conta";
