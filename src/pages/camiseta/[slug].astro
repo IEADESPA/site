@@ -3,7 +3,7 @@ import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { DIRECTUS_URL, TELEFONE_HASH_URL, fetchItems } from "@/lib/directus";
+import { CRIAR_PEDIDO_CAMISETA_URL, DIRECTUS_URL, TELEFONE_HASH_URL, fetchItems } from "@/lib/directus";
 import { getAllMensagens, visiblePosts } from "@/lib/posts";
 
 interface Lote {
@@ -177,8 +177,8 @@ const modelos = lote.modelos ?? [];
       <script
         is:inline
         define:vars={{
-          directusUrl: DIRECTUS_URL,
           telefoneHashUrl: TELEFONE_HASH_URL,
+          criarPedidoUrl: CRIAR_PEDIDO_CAMISETA_URL,
           loteId: lote.id,
           tamanhos,
           modelos,
@@ -274,23 +274,8 @@ const modelos = lote.modelos ?? [];
             if (!hashRes.ok) throw new Error("falha ao proteger telefone");
             const telefoneHash = (await hashRes.json()).valor;
 
-            const pedidoRes = await fetch(`${directusUrl}/items/camiseta_pedidos`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                grupo: loteId,
-                nome: String(data.get("nome")).trim(),
-                telefone: telefoneHash,
-                email: String(data.get("email") || "").trim() || null,
-                congregacao: congregacaoEl && congregacaoEl.value ? Number(congregacaoEl.value) : null,
-              }),
-            });
-            if (!pedidoRes.ok) throw new Error("falha ao criar pedido");
-            const pedidoId = (await pedidoRes.json()).data.id;
-
             // Respostas às perguntas customizadas desta campanha (mesmo padrão
-            // de `respostas_inscricao` em eventos) — coletadas do formulário e
-            // gravadas vinculadas ao pedido recém-criado.
+            // de `respostas_inscricao` em eventos) — coletadas do formulário.
             const respostas = [];
             form.querySelectorAll("[data-pergunta-field]").forEach((field) => {
               const perguntaId = Number(field.dataset.perguntaId);
@@ -308,22 +293,26 @@ const modelos = lote.modelos ?? [];
               if (valor) respostas.push({ pergunta: perguntaId, valor });
             });
 
-            await Promise.all([
-              ...itens.map((item) =>
-                fetch(`${directusUrl}/items/camiseta_itens_pedido`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ pedido: pedidoId, tamanho: item.tamanho, modelo: item.modelo, quantidade: item.quantidade }),
-                }),
-              ),
-              ...respostas.map((resposta) =>
-                fetch(`${directusUrl}/items/respostas_pedido_camiseta`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ...resposta, pedido: pedidoId }),
-                }),
-              ),
-            ]);
+            // Pedido + itens + respostas são criados juntos numa Function só
+            // (`criar-pedido-camiseta`), que também decide sozinha em qual
+            // lote (janela de compra aberta) este pedido entra — a criação
+            // direta pelo navegador foi desativada de propósito, pra ninguém
+            // conseguir escolher o próprio lote nem criar dois lotes "1" ao
+            // mesmo tempo.
+            const pedidoRes = await fetch(criarPedidoUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                grupoId: loteId,
+                nome: String(data.get("nome")).trim(),
+                telefoneHash,
+                email: String(data.get("email") || "").trim() || null,
+                congregacaoId: congregacaoEl && congregacaoEl.value ? Number(congregacaoEl.value) : null,
+                itens,
+                respostas,
+              }),
+            });
+            if (!pedidoRes.ok) throw new Error("falha ao criar pedido");
 
             if (status) status.textContent = "✅ Pedido registrado! Acompanhe em \"Meus pedidos\", com o seu telefone.";
             form.reset();

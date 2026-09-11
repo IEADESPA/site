@@ -23,57 +23,61 @@ const allPosts = visiblePosts(await getAllMensagens());
       </div>
 
       <div hidden data-painel-conteudo>
-        <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-stats-grid>
-          <div class="stat-card"><p class="stat-numero" data-stat="total">0</p><p class="stat-label">Pedidos</p></div>
+        <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-stats-grid>
+          <div class="stat-card"><p class="stat-numero" data-stat="total">0</p><p class="stat-label">Pedidos (todos os lotes)</p></div>
           <div class="stat-card"><p class="stat-numero" data-stat="arrecadado">R$ 0</p><p class="stat-label">Arrecadado</p></div>
           <div class="stat-card"><p class="stat-numero" data-stat="esperado">R$ 0</p><p class="stat-label">Esperado (total)</p></div>
-          <div class="stat-card"><p class="stat-numero" data-stat="lucro">R$ 0</p><p class="stat-label">Lucro estimado</p></div>
-        </div>
-        <p class="mt-2 text-xs text-muted-foreground">
-          Lucro estimado usa o custo médio por peça entre os lotes de compra já lançados (o custo
-          real pode variar peça a peça, já que o preço muda de encomenda pra encomenda).
-        </p>
-
-        <div class="mt-8 grid gap-6 lg:grid-cols-2">
-          <div>
-            <h2 class="section-title">Por tamanho/modelo</h2>
-            <p class="mt-1 text-sm text-muted-foreground">Pedido = quantidade pedida (sem contar venda avulsa, que já sai de estoque existente).</p>
-            <div class="mt-3 overflow-x-auto">
-              <table class="tabela-camiseta">
-                <thead><tr><th>Tamanho</th><th>Modelo</th><th>Pedido</th><th>Recebido (lotes)</th><th>Falta encomendar</th></tr></thead>
-                <tbody data-tamanhos-corpo></tbody>
-              </table>
-            </div>
-          </div>
-          <div>
-            <h2 class="section-title">Por congregação</h2>
-            <div class="mt-3 flex flex-wrap gap-2" data-congregacoes-resumo></div>
-          </div>
         </div>
 
         <div class="mt-8">
-          <h2 class="section-title">Lotes de compra</h2>
+          <h2 class="section-title">Lotes</h2>
           <p class="mt-1 text-sm text-muted-foreground">
-            Cada encomenda feita ao fornecedor vira um lote de compra aqui, com seu próprio custo —
-            não precisa esperar todos os lotes chegarem pra começar a entregar.
+            Cada pedido cai sozinho no lote aberto no momento em que foi feito — igual já funciona
+            na planilha de camiseta da tesouraria. Feche o lote quando decidir encomendar; o
+            próximo pedido já abre o lote seguinte sozinho.
           </p>
-          <div class="mt-4 overflow-x-auto">
-            <table class="tabela-camiseta">
-              <thead><tr><th>Tamanho</th><th>Modelo</th><th>Quantidade</th><th>Custo/peça</th><th></th></tr></thead>
-              <tbody data-lotes-corpo></tbody>
-            </table>
+          <div class="mt-4 flex flex-wrap gap-2" data-lotes-tabs></div>
+        </div>
+
+        <div class="mt-6" data-lote-painel>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h3 class="text-lg font-serif font-bold" data-lote-titulo></h3>
+            <button type="button" class="btn btn-outline" data-fechar-lote hidden>Fechar este lote</button>
           </div>
-          <div class="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto] max-w-2xl" data-lote-novo>
-            <input type="text" class="field" placeholder="Tamanho" data-novo-lote-tamanho />
-            <input type="text" class="field" placeholder="Modelo" data-novo-lote-modelo />
-            <input type="number" min="0" class="field" placeholder="Qtd" style="width:6rem" data-novo-lote-quantidade />
-            <input type="number" step="0.01" min="0" class="field" placeholder="Custo/peça" style="width:7rem" data-novo-lote-custo />
-            <button type="button" class="btn btn-outline" data-adicionar-lote>Adicionar</button>
+          <p class="mt-1 text-sm text-muted-foreground" data-lote-status-texto></p>
+
+          <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-lote-financeiro hidden>
+            <div class="stat-card"><p class="stat-numero" data-lstat="vendido">R$ 0</p><p class="stat-label">Vendido</p></div>
+            <div class="stat-card"><p class="stat-numero" data-lstat="arrecadado">R$ 0</p><p class="stat-label">Arrecadado</p></div>
+            <div class="stat-card"><p class="stat-numero" data-lstat="pago">R$ 0</p><p class="stat-label">Pago à malharia</p></div>
+            <div class="stat-card"><p class="stat-numero" data-lstat="saldo">R$ 0</p><p class="stat-label">Saldo do lote</p></div>
+          </div>
+
+          <div class="mt-6" data-lote-consolidado hidden>
+            <h4 class="text-sm font-semibold">Consolidado — o que encomendar da malharia</h4>
+            <div class="mt-3 overflow-x-auto">
+              <table class="tabela-camiseta">
+                <thead><tr><th>Tamanho</th><th>Modelo</th><th>Pedido pelo sistema</th><th>Estoque extra</th><th>Total a encomendar</th><th>Custo/peça</th><th></th></tr></thead>
+                <tbody data-consolidado-corpo></tbody>
+              </table>
+            </div>
+            <div class="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] max-w-xl" data-consolidado-novo>
+              <input type="text" class="field" placeholder="Tamanho" data-novo-item-tamanho />
+              <input type="text" class="field" placeholder="Modelo" data-novo-item-modelo />
+              <input type="number" min="0" class="field" placeholder="Estoque extra" style="width:8rem" data-novo-item-extra />
+              <button type="button" class="btn btn-outline" data-adicionar-item-consolidado>Adicionar tamanho/modelo</button>
+            </div>
+            <p class="mt-2 text-xs text-muted-foreground">
+              "Pedido pelo sistema" soma sozinho os itens dos pedidos deste lote — não é editável
+              aqui. "Estoque extra" é o que você decidir comprar a mais (sobra, aposta de venda
+              avulsa futura). O custo/peça fica registrado por tamanho/modelo, porque o preço muda
+              de encomenda pra encomenda.
+            </p>
           </div>
         </div>
 
         <div class="mt-8 flex flex-wrap items-baseline justify-between gap-3">
-          <h2 class="section-title">Todos os pedidos</h2>
+          <h2 class="section-title">Pedidos deste lote</h2>
           <button type="button" class="btn btn-solid" data-abrir-avulso>+ Venda avulsa</button>
         </div>
 
@@ -96,8 +100,8 @@ const allPosts = visiblePosts(await getAllMensagens());
             <p class="text-sm" data-avulso-status role="status" aria-live="polite"></p>
           </div>
           <p class="text-xs text-muted-foreground">
-            Venda avulsa não entra na contagem de "falta encomendar" — o entendimento é que essa
-            peça já saiu de um lote de compra existente, não gerou uma encomenda nova.
+            Venda avulsa não entra em nenhum lote (mesmo espírito do "AVULSO" da planilha) — é peça
+            que já existia em estoque, não gerou encomenda nova.
           </p>
         </div>
 
@@ -154,15 +158,24 @@ const allPosts = visiblePosts(await getAllMensagens());
       congregacao: { name: string } | null;
       valor_pago: number;
       avulso: boolean;
+      lote: number | null;
       itens: Item[];
     }
 
-    interface LoteCompra {
+    interface Lote {
       id: number;
+      numero: number;
+      status: "aberto" | "fechado";
+      fechado_em: string | null;
+    }
+
+    interface LoteItem {
+      id: number;
+      lote: number;
       tamanho: string | null;
       modelo: string | null;
-      quantidade: number;
-      valor_custo: number | null;
+      estoque_extra: number;
+      custo_unitario: number | null;
     }
 
     type TipoPergunta = "texto_curto" | "texto_longo" | "selecao_unica" | "selecao_multipla" | "numero" | "data";
@@ -193,16 +206,19 @@ const allPosts = visiblePosts(await getAllMensagens());
     const conteudoEl = document.querySelector<HTMLElement>("[data-painel-conteudo]");
     const tituloEl = document.querySelector<HTMLElement>("[data-painel-titulo]");
     const listaEl = document.querySelector<HTMLElement>("[data-pedidos-lista]");
-    const tamanhosCorpoEl = document.querySelector<HTMLElement>("[data-tamanhos-corpo]");
-    const congregacoesResumoEl = document.querySelector<HTMLElement>("[data-congregacoes-resumo]");
-    const lotesCorpoEl = document.querySelector<HTMLElement>("[data-lotes-corpo]");
+    const lotesTabsEl = document.querySelector<HTMLElement>("[data-lotes-tabs]");
 
     let token = "";
     let grupo: Grupo;
     let pedidos: Pedido[] = [];
-    let lotesCompra: LoteCompra[] = [];
+    let lotes: Lote[] = [];
+    let loteItens: LoteItem[] = [];
     let perguntas: Pergunta[] = [];
     let respostasPorPedido = new Map<number, Resposta[]>();
+
+    /** "todos-os-lotes" | "avulso" | um id de lote (número, como string). */
+    let visaoAtual: "todos-os-lotes" | "avulso" | number = "todos-os-lotes";
+
     let filtroAtivo: "todos" | "devendo" | "pago" | "pendente-retirada" | "retirado" = "todos";
     let termoBusca = "";
     let filtroPerguntaId: number | null = null;
@@ -222,12 +238,6 @@ const allPosts = visiblePosts(await getAllMensagens());
     function devendo(p: Pedido): boolean {
       return Number(p.valor_pago) < totalPedido(p);
     }
-    function custoMedioPorPeca(): number {
-      const totalQtd = lotesCompra.reduce((s, l) => s + l.quantidade, 0);
-      if (totalQtd === 0) return 0;
-      const totalCusto = lotesCompra.reduce((s, l) => s + l.quantidade * Number(l.valor_custo ?? 0), 0);
-      return totalCusto / totalQtd;
-    }
     function temPendenteRetirada(p: Pedido): boolean {
       let restante = (grupo.valor_venda ?? 0) > 0 ? Number(p.valor_pago) / Number(grupo.valor_venda) : 0;
       for (const item of p.itens) {
@@ -241,83 +251,157 @@ const allPosts = visiblePosts(await getAllMensagens());
       return p.itens.length > 0 && p.itens.every((item) => item.quantidade_retirada >= item.quantidade);
     }
 
-    function atualizarStats() {
+    function pedidosDaVisao(): Pedido[] {
+      if (visaoAtual === "todos-os-lotes") return pedidos;
+      if (visaoAtual === "avulso") return pedidos.filter((p) => p.avulso);
+      return pedidos.filter((p) => p.lote === visaoAtual && !p.avulso);
+    }
+
+    function atualizarStatsGerais() {
       const stat = (nome: string) => document.querySelector<HTMLElement>(`[data-stat="${nome}"]`);
-      const venda = grupo.valor_venda ?? 0;
-      const custoMedio = custoMedioPorPeca();
-
       const arrecadado = pedidos.reduce((s, p) => s + Number(p.valor_pago || 0), 0);
-      const totalPecas = pedidos.reduce((s, p) => s + totalItens(p), 0);
-      const esperado = totalPecas * venda;
-      const lucro = totalPecas * (venda - custoMedio);
-
+      const esperado = pedidos.reduce((s, p) => s + totalPedido(p), 0);
       const t = stat("total"); if (t) t.textContent = String(pedidos.length);
       const a = stat("arrecadado"); if (a) a.textContent = brl(arrecadado);
       const e = stat("esperado"); if (e) e.textContent = brl(esperado);
-      const l = stat("lucro"); if (l) l.textContent = brl(lucro);
-
-      if (tamanhosCorpoEl) {
-        const chave = (t: string | null, m: string | null) => `${t ?? "—"}|||${m ?? "—"}`;
-        const pedidoPorCombo = new Map<string, number>();
-        pedidos.forEach((p) => {
-          if (p.avulso) return; // avulso não conta como "precisa encomendar"
-          p.itens.forEach((item) => {
-            const k = chave(item.tamanho, item.modelo);
-            pedidoPorCombo.set(k, (pedidoPorCombo.get(k) ?? 0) + item.quantidade);
-          });
-        });
-        const recebidoPorCombo = new Map<string, number>();
-        lotesCompra.forEach((l) => recebidoPorCombo.set(chave(l.tamanho, l.modelo), (recebidoPorCombo.get(chave(l.tamanho, l.modelo)) ?? 0) + l.quantidade));
-
-        const combos = new Set([...pedidoPorCombo.keys(), ...recebidoPorCombo.keys()]);
-        tamanhosCorpoEl.innerHTML = combos.size
-          ? Array.from(combos)
-              .sort()
-              .map((k) => {
-                const [tamanho, modelo] = k.split("|||");
-                const pedido = pedidoPorCombo.get(k) ?? 0;
-                const recebido = recebidoPorCombo.get(k) ?? 0;
-                const falta = Math.max(0, pedido - recebido);
-                return `<tr><td>${escapeHtml(tamanho)}</td><td>${escapeHtml(modelo)}</td><td>${pedido}</td><td>${recebido}</td><td>${falta}</td></tr>`;
-              })
-              .join("")
-          : `<tr><td colspan="5" class="text-sm text-muted-foreground">Nenhum pedido ainda.</td></tr>`;
-      }
-
-      if (congregacoesResumoEl) {
-        const contagem = new Map<string, number>();
-        pedidos.forEach((p) => {
-          const nome = p.congregacao?.name ?? "Não informada";
-          contagem.set(nome, (contagem.get(nome) ?? 0) + totalItens(p));
-        });
-        congregacoesResumoEl.innerHTML =
-          Array.from(contagem.entries())
-            .sort((a, b) => b[1] - a[1])
-            .map(([nome, qtd]) => `<span class="tamanho-chip">${escapeHtml(nome)}: <strong>${qtd}</strong></span>`)
-            .join("") || `<span class="text-sm text-muted-foreground">Nenhum pedido ainda.</span>`;
-      }
     }
 
-    function renderizarLotesCompra() {
-      if (!lotesCorpoEl) return;
-      lotesCorpoEl.innerHTML = lotesCompra.length
-        ? lotesCompra
-            .map(
-              (l) => `
-                <tr data-lote-id="${l.id}">
-                  <td>${escapeHtml(l.tamanho ?? "—")}</td>
-                  <td>${escapeHtml(l.modelo ?? "—")}</td>
-                  <td><input type="number" min="0" class="field" style="width:6rem" value="${l.quantidade}" data-campo-quantidade /></td>
-                  <td><input type="number" step="0.01" min="0" class="field" style="width:7rem" value="${l.valor_custo ?? 0}" data-campo-custo /></td>
-                  <td class="flex gap-3">
-                    <button type="button" class="link-sweep text-sm font-semibold text-accent" data-salvar-lote>Salvar</button>
-                    <button type="button" class="link-sweep text-sm font-semibold" data-excluir-lote>Excluir</button>
-                  </td>
-                </tr>
-              `,
-            )
-            .join("")
-        : `<tr><td colspan="5" class="text-sm text-muted-foreground">Nenhum lote de compra lançado ainda.</td></tr>`;
+    function renderizarLotesTabs() {
+      if (!lotesTabsEl) return;
+      const botaoHtml = (valor: string, label: string, ativo: boolean) =>
+        `<button type="button" class="filtro-chip${ativo ? " is-active" : ""}" data-lote-tab="${valor}">${escapeHtml(label)}</button>`;
+
+      const lotesOrdenados = [...lotes].sort((a, b) => b.numero - a.numero);
+      const tabs = [
+        botaoHtml("todos-os-lotes", "Todos os lotes", visaoAtual === "todos-os-lotes"),
+        ...lotesOrdenados.map((l) =>
+          botaoHtml(String(l.id), `Lote ${l.numero}${l.status === "aberto" ? " (aberto)" : ""}`, visaoAtual === l.id),
+        ),
+        botaoHtml("avulso", "Avulso", visaoAtual === "avulso"),
+      ];
+      lotesTabsEl.innerHTML = tabs.join("");
+    }
+
+    function loteSelecionado(): Lote | null {
+      if (typeof visaoAtual !== "number") return null;
+      return lotes.find((l) => l.id === visaoAtual) ?? null;
+    }
+
+    function renderizarPainelLote() {
+      const tituloLoteEl = document.querySelector<HTMLElement>("[data-lote-titulo]");
+      const statusTextoEl = document.querySelector<HTMLElement>("[data-lote-status-texto]");
+      const fecharBtn = document.querySelector<HTMLButtonElement>("[data-fechar-lote]");
+      const financeiroEl = document.querySelector<HTMLElement>("[data-lote-financeiro]");
+      const consolidadoEl = document.querySelector<HTMLElement>("[data-lote-consolidado]");
+
+      const lote = loteSelecionado();
+
+      if (visaoAtual === "todos-os-lotes") {
+        if (tituloLoteEl) tituloLoteEl.textContent = "Todos os lotes";
+        if (statusTextoEl) statusTextoEl.textContent = "Visão geral, somando todos os lotes já criados.";
+        if (fecharBtn) fecharBtn.hidden = true;
+        if (financeiroEl) financeiroEl.hidden = true;
+        if (consolidadoEl) consolidadoEl.hidden = true;
+        return;
+      }
+
+      if (visaoAtual === "avulso") {
+        if (tituloLoteEl) tituloLoteEl.textContent = "Avulso";
+        if (statusTextoEl) statusTextoEl.textContent = "Vendas que não passaram por nenhum lote — já saíram de peça em estoque.";
+        if (fecharBtn) fecharBtn.hidden = true;
+        if (financeiroEl) financeiroEl.hidden = true;
+        if (consolidadoEl) consolidadoEl.hidden = true;
+        return;
+      }
+
+      if (!lote) return;
+
+      if (tituloLoteEl) tituloLoteEl.textContent = `Lote ${lote.numero}`;
+      if (statusTextoEl) {
+        statusTextoEl.textContent =
+          lote.status === "aberto"
+            ? "Aberto — pedidos novos desta campanha estão caindo aqui automaticamente."
+            : `Fechado${lote.fechado_em ? " em " + new Date(lote.fechado_em).toLocaleDateString("pt-BR") : ""}.`;
+      }
+      if (fecharBtn) fecharBtn.hidden = lote.status !== "aberto";
+      if (financeiroEl) financeiroEl.hidden = false;
+      if (consolidadoEl) consolidadoEl.hidden = false;
+
+      const pedidosDoLote = pedidos.filter((p) => p.lote === lote.id && !p.avulso);
+      const vendido = pedidosDoLote.reduce((s, p) => s + totalPedido(p), 0);
+      const arrecadado = pedidosDoLote.reduce((s, p) => s + Number(p.valor_pago || 0), 0);
+
+      const itensDoLote = loteItens.filter((li) => li.lote === lote.id);
+      const pago = itensDoLote.reduce((s, li) => {
+        const pedidoSistema = pedidoSistemaPara(lote.id, li.tamanho, li.modelo);
+        const totalEncomendado = pedidoSistema + Number(li.estoque_extra || 0);
+        return s + totalEncomendado * Number(li.custo_unitario || 0);
+      }, 0);
+
+      const lstat = (nome: string) => document.querySelector<HTMLElement>(`[data-lstat="${nome}"]`);
+      const vEl = lstat("vendido"); if (vEl) vEl.textContent = brl(vendido);
+      const aEl = lstat("arrecadado"); if (aEl) aEl.textContent = brl(arrecadado);
+      const pEl = lstat("pago"); if (pEl) pEl.textContent = brl(pago);
+      const sEl = lstat("saldo"); if (sEl) sEl.textContent = brl(arrecadado - pago);
+
+      renderizarConsolidado(lote.id);
+    }
+
+    /** Soma, entre os pedidos deste lote (sem contar avulso), quantas peças de um tamanho/modelo já foram pedidas. */
+    function pedidoSistemaPara(loteId: number, tamanho: string | null, modelo: string | null): number {
+      const pedidosDoLote = pedidos.filter((p) => p.lote === loteId && !p.avulso);
+      let soma = 0;
+      for (const p of pedidosDoLote) {
+        for (const item of p.itens) {
+          if ((item.tamanho ?? null) === (tamanho ?? null) && (item.modelo ?? null) === (modelo ?? null)) soma += item.quantidade;
+        }
+      }
+      return soma;
+    }
+
+    /** Combinações tamanho/modelo vistas nos pedidos do lote, mesmo sem linha de consolidado lançada ainda. */
+    function combosDoLote(loteId: number): { tamanho: string | null; modelo: string | null }[] {
+      const chave = (t: string | null, m: string | null) => `${t ?? ""}|||${m ?? ""}`;
+      const vistos = new Map<string, { tamanho: string | null; modelo: string | null }>();
+      pedidos
+        .filter((p) => p.lote === loteId && !p.avulso)
+        .forEach((p) => p.itens.forEach((i) => vistos.set(chave(i.tamanho, i.modelo), { tamanho: i.tamanho, modelo: i.modelo })));
+      loteItens.filter((li) => li.lote === loteId).forEach((li) => vistos.set(chave(li.tamanho, li.modelo), { tamanho: li.tamanho, modelo: li.modelo }));
+      return Array.from(vistos.values());
+    }
+
+    function renderizarConsolidado(loteId: number) {
+      const corpo = document.querySelector<HTMLElement>("[data-consolidado-corpo]");
+      if (!corpo) return;
+
+      const combos = combosDoLote(loteId).sort((a, b) => (a.tamanho ?? "").localeCompare(b.tamanho ?? ""));
+
+      if (combos.length === 0) {
+        corpo.innerHTML = `<tr><td colspan="7" class="text-sm text-muted-foreground">Nenhum pedido ainda neste lote.</td></tr>`;
+        return;
+      }
+
+      corpo.innerHTML = combos
+        .map(({ tamanho, modelo }) => {
+          const pedidoSistema = pedidoSistemaPara(loteId, tamanho, modelo);
+          const itemExistente = loteItens.find((li) => li.lote === loteId && (li.tamanho ?? null) === (tamanho ?? null) && (li.modelo ?? null) === (modelo ?? null));
+          const extra = itemExistente?.estoque_extra ?? 0;
+          const custo = itemExistente?.custo_unitario ?? "";
+          const total = pedidoSistema + Number(extra || 0);
+
+          return `
+            <tr data-consolidado-linha data-tamanho="${escapeHtml(tamanho ?? "")}" data-modelo="${escapeHtml(modelo ?? "")}" data-item-id="${itemExistente?.id ?? ""}">
+              <td>${escapeHtml(tamanho ?? "—")}</td>
+              <td>${escapeHtml(modelo ?? "—")}</td>
+              <td>${pedidoSistema}</td>
+              <td><input type="number" min="0" class="field" style="width:6rem" value="${extra}" data-campo-extra /></td>
+              <td data-campo-total>${total}</td>
+              <td><input type="number" step="0.01" min="0" class="field" style="width:7rem" value="${custo}" data-campo-custo /></td>
+              <td><button type="button" class="link-sweep text-sm font-semibold text-accent" data-salvar-consolidado>Salvar</button></td>
+            </tr>
+          `;
+        })
+        .join("");
     }
 
     function itemLinhaHtml(i: Item, quantidadePaga: number): string {
@@ -344,12 +428,14 @@ const allPosts = visiblePosts(await getAllMensagens());
         })
         .join("");
 
+      const loteInfo = p.avulso ? "" : p.lote ? ` · lote ${lotes.find((l) => l.id === p.lote)?.numero ?? "?"}` : "";
+
       return `
         <div class="camiseta-pedido-painel-card" data-pedido-id="${p.id}">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p class="font-semibold">${escapeHtml(p.nome)} ${p.avulso ? '<span class="badge-avulso">venda avulsa</span>' : ""}</p>
-              <p class="text-xs text-muted-foreground">${escapeHtml(p.congregacao?.name ?? "Congregação não informada")}</p>
+              <p class="text-xs text-muted-foreground">${escapeHtml(p.congregacao?.name ?? "Congregação não informada")}${loteInfo}</p>
             </div>
             <div class="flex items-center gap-3">
               <label class="text-sm">Pago: R$
@@ -367,7 +453,8 @@ const allPosts = visiblePosts(await getAllMensagens());
     function renderizarPedidos() {
       if (!listaEl) return;
       const termo = termoBusca.trim().toLowerCase();
-      const filtrados = pedidos.filter((p) => {
+      const base = pedidosDaVisao();
+      const filtrados = base.filter((p) => {
         if (termo && !p.nome.toLowerCase().includes(termo)) return false;
         if (filtroPerguntaId !== null) {
           const respostas = respostasPorPedido.get(p.id) ?? [];
@@ -386,6 +473,97 @@ const allPosts = visiblePosts(await getAllMensagens());
       });
       listaEl.innerHTML = filtrados.length ? filtrados.map(pedidoCardHtml).join("") : `<p class="text-sm text-muted-foreground">Nenhum pedido nesse filtro.</p>`;
     }
+
+    function atualizarTudo() {
+      atualizarStatsGerais();
+      renderizarLotesTabs();
+      renderizarPainelLote();
+      renderizarPedidos();
+    }
+
+    lotesTabsEl?.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const valor = target.closest<HTMLElement>("[data-lote-tab]")?.dataset.loteTab;
+      if (!valor) return;
+      visaoAtual = valor === "todos-os-lotes" || valor === "avulso" ? valor : Number(valor);
+      atualizarTudo();
+    });
+
+    document.querySelector("[data-fechar-lote]")?.addEventListener("click", async () => {
+      const lote = loteSelecionado();
+      if (!lote) return;
+      if (!confirm(`Fechar o Lote ${lote.numero}? O próximo pedido já cria o lote seguinte sozinho.`)) return;
+      const res = await fetch(`${directusUrl}/items/camiseta_lotes/${lote.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "fechado", fechado_em: new Date().toISOString() }),
+      });
+      if (res.ok) {
+        lote.status = "fechado";
+        lote.fechado_em = new Date().toISOString();
+        atualizarTudo();
+      }
+    });
+
+    document.querySelector("[data-consolidado-corpo]")?.addEventListener("click", async (event) => {
+      const target = event.target as HTMLElement;
+      if (!target.matches("[data-salvar-consolidado]")) return;
+      const linha = target.closest<HTMLElement>("[data-consolidado-linha]");
+      const lote = loteSelecionado();
+      if (!linha || !lote) return;
+
+      const tamanho = linha.dataset.tamanho || null;
+      const modelo = linha.dataset.modelo || null;
+      const itemId = linha.dataset.itemId;
+      const extra = Number(linha.querySelector<HTMLInputElement>("[data-campo-extra]")?.value || 0);
+      const custo = Number(linha.querySelector<HTMLInputElement>("[data-campo-custo]")?.value || 0);
+
+      const payload = { lote: lote.id, tamanho, modelo, estoque_extra: extra, custo_unitario: custo };
+      let salvo: LoteItem | null = null;
+
+      if (itemId) {
+        const res = await fetch(`${directusUrl}/items/camiseta_lote_itens/${itemId}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) salvo = (await res.json()).data;
+      } else {
+        const res = await fetch(`${directusUrl}/items/camiseta_lote_itens`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) salvo = (await res.json()).data;
+      }
+
+      if (salvo) {
+        loteItens = loteItens.filter((li) => li.id !== salvo!.id);
+        loteItens.push(salvo);
+        renderizarPainelLote();
+      }
+    });
+
+    document.querySelector("[data-adicionar-item-consolidado]")?.addEventListener("click", async () => {
+      const lote = loteSelecionado();
+      if (!lote) return;
+      const tamanho = (document.querySelector<HTMLInputElement>("[data-novo-item-tamanho]")?.value ?? "").trim() || null;
+      const modelo = (document.querySelector<HTMLInputElement>("[data-novo-item-modelo]")?.value ?? "").trim() || null;
+      const extra = Number(document.querySelector<HTMLInputElement>("[data-novo-item-extra]")?.value || 0);
+
+      const res = await fetch(`${directusUrl}/items/camiseta_lote_itens`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ lote: lote.id, tamanho, modelo, estoque_extra: extra, custo_unitario: null }),
+      });
+      if (res.ok) {
+        loteItens.push((await res.json()).data);
+        (document.querySelector<HTMLInputElement>("[data-novo-item-tamanho]") as HTMLInputElement).value = "";
+        (document.querySelector<HTMLInputElement>("[data-novo-item-modelo]") as HTMLInputElement).value = "";
+        (document.querySelector<HTMLInputElement>("[data-novo-item-extra]") as HTMLInputElement).value = "";
+        renderizarPainelLote();
+      }
+    });
 
     document.querySelectorAll<HTMLButtonElement>("[data-filtro]").forEach((botao) => {
       botao.addEventListener("click", () => {
@@ -454,59 +632,6 @@ const allPosts = visiblePosts(await getAllMensagens());
       }
     }
 
-    // --- lotes de compra ---
-    document.querySelector("[data-adicionar-lote]")?.addEventListener("click", async () => {
-      const tamanho = (document.querySelector<HTMLInputElement>("[data-novo-lote-tamanho]")?.value ?? "").trim();
-      const modelo = (document.querySelector<HTMLInputElement>("[data-novo-lote-modelo]")?.value ?? "").trim();
-      const quantidade = Number(document.querySelector<HTMLInputElement>("[data-novo-lote-quantidade]")?.value || 0);
-      const valorCusto = Number(document.querySelector<HTMLInputElement>("[data-novo-lote-custo]")?.value || 0);
-      if (!quantidade) return;
-
-      const res = await fetch(`${directusUrl}/items/camiseta_lotes`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ grupo: grupoId, tamanho: tamanho || null, modelo: modelo || null, quantidade, valor_custo: valorCusto }),
-      });
-      if (res.ok) {
-        const novo = (await res.json()).data;
-        lotesCompra.push(novo);
-        renderizarLotesCompra();
-        atualizarStats();
-      }
-    });
-
-    lotesCorpoEl?.addEventListener("click", async (event) => {
-      const target = event.target as HTMLElement;
-      const linha = target.closest<HTMLElement>("tr[data-lote-id]");
-      if (!linha) return;
-      const loteId = Number(linha.dataset.loteId);
-
-      if (target.matches("[data-salvar-lote]")) {
-        const quantidade = Number(linha.querySelector<HTMLInputElement>("[data-campo-quantidade]")?.value || 0);
-        const valorCusto = Number(linha.querySelector<HTMLInputElement>("[data-campo-custo]")?.value || 0);
-        const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ quantidade, valor_custo: valorCusto }),
-        });
-        if (res.ok) {
-          const item = lotesCompra.find((l) => l.id === loteId);
-          if (item) { item.quantidade = quantidade; item.valor_custo = valorCusto; }
-          atualizarStats();
-        }
-      }
-
-      if (target.matches("[data-excluir-lote]")) {
-        if (!confirm("Excluir esse lote de compra?")) return;
-        const res = await fetch(`${directusUrl}/items/camiseta_lotes/${loteId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) {
-          lotesCompra = lotesCompra.filter((l) => l.id !== loteId);
-          renderizarLotesCompra();
-          atualizarStats();
-        }
-      }
-    });
-
     // --- pedidos: salvar valor pago / excluir / retirada por item ---
     listaEl?.addEventListener("click", async (event) => {
       const target = event.target as HTMLElement;
@@ -527,8 +652,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         target.textContent = "Salvar";
         if (res.ok) {
           pedido.valor_pago = valorPago;
-          atualizarStats();
-          renderizarPedidos();
+          atualizarTudo();
         }
       }
 
@@ -537,8 +661,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         const res = await fetch(`${directusUrl}/items/camiseta_pedidos/${pedidoId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           pedidos = pedidos.filter((p) => p.id !== pedidoId);
-          atualizarStats();
-          renderizarPedidos();
+          atualizarTudo();
         }
       }
 
@@ -580,11 +703,6 @@ const allPosts = visiblePosts(await getAllMensagens());
     }
 
     const avulsoItensEl = document.querySelector<HTMLElement>("[data-avulso-itens]");
-    // A primeira linha só pode ser montada depois que `grupo` existir de
-    // verdade (carregado dentro de `iniciar()`) — chamar isso aqui, no topo
-    // do script, lia `grupo.tamanhos` com `grupo` ainda `undefined` e
-    // quebrava a página inteira antes até de checar a sessão (bug real,
-    // travava em "Verificando sua sessão…" pra sempre).
     document.querySelector("[data-avulso-item-adicionar]")?.addEventListener("click", () => {
       avulsoItensEl?.insertAdjacentHTML("beforeend", linhaItemAvulsoHtml());
     });
@@ -611,7 +729,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         const res = await fetch(`${directusUrl}/items/camiseta_pedidos`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ grupo: grupoId, nome, telefone: null, avulso: true, valor_pago: valorPago }),
+          body: JSON.stringify({ grupo: grupoId, nome, telefone: null, avulso: true, lote: null, valor_pago: valorPago }),
         });
         if (!res.ok) throw new Error("falha ao criar pedido avulso");
         const novoPedido = (await res.json()).data;
@@ -627,8 +745,7 @@ const allPosts = visiblePosts(await getAllMensagens());
         }
 
         pedidos.push({ ...novoPedido, congregacao: null, itens: itensSalvos });
-        atualizarStats();
-        renderizarPedidos();
+        atualizarTudo();
         if (statusEl) statusEl.textContent = "✅ Venda avulsa registrada.";
         if (avulsoWrap) avulsoWrap.hidden = true;
       } catch {
@@ -659,16 +776,28 @@ const allPosts = visiblePosts(await getAllMensagens());
       if (tituloEl) tituloEl.textContent = `Pedidos — ${grupo.nome}`;
 
       const resPedidos = await fetch(
-        `${directusUrl}/items/camiseta_pedidos?filter[grupo][_eq]=${grupoId}&fields=id,nome,valor_pago,avulso,congregacao.name,itens.id,itens.tamanho,itens.modelo,itens.quantidade,itens.quantidade_retirada&sort=nome&limit=-1`,
+        `${directusUrl}/items/camiseta_pedidos?filter[grupo][_eq]=${grupoId}&fields=id,nome,valor_pago,avulso,lote,congregacao.name,itens.id,itens.tamanho,itens.modelo,itens.quantidade,itens.quantidade_retirada&sort=nome&limit=-1`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       pedidos = (await resPedidos.json()).data ?? [];
       pedidos.forEach((p) => { if (!p.itens) p.itens = []; });
 
-      const resLotes = await fetch(`${directusUrl}/items/camiseta_lotes?filter[grupo][_eq]=${grupoId}&fields=id,tamanho,modelo,quantidade,valor_custo&limit=-1`, {
+      const resLotes = await fetch(`${directusUrl}/items/camiseta_lotes?filter[grupo][_eq]=${grupoId}&sort=numero&limit=-1`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      lotesCompra = (await resLotes.json()).data ?? [];
+      lotes = (await resLotes.json()).data ?? [];
+
+      if (lotes.length > 0) {
+        const idsLotes = lotes.map((l) => l.id).join(",");
+        const resLoteItens = await fetch(
+          `${directusUrl}/items/camiseta_lote_itens?filter[lote][_in]=${idsLotes}&limit=-1`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        loteItens = (await resLoteItens.json()).data ?? [];
+      }
+
+      const aberto = lotes.find((l) => l.status === "aberto");
+      visaoAtual = aberto ? aberto.id : lotes.length > 0 ? lotes[lotes.length - 1].id : "todos-os-lotes";
 
       const resPerguntas = await fetch(`${directusUrl}/items/perguntas_camiseta?filter[grupo][_eq]=${grupoId}&sort=ordem&limit=-1`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -693,10 +822,8 @@ const allPosts = visiblePosts(await getAllMensagens());
       if (carregando) carregando.hidden = true;
       if (conteudoEl) conteudoEl.hidden = false;
 
-      atualizarStats();
-      renderizarLotesCompra();
       renderizarFiltroPergunta();
-      renderizarPedidos();
+      atualizarTudo();
       avulsoItensEl?.insertAdjacentHTML("beforeend", linhaItemAvulsoHtml());
     }
 
@@ -707,7 +834,6 @@ const allPosts = visiblePosts(await getAllMensagens());
     .stat-card { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; }
     .stat-numero { font-size: 1.5rem; font-weight: 700; }
     .stat-label { margin-top: 0.25rem; font-size: 0.8125rem; color: var(--muted-foreground); }
-    .tamanho-chip { border: 1px solid var(--border); border-radius: 999px; padding: 0.25rem 0.75rem; font-size: 0.8125rem; }
     .filtro-chip { border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.8125rem; background: transparent; cursor: pointer; }
     .filtro-chip.is-active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
     .tabela-camiseta { width: 100%; border-collapse: collapse; font-size: 0.875rem; }

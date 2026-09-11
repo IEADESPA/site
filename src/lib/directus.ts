@@ -93,6 +93,16 @@ export const CONSULTAR_PEDIDOS_CAMISETA_URL = "/api/consultar-pedidos-camiseta";
  */
 export const ORAR_MURAL_URL = "/api/orar-mural";
 
+/**
+ * Cria o pedido público de camiseta inteiro (pedido + itens + respostas),
+ * atribuindo-o automaticamente ao lote aberto da campanha (ver
+ * `api/src/functions/criarPedidoCamiseta.js`) — a criação direta pelo
+ * navegador em `camiseta_pedidos`/`camiseta_itens_pedido`/
+ * `respostas_pedido_camiseta` foi removida (sem permissão pública nenhuma
+ * mais nessas três coleções).
+ */
+export const CRIAR_PEDIDO_CAMISETA_URL = "/api/criar-pedido-camiseta";
+
 export const SOLICITAR_CODIGO_CONTA_URL = "/api/solicitar-codigo-conta";
 export const CONFIRMAR_CODIGO_CONTA_URL = "/api/confirmar-codigo-conta";
 export const CONSULTAR_MINHA_CONTA_URL = "/api/consultar-minha-conta";

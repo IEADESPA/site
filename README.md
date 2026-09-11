@@ -94,11 +94,12 @@ quem não deveria vê-lo.
 | `respostas_inscricao` | Resposta a pergunta customizada de um evento | Só cria publicamente |
 | `cupons_desconto` | Código de desconto, limite de usos | Leitura pública por código; atualização pública só do contador de usos |
 | `camiseta_grupos` | Campanha de camiseta/uniforme (nome, valor, prazo) | Leitura pública |
-| `camiseta_lotes` | Lote de compra dentro de um grupo, com custo (`valor_custo`, nunca público) | Sem leitura pública do custo |
-| `camiseta_pedidos` | Nome, telefone (hash), e-mail opcional, valor pago | Criação pública; leitura pública só do campo `id`; consulta por telefone via `consultarPedidosCamiseta.js` |
-| `camiseta_itens_pedido` | Item do carrinho (tamanho/modelo/quantidade) | Mesma proteção do pedido pai |
+| `camiseta_lotes` | Janela de compra (número, aberto/fechado) de um grupo | Sem leitura/escrita pública — só a equipe (painel) e a Function de criação de pedido |
+| `camiseta_lote_itens` | Estoque extra + custo por tamanho/modelo de um lote | Sem leitura/escrita pública |
+| `camiseta_pedidos` | Nome, telefone (hash), e-mail opcional, valor pago | Sem criação pública direta — só via `criarPedidoCamiseta.js`; leitura pública só do campo `id`; consulta por telefone via `consultarPedidosCamiseta.js` |
+| `camiseta_itens_pedido` | Item do carrinho (tamanho/modelo/quantidade) | Sem criação pública direta — só via `criarPedidoCamiseta.js` |
 | `perguntas_camiseta` | Pergunta customizada de uma campanha | Leitura pública |
-| `respostas_pedido_camiseta` | Resposta de um pedido a uma pergunta | Só cria publicamente |
+| `respostas_pedido_camiseta` | Resposta de um pedido a uma pergunta | Sem criação pública direta — só via `criarPedidoCamiseta.js` |
 | `mural_oracao` | Pedido de oração, nome opcional, confidencial | Leitura pública só do que é `aprovado=true`, não confidencial e dos últimos 90 dias; contador `orando_count` só é escrito pela Function `orarMural.js` |
 | `contato_mensagens` | Formulário de contato (inclui LGPD/pedido de oração) | Só cria publicamente, nunca lida |
 | `push_subscriptions` | Inscrição de notificação push | Só cria publicamente; edição usa o próprio endpoint como "senha de posse" |
@@ -179,18 +180,31 @@ Arquitetura em carrinho, com atribuição por congregação e alocação de paga
 
 - **`camiseta_grupos`** — a campanha (ex. "Camiseta do aniversário 2026"), com preço de venda e
   prazo.
-- **`camiseta_lotes`** — lotes de compra dentro de um grupo, cada um com seu próprio custo
-  (`valor_custo`, nunca público) — permite rastrear margem real mesmo quando o fornecedor muda de
-  preço entre lotes.
+- **`camiseta_lotes`** — janela de compra real (número sequencial + status aberto/fechado),
+  seguindo o mesmo modelo já usado há anos na planilha de camisetas da tesouraria: todo pedido
+  novo cai sozinho no lote que estiver aberto no momento; quando a equipe fecha o lote
+  (`/painel-camisetas/grupo/pedidos/`), o próximo pedido já cria o lote seguinte sozinho, sem
+  nenhuma ação manual de agrupar pedido a lote.
+- **`camiseta_lote_itens`** — por tamanho/modelo, dentro de um lote: quanto o sistema já
+  consolidou de pedido (calculado, não editável), quanto de estoque extra a equipe decidiu
+  comprar a mais, e o custo/peça pago à malharia naquele lote — o total a encomendar é a soma dos
+  dois primeiros. Alimenta o "Vendido/Arrecadado/Pago à malharia/Saldo" por lote no painel, o
+  mesmo cálculo que a aba "CONSELHO" da planilha já fazia.
 - **`camiseta_pedidos`** + **`camiseta_itens_pedido`** — um pedido é um carrinho (várias
   linhas de tamanho/modelo/quantidade), com pagamento parcial alocado item a item, em ordem de
-  criação. Venda avulsa (sem congregação) também é suportada.
-- **`camiseta_estoque`** — recebimento físico por lote+tamanho+modelo, lançado manualmente pela
-  equipe conforme a mercadoria chega.
+  criação. Venda avulsa (sem congregação, sem lote — mesmo "AVULSO" da planilha) também é
+  suportada.
+- **Criação do pedido é toda feita numa Function** (`api/src/functions/criarPedidoCamiseta.js`,
+  rota `/api/criar-pedido-camiseta`) — não existe mais permissão pública de criar
+  `camiseta_pedidos`/`camiseta_itens_pedido`/`respostas_pedido_camiseta` direto no Directus. A
+  Function decide sozinha em qual lote o pedido cai (encontra o aberto, ou cria o próximo número
+  se não houver nenhum), evitando tanto expor essa lógica no navegador quanto duas pessoas criarem
+  o "lote 1" ao mesmo tempo.
 - **Consulta pública** (`/meus-pedidos-camiseta/`) — só por telefone, sem código, por decisão
   explícita de simplicidade.
-- **Painel de gestão** (`/painel-camisetas/`) — CRUD de grupos/lotes, estatísticas, breakdown por
-  congregação, venda avulsa, controle de retirada.
+- **Painel de gestão** (`/painel-camisetas/`) — CRUD de campanha, abas por lote (todos os
+  lotes/lote N/avulso), fechamento de lote, consolidado editável, venda avulsa, controle de
+  retirada.
 - **Perguntas personalizadas por campanha** (`perguntas_camiseta`/`respostas_pedido_camiseta`) —
   espelha o mesmo sistema de eventos: cada campanha pode pedir campos extras no formulário público
   (ex. bairro, forma de retirada), com os mesmos 6 tipos de pergunta (texto curto/longo, seleção
