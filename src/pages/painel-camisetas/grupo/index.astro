@@ -67,6 +67,15 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
           de um ministério não precisa de evento nenhum; camiseta de uma marcha pode ter só o evento.
         </p>
 
+        <label class="flex items-start gap-2 text-sm">
+          <input id="f-pedir-congregacao" type="checkbox" class="mt-1" />
+          <span>
+            <strong>Perguntar a congregação no pedido</strong> — desmarque para campanhas que
+            reúnem várias igrejas/ministérios (ex.: uma marcha da cidade toda), onde vincular a uma
+            única congregação não faz sentido.
+          </span>
+        </label>
+
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="grid gap-2">
             <label class="text-sm font-semibold" for="f-tamanhos">Tamanhos (separados por vírgula)</label>
@@ -184,6 +193,7 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
       pedidos_ate: string | null;
       ativo: boolean;
       destaque: boolean;
+      pedir_congregacao: boolean;
     }
 
     const container = document.querySelector<HTMLElement>("[data-directus-url]");
@@ -211,6 +221,7 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
     const fPedidosAte = el<HTMLInputElement>("f-pedidos-ate");
     const fAtivo = el<HTMLInputElement>("f-ativo");
     const fDestaque = el<HTMLInputElement>("f-destaque");
+    const fPedirCongregacao = el<HTMLInputElement>("f-pedir-congregacao");
 
     function slugify(texto: string): string {
       return texto
@@ -244,6 +255,7 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
       fPedidosAte.value = grupo.pedidos_ate ?? "";
       fAtivo.checked = Boolean(grupo.ativo);
       fDestaque.checked = Boolean(grupo.destaque);
+      fPedirCongregacao.checked = grupo.pedir_congregacao !== false;
     }
 
     function lerFormulario() {
@@ -259,6 +271,7 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
         pedidos_ate: fPedidosAte.value || null,
         ativo: fAtivo.checked,
         destaque: fDestaque.checked,
+        pedir_congregacao: fPedirCongregacao.checked,
       };
     }
 

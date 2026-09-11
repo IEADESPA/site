@@ -17,6 +17,7 @@ interface Lote {
   pedidos_ate: string | null;
   evento: { title: string } | null;
   ministerio: { name: string } | null;
+  pedir_congregacao: boolean;
 }
 
 interface Congregacao {
@@ -105,13 +106,17 @@ const modelos = lote.modelos ?? [];
                 <a href="/minha-conta/" class="underline underline-offset-2">Minha conta</a>.
               </p>
             </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-semibold" for="pedido-congregacao">Congregação</label>
-              <select id="pedido-congregacao" class="field">
-                <option value="">— Não informar —</option>
-                {congregacoes.map((c) => <option value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
+            {
+              lote.pedir_congregacao !== false && (
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold" for="pedido-congregacao">Congregação</label>
+                  <select id="pedido-congregacao" class="field">
+                    <option value="">— Não informar —</option>
+                    {congregacoes.map((c) => <option value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )
+            }
 
             {
               perguntas.map((pergunta) => (

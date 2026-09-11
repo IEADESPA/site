@@ -101,10 +101,24 @@ const allPosts = visiblePosts(await getAllMensagens());
           </p>
         </div>
 
-        <div class="mt-6 flex flex-wrap gap-2" data-filtros>
-          <button type="button" class="filtro-chip is-active" data-filtro="todos">Todos</button>
-          <button type="button" class="filtro-chip" data-filtro="devendo">Devendo</button>
-          <button type="button" class="filtro-chip" data-filtro="pendente-retirada">Com peça a retirar</button>
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <input type="search" class="field busca-input" placeholder="Buscar por nome…" data-busca />
+          <div class="flex flex-wrap gap-2" data-filtros>
+            <button type="button" class="filtro-chip is-active" data-filtro="todos">Todos</button>
+            <button type="button" class="filtro-chip" data-filtro="devendo">Devendo</button>
+            <button type="button" class="filtro-chip" data-filtro="pago">Pago</button>
+            <button type="button" class="filtro-chip" data-filtro="pendente-retirada">Com peça a retirar</button>
+            <button type="button" class="filtro-chip" data-filtro="retirado">Já retirado tudo</button>
+          </div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center gap-3" data-filtro-pergunta-bloco hidden>
+          <span class="text-sm font-semibold text-muted-foreground">Filtrar por pergunta:</span>
+          <select class="field" data-filtro-pergunta-select></select>
+          <select class="field" data-filtro-pergunta-valor hidden></select>
+          <button type="button" class="link-sweep text-accent text-sm font-semibold" data-filtro-pergunta-limpar hidden>
+            Limpar filtro
+          </button>
         </div>
 
         <div class="mt-4 grid gap-4" data-pedidos-lista></div>
@@ -151,6 +165,22 @@ const allPosts = visiblePosts(await getAllMensagens());
       valor_custo: number | null;
     }
 
+    type TipoPergunta = "texto_curto" | "texto_longo" | "selecao_unica" | "selecao_multipla" | "numero" | "data";
+
+    interface Pergunta {
+      id: number;
+      ordem: number | null;
+      label: string;
+      tipo: TipoPergunta;
+      opcoes: string[] | null;
+    }
+
+    interface Resposta {
+      pedido: number;
+      pergunta: number;
+      valor: string;
+    }
+
     const container = document.querySelector<HTMLElement>("[data-directus-url]");
     if (!container) throw new Error("contêiner do painel ausente");
     const directusUrl = container.dataset.directusUrl ?? "";
@@ -171,7 +201,12 @@ const allPosts = visiblePosts(await getAllMensagens());
     let grupo: Grupo;
     let pedidos: Pedido[] = [];
     let lotesCompra: LoteCompra[] = [];
-    let filtroAtivo: "todos" | "devendo" | "pendente-retirada" = "todos";
+    let perguntas: Pergunta[] = [];
+    let respostasPorPedido = new Map<number, Resposta[]>();
+    let filtroAtivo: "todos" | "devendo" | "pago" | "pendente-retirada" | "retirado" = "todos";
+    let termoBusca = "";
+    let filtroPerguntaId: number | null = null;
+    let filtroPerguntaValor: string | null = null;
 
     function escapeHtml(value: string) {
       return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
@@ -201,6 +236,9 @@ const allPosts = visiblePosts(await getAllMensagens());
         if (item.quantidade_retirada < paga) return true;
       }
       return false;
+    }
+    function tudoRetirado(p: Pedido): boolean {
+      return p.itens.length > 0 && p.itens.every((item) => item.quantidade_retirada >= item.quantidade);
     }
 
     function atualizarStats() {
@@ -328,9 +366,22 @@ const allPosts = visiblePosts(await getAllMensagens());
 
     function renderizarPedidos() {
       if (!listaEl) return;
+      const termo = termoBusca.trim().toLowerCase();
       const filtrados = pedidos.filter((p) => {
+        if (termo && !p.nome.toLowerCase().includes(termo)) return false;
+        if (filtroPerguntaId !== null) {
+          const respostas = respostasPorPedido.get(p.id) ?? [];
+          const resposta = respostas.find((r) => r.pergunta === filtroPerguntaId);
+          const valores = (resposta?.valor ?? "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+          if (!valores.includes(filtroPerguntaValor ?? "")) return false;
+        }
         if (filtroAtivo === "devendo") return devendo(p);
+        if (filtroAtivo === "pago") return !devendo(p);
         if (filtroAtivo === "pendente-retirada") return temPendenteRetirada(p);
+        if (filtroAtivo === "retirado") return tudoRetirado(p);
         return true;
       });
       listaEl.innerHTML = filtrados.length ? filtrados.map(pedidoCardHtml).join("") : `<p class="text-sm text-muted-foreground">Nenhum pedido nesse filtro.</p>`;
@@ -343,6 +394,65 @@ const allPosts = visiblePosts(await getAllMensagens());
         renderizarPedidos();
       });
     });
+
+    const buscaInput = document.querySelector<HTMLInputElement>("[data-busca]");
+    buscaInput?.addEventListener("input", () => {
+      termoBusca = buscaInput.value;
+      renderizarPedidos();
+    });
+
+    function perguntasComOpcoes(): Pergunta[] {
+      return perguntas.filter((p) => p.tipo === "selecao_unica" || p.tipo === "selecao_multipla");
+    }
+
+    function renderizarFiltroPergunta() {
+      const bloco = document.querySelector<HTMLElement>("[data-filtro-pergunta-bloco]");
+      const selectPergunta = document.querySelector<HTMLSelectElement>("[data-filtro-pergunta-select]");
+      const selectValor = document.querySelector<HTMLSelectElement>("[data-filtro-pergunta-valor]");
+      const limparBtn = document.querySelector<HTMLButtonElement>("[data-filtro-pergunta-limpar]");
+      if (!bloco || !selectPergunta || !selectValor || !limparBtn) return;
+
+      const graficaveis = perguntasComOpcoes();
+      bloco.hidden = graficaveis.length === 0;
+      if (!graficaveis.length) return;
+
+      if (!selectPergunta.dataset.montado) {
+        selectPergunta.dataset.montado = "1";
+        selectPergunta.innerHTML =
+          `<option value="">Nenhuma</option>` + graficaveis.map((p) => `<option value="${p.id}">${escapeHtml(p.label)}</option>`).join("");
+
+        selectPergunta.addEventListener("change", () => {
+          const perguntaId = selectPergunta.value ? Number(selectPergunta.value) : null;
+          filtroPerguntaId = perguntaId;
+          filtroPerguntaValor = null;
+          const pergunta = perguntaId ? graficaveis.find((p) => p.id === perguntaId) : null;
+          if (pergunta) {
+            selectValor.innerHTML = (pergunta.opcoes ?? []).map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
+            selectValor.hidden = false;
+            filtroPerguntaValor = pergunta.opcoes?.[0] ?? null;
+            limparBtn.hidden = false;
+          } else {
+            selectValor.hidden = true;
+            limparBtn.hidden = true;
+          }
+          renderizarPedidos();
+        });
+
+        selectValor.addEventListener("change", () => {
+          filtroPerguntaValor = selectValor.value;
+          renderizarPedidos();
+        });
+
+        limparBtn.addEventListener("click", () => {
+          selectPergunta.value = "";
+          filtroPerguntaId = null;
+          filtroPerguntaValor = null;
+          selectValor.hidden = true;
+          limparBtn.hidden = true;
+          renderizarPedidos();
+        });
+      }
+    }
 
     // --- lotes de compra ---
     document.querySelector("[data-adicionar-lote]")?.addEventListener("click", async () => {
@@ -556,11 +666,32 @@ const allPosts = visiblePosts(await getAllMensagens());
       });
       lotesCompra = (await resLotes.json()).data ?? [];
 
+      const resPerguntas = await fetch(`${directusUrl}/items/perguntas_camiseta?filter[grupo][_eq]=${grupoId}&sort=ordem&limit=-1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      perguntas = (await resPerguntas.json()).data ?? [];
+
+      if (perguntas.length && pedidos.length) {
+        const idsPedidos = pedidos.map((p) => p.id).join(",");
+        const resRespostas = await fetch(
+          `${directusUrl}/items/respostas_pedido_camiseta?filter[pedido][_in]=${idsPedidos}&fields=pedido,pergunta,valor&limit=-1`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        const respostas: Resposta[] = (await resRespostas.json()).data ?? [];
+        respostasPorPedido = new Map();
+        for (const r of respostas) {
+          const lista = respostasPorPedido.get(r.pedido) ?? [];
+          lista.push(r);
+          respostasPorPedido.set(r.pedido, lista);
+        }
+      }
+
       if (carregando) carregando.hidden = true;
       if (conteudoEl) conteudoEl.hidden = false;
 
       atualizarStats();
       renderizarLotesCompra();
+      renderizarFiltroPergunta();
       renderizarPedidos();
     }
 

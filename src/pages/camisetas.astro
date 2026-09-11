@@ -40,35 +40,56 @@ const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "num
         </p>
       </header>
 
-      {
-        grupos.length === 0 ? (
-          <div class="gallery-empty mt-8">
-            <p class="text-sm text-muted-foreground">Nenhuma camiseta aberta no momento.</p>
-          </div>
-        ) : (
-          <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {grupos.map((grupo) => (
-              <a href={`/camiseta/${grupo.slug}/`} class="camiseta-lote-card">
-                <span class="camiseta-lote-nome">{grupo.nome}</span>
-                {(grupo.evento || grupo.ministerio) && (
-                  <span class="camiseta-lote-vinculo">{grupo.evento?.title ?? grupo.ministerio?.name}</span>
-                )}
-                {grupo.valor_venda != null && (
-                  <span class="camiseta-lote-valor">
-                    R$ {Number(grupo.valor_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </span>
-                )}
-                {grupo.pedidos_ate && (
-                  <span class="camiseta-lote-prazo">Pedidos até {dateFormatter.format(new Date(grupo.pedidos_ate))}</span>
-                )}
-              </a>
-            ))}
-          </div>
-        )
-      }
+      <div data-camisetas-wrap>
+        <div hidden={grupos.length > 0} class="gallery-empty mt-8" data-camisetas-vazio>
+          <p class="text-sm text-muted-foreground">Nenhuma camiseta aberta no momento.</p>
+        </div>
+
+        <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-camisetas-grid>
+          {grupos.map((grupo) => (
+            <a href={`/camiseta/${grupo.slug}/`} class="camiseta-lote-card" data-camiseta-card data-pedidos-ate={grupo.pedidos_ate ?? ""}>
+              <span class="camiseta-lote-nome">{grupo.nome}</span>
+              {(grupo.evento || grupo.ministerio) && (
+                <span class="camiseta-lote-vinculo">{grupo.evento?.title ?? grupo.ministerio?.name}</span>
+              )}
+              {grupo.valor_venda != null && (
+                <span class="camiseta-lote-valor">
+                  R$ {Number(grupo.valor_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </span>
+              )}
+              {grupo.pedidos_ate && (
+                <span class="camiseta-lote-prazo">Pedidos até {dateFormatter.format(new Date(grupo.pedidos_ate))}</span>
+              )}
+            </a>
+          ))}
+        </div>
+      </div>
     </div>
   </main>
   <SiteFooter />
+
+  <script>
+    // O site é estático e pode passar dias sem rebuildar — por isso o prazo
+    // "pedidos até" é conferido aqui, contra a data de hoje do visitante, em
+    // vez de confiar só no que valia no momento do último build (mesma
+    // técnica já usada no carrossel de destaque, ver README).
+    (() => {
+      const cards = document.querySelectorAll<HTMLElement>("[data-camiseta-card]");
+      const hoje = new Date().toISOString().slice(0, 10);
+      let visiveis = 0;
+
+      cards.forEach((card) => {
+        const prazo = card.dataset.pedidosAte;
+        const venceu = Boolean(prazo && prazo < hoje);
+        card.hidden = venceu;
+        if (!venceu) visiveis += 1;
+      });
+
+      const vazio = document.querySelector<HTMLElement>("[data-camisetas-vazio]");
+      if (vazio) vazio.hidden = visiveis > 0;
+    })();
+  </script>
+
 
   <style is:global>
     .camiseta-lote-card {

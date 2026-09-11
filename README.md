@@ -196,6 +196,20 @@ Arquitetura em carrinho, com atribuição por congregação e alocação de paga
   (ex. bairro, forma de retirada), com os mesmos 6 tipos de pergunta (texto curto/longo, seleção
   única/múltipla, número, data), geridos na página de edição da campanha em
   `/painel-camisetas/grupo/`.
+- **Congregação é opcional de duas formas**: a pessoa sempre pode deixar em branco, e a campanha
+  inteira pode desligar a pergunta (`pedir_congregacao`, no formulário de edição) para casos onde
+  vincular a uma única congregação não faz sentido — ex. uma marcha que reúne várias igrejas da
+  cidade, onde faz mais sentido perguntar bairro (via pergunta personalizada) do que congregação.
+- **Inativação**: não existe um botão "excluir" separado de "inativar" — os dois mecanismos já
+  cobrem os dois casos. Desmarcar "Ativo" tira a campanha do ar imediatamente (some da listagem
+  pública e para de aceitar pedido nesse instante). "Pedidos até" faz o mesmo automaticamente
+  quando a data passa — sem precisar de ação manual — mas os pedidos já feitos continuam existindo
+  e geríveis no painel; nada é apagado por expirar.
+- **Painel de pedidos com os mesmos filtros de eventos**: busca por nome, chips (Todos/Devendo/
+  Pago/Com peça a retirar/Já retirado tudo) e um filtro por resposta de uma pergunta personalizada
+  de seleção (ex. filtrar só quem respondeu "Zona Norte"). Sem exportação para Excel/CSV, de
+  propósito — mesmo motivo já documentado para eventos: manter dado pessoal só dentro do painel
+  controlado, não solto circulando em arquivo.
 
 ### Comunidade: mural de oração, enquetes e Minha Conta
 
