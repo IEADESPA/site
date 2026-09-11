@@ -29,6 +29,7 @@ const allPosts = visiblePosts(await getAllMensagens());
           <h2 class="section-title">Lotes de camiseta/uniforme</h2>
           <button type="button" class="btn btn-solid" data-painel-novo-grupo>+ Nova camiseta</button>
         </div>
+        <p class="mt-2 text-sm text-muted-foreground" data-painel-novo-status role="status" aria-live="polite"></p>
 
         <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-painel-lotes-lista>
           <p class="text-sm text-muted-foreground">Carregando lotes…</p>
@@ -92,20 +93,28 @@ const allPosts = visiblePosts(await getAllMensagens());
         .join("");
     }
 
+    const novoStatus = document.querySelector<HTMLElement>("[data-painel-novo-status]");
+
     novoBtn?.addEventListener("click", async () => {
       const t = await exigirAutenticacao(directusUrl, AUTH);
       if (!t) return;
       novoBtn.disabled = true;
+      if (novoStatus) novoStatus.textContent = "Criando…";
       try {
+        // `slug` é obrigatório e único no Directus — um placeholder com
+        // timestamp garante que a criação nunca falhe por causa dele; a tela
+        // de edição já tem "Gerar do nome" pra trocar por um slug de verdade.
         const res = await fetch(`${directusUrl}/items/camiseta_grupos`, {
           method: "POST",
           headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ nome: "Nova camiseta", ativo: true }),
+          body: JSON.stringify({ nome: "Nova camiseta", slug: `nova-camiseta-${Date.now()}`, ativo: true }),
         });
+        if (!res.ok) throw new Error("falha ao criar");
         const json = await res.json();
         window.location.href = `/painel-camisetas/grupo/?id=${json.data.id}`;
       } catch {
         novoBtn.disabled = false;
+        if (novoStatus) novoStatus.textContent = "Não foi possível criar agora. Tente de novo em instantes.";
       }
     });
 
