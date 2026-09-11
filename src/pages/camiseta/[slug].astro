@@ -86,6 +86,14 @@ const modelos = lote.modelos ?? [];
               </p>
             </div>
             <div class="grid gap-2">
+              <label class="text-sm font-semibold" for="pedido-email">E-mail (opcional)</label>
+              <input id="pedido-email" name="email" type="email" autocomplete="email" class="field" />
+              <p class="text-xs text-muted-foreground">
+                Se informar, esse pedido aparece junto com o resto na sua{" "}
+                <a href="/minha-conta/" class="underline underline-offset-2">Minha conta</a>.
+              </p>
+            </div>
+            <div class="grid gap-2">
               <label class="text-sm font-semibold" for="pedido-congregacao">Congregação</label>
               <select id="pedido-congregacao" class="field">
                 <option value="">— Não informar —</option>
@@ -132,6 +140,13 @@ const modelos = lote.modelos ?? [];
         const form = document.querySelector("[data-pedido-form]");
         const itensLista = document.querySelector("[data-itens-lista]");
         const totalEl = document.querySelector("[data-pedido-total]");
+
+        // Fase 26 — pré-preenche com o e-mail da Minha Conta, se já logado.
+        (() => {
+          const contaEmailSalvo = localStorage.getItem("conta_email");
+          const inputEmail = document.getElementById("pedido-email");
+          if (contaEmailSalvo && inputEmail && !inputEmail.value) inputEmail.value = contaEmailSalvo;
+        })();
 
         function linhaItemHtml() {
           const tamanhoOpcoes = tamanhos.length
@@ -218,6 +233,7 @@ const modelos = lote.modelos ?? [];
                 grupo: loteId,
                 nome: String(data.get("nome")).trim(),
                 telefone: telefoneHash,
+                email: String(data.get("email") || "").trim() || null,
                 congregacao: congregacaoEl && congregacaoEl.value ? Number(congregacaoEl.value) : null,
               }),
             });

@@ -536,6 +536,15 @@ const structuredData = startDate
           vapidPublicKey: "BHjTzvfXIx0DAkcCgfJDNQO5N09SmO0jIPuTP8L6rxnEaITMn95fQH6kHFnbrEJE-Fdroim5bNnaKp5wwowXdak",
         }}
       >
+        // Fase 26 — se a pessoa já estiver logada na Minha Conta, pré-preenche
+        // o e-mail (mesma chave usada por `contaAuth.ts`) pra ela não digitar
+        // de novo; continua editável e opcional, igual antes.
+        (() => {
+          const contaEmailSalvo = localStorage.getItem("conta_email");
+          const inputEmail = document.getElementById("inscricao-email");
+          if (contaEmailSalvo && inputEmail && !inputEmail.value) inputEmail.value = contaEmailSalvo;
+        })();
+
         // Sem caracteres ambíguos (0/O, 1/I/L) — pra ser fácil de digitar de
         // volta na portaria no dia do evento.
         const ALFABETO_CODIGO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";

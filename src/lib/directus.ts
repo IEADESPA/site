@@ -76,6 +76,18 @@ export const ENVIAR_CONFIRMACAO_URL = "/api/enviar-confirmacao-inscricao";
 export const CONSULTAR_PEDIDOS_CAMISETA_URL = "/api/consultar-pedidos-camiseta";
 
 /**
+ * Fase 26 — "Minha Conta": login sem senha (e-mail + código de 6 dígitos,
+ * enviado via ACS — mesma infraestrutura da Fase 21). Três chamadas, nessa
+ * ordem: `SOLICITAR_CODIGO_CONTA_URL` (pede o código), `CONFIRMAR_CODIGO_CONTA_URL`
+ * (confere o código, devolve um token assinado pra guardar no navegador) e
+ * `CONSULTAR_MINHA_CONTA_URL` (usa esse token pra listar inscrições em
+ * eventos e pedidos de camiseta feitos com aquele e-mail). Ver `contaAuth.ts`.
+ */
+export const SOLICITAR_CODIGO_CONTA_URL = "/api/solicitar-codigo-conta";
+export const CONFIRMAR_CODIGO_CONTA_URL = "/api/confirmar-codigo-conta";
+export const CONSULTAR_MINHA_CONTA_URL = "/api/consultar-minha-conta";
+
+/**
  * Busca uma URL do Directus com tentativas automáticas em caso de erro
  * transitório (5xx ou falha de rede) — o Directus no plano gratuito
  * ocasionalmente fica "sob pressão" por alguns segundos, e sem isso um

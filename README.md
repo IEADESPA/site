@@ -1947,13 +1947,59 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
      endereço em `senderAddress`, sem campo de nome de exibição). O usuário tentou editar esse campo
      no Portal e não encontrou como; fica pra revisitar junto desta fase.
 
-- **Fase 26 — perfil/login integrado para o público em geral (última fase planejada)**: registrada
-  como pré-requisito da metade de enquete da Fase 23 — sem uma conta de verdade pro visitante
-  comum (diferente do login de equipe que já existe em `/painel-eventos/`/`/painel-camisetas/`, e
-  diferente do Portal do Membro externo já linkado na home), não tem como impedir voto repetido
-  numa enquete de forma confiável. **Só registro, não construir agora** — nenhum desenho de escopo
-  feito ainda (o que a conta guarda, como ela se relaciona com o Portal do Membro que já existe
-  externamente, se substitui ou convive com ele) — fica pra quando chegar nesta fase.
+- [x] **Fase 26 — perfil/login integrado para o público em geral (última fase planejada)**:
+  registrada como pré-requisito da metade de enquete da Fase 23 — sem uma conta de verdade pro
+  visitante comum (diferente do login de equipe que já existe em
+  `/painel-eventos/`/`/painel-camisetas/`, e diferente do Portal do Membro externo já linkado na
+  home), não tem como impedir voto repetido numa enquete de forma confiável.
+
+  **Decisões do usuário antes de construir** (três perguntas, respondidas antes de qualquer
+  desenho): (1) escopo é um perfil de verdade — "Minha Conta" reunindo o que a pessoa já faz
+  espalhado pelo site (inscrições em evento, pedidos de camiseta), não só o mínimo pra resolver
+  voto de enquete; (2) **independente do Portal do Membro externo** (sistema de governança) — o
+  usuário considerou primeiro que "devem conversar de alguma forma", mas ao ser perguntado que
+  tipo de conversa faria sentido, decidiu deixar os dois sistemas totalmente separados por
+  enquanto: o financeiro dos dois já se conecta por fora (o PDF de encerramento de evento/o
+  relatório de camisetas é lançado manualmente nas entradas e saídas do sistema de governança,
+  nada novo aqui), e o resto (inscrições, pedidos) é "totalmente diferente, funciona diferente" —
+  fundir os dois fica pra um momento futuro com mais tempo disponível, não agora; (3) login **sem
+  senha**, por e-mail + código de 6 dígitos enviado por e-mail (reaproveita a infraestrutura ACS
+  Email da Fase 21) — mesmo espírito de simplicidade da consulta só-por-telefone da Fase 22.
+
+  **Como foi construído**: duas coleções novas no Directus, sem leitura/escrita pública nenhuma
+  (mesmo padrão de proteção de `camiseta_pedidos`, tudo passa por Function com token de admin):
+  `contas` (e-mail + nome opcional + data de criação) e `contas_codigos` (código de 6 dígitos,
+  guardado só como hash SHA-256 — nunca em texto puro — com validade de 10 minutos e marcação de
+  uso único). Três Functions novas: `solicitar-codigo-conta` (garante que a conta existe, gera o
+  código, manda por e-mail usando o mesmo `emailTemplate.js`/`renderCodigoBox` da Fase 21),
+  `confirmar-codigo-conta` (confere o código contra o hash, marca como usado, devolve um **token
+  de sessão assinado com HMAC** — `CONTA_TOKEN_SECRET`, nova variável de ambiente — que carrega o
+  próprio e-mail e uma validade de 90 dias; sem tabela de sessão nenhuma no banco, ao gosto do
+  mesmo princípio de simplicidade das outras Functions) e `consultar-minha-conta` (recebe o token,
+  confere a assinatura pra extrair o e-mail confiável, busca `inscricoes_eventos` e
+  `camiseta_pedidos`/`camiseta_itens_pedido` filtrados por esse e-mail — nunca aceita um e-mail cru
+  do navegador pra evitar que alguém consulte a conta alheia só digitando o e-mail de outra
+  pessoa). Reaproveitou a mesma lógica de alocação de pagamento por item já existente em
+  `consultarPedidosCamiseta.js`.
+
+  Ganharam um campo `email` opcional (só `inscricoes_eventos` já tinha, desde a Fase 21;
+  `camiseta_pedidos` ganhou agora) — continua sendo só um jeito de vincular o registro à conta,
+  nunca a forma de identidade principal (que continua sendo telefone+código, como sempre foi).
+  Página nova `/minha-conta/` (link em Rodapé → Participe): formulário de e-mail → código → lista
+  de inscrições e pedidos, com botão Sair; token guardado em `localStorage` (`contaAuth.ts`), ao
+  contrário do painel administrativo que usa `sessionStorage` — aqui a expectativa é continuar
+  logado entre visitas. Os formulários de inscrição em evento e de pedido de camiseta pré-preenchem
+  o e-mail sozinhos quando a pessoa já está logada na Minha Conta (sem forçar, continua editável).
+
+  **Teste**: toda a lógica de assinatura/verificação do token e de hash/verificação do código
+  testada isoladamente (token adulterado é rejeitado, código errado é rejeitado, reuso de código já
+  marcado como usado não é mais encontrado). Fluxo completo testado com dados reais no Directus —
+  conta, código, inscrição de evento real e pedido de camiseta de teste, todos com o mesmo e-mail —
+  confirmando que `consultar-minha-conta` traz os dois de volta corretamente (inclusive o cálculo de
+  quantas peças já estão pagas), e que tudo foi apagado depois do teste. Não foi possível rodar a
+  Function localmente (sem Azure Functions Core Tools no ambiente, mesma limitação de sempre) — a
+  lógica de cada Function foi replicada e executada linha a linha contra o Directus e o Directus
+  real, e o envio de e-mail em si (Fase 21, já testado) não precisou ser retestado.
 
 **Fases 0 a 14, 17 a 22 e a metade de destaque da 23 já foram construídas e testadas** (ver o `[x]`
 de cada uma acima). **As fases 15 e 16 foram descartadas em definitivo** (não é "falta construir",
