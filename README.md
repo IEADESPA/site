@@ -1541,15 +1541,35 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   [CreateMyTee — Group Order](https://www.createmytee.com/About/GroupOrder/),
   [Fourthwall — Church Group T-Shirts](https://fourthwall.com/make-your-own/church-group-t-shirts).
 
-- **Fase 23 — opinião pública (enquetes) e destaque de eventos/camisetas na página inicial**:
+- [x] **Fase 23 — opinião pública (enquetes) e destaque de eventos/camisetas na página inicial**:
   pedida pelo usuário junto com a Fase 22. As duas metades tiveram destinos diferentes depois de
   conversar sobre cada uma:
 
-  **Enquete/opinião pública — adiada de propósito, virou pré-requisito da Fase 26**: sem login de
-  membro, não existe jeito confiável de impedir voto repetido — a única opção seria algo frágil
-  (`localStorage`, burlável limpando os dados ou trocando de aparelho), e o usuário decidiu
-  explicitamente que não compensa construir isso agora ("seria quase uma bagunça de formulário
-  Google"). Fica esperando a Fase 26 (perfil/login integrado) existir.
+  **Enquete/opinião pública — adiada de propósito até existir a Fase 26, depois construída**: sem
+  login de membro, não existia jeito confiável de impedir voto repetido — a única opção seria algo
+  frágil (`localStorage`, burlável limpando os dados ou trocando de aparelho), e o usuário decidiu
+  explicitamente que não compensava construir isso na época ("seria quase uma bagunça de formulário
+  Google"). Assim que a Fase 26 (Minha Conta) ficou pronta, o usuário pediu pra construir esta
+  metade também, fechando de vez a Fase 23.
+
+  **Como foi construído**: duas coleções novas — `enquetes` (pergunta, `opcoes` como lista de
+  textos, `ativa`, `encerra_em` opcional; leitura pública liberada, sem dado sensível nenhum) e
+  `enquete_votos` (enquete, opção escolhida, e-mail; **sem leitura nem escrita pública nenhuma**,
+  mesmo padrão de `contas`/`camiseta_pedidos`). Duas Functions: `consultar-enquete` (devolve a
+  contagem de votos só pra quem **já votou** ou quando a enquete **já encerrou** — antes disso,
+  ninguém "espia" o resultado sem participar) e `votar-enquete` (exige o token da Minha Conta —
+  nunca um e-mail cru mandado pelo navegador —, confere se aquele e-mail já votou nesta enquete
+  antes de gravar, um voto por conta por enquete). Enquete fecha por dois caminhos, igual ao
+  destaque: desmarcando "Ativa" no Directus, ou passando de `encerra_em` (opcional). Página nova
+  `/enquetes/` (link em Rodapé → Participe), num formato pergunta → barra de progresso por opção
+  depois de votar (ou já de cara, se a enquete estiver encerrada).
+
+  **Teste**: toda a lógica das duas Functions replicada e executada contra uma enquete real criada
+  no Directus — confirmado que um segundo voto da mesma conta é recusado (409), que duas contas
+  diferentes votando geram a contagem certa, que ninguém sem token (nem com token de quem ainda não
+  votou) vê a contagem enquanto a enquete está ativa, e que, ao marcar a enquete como encerrada,
+  o resultado passa a aparecer pra qualquer um (mesmo sem token) e um novo voto passa a ser
+  recusado. Tudo apagado do Directus depois do teste.
 
   - [x] **Destaque de evento/camiseta na página inicial (carrossel) — construído**: depois de
     conversar, ficou definido que só **eventos e camisetas** entram (não notícia solta — notícia
@@ -2001,16 +2021,18 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
   lógica de cada Function foi replicada e executada linha a linha contra o Directus e o Directus
   real, e o envio de e-mail em si (Fase 21, já testado) não precisou ser retestado.
 
-**Fases 0 a 14, 17 a 22 e a metade de destaque da 23 já foram construídas e testadas** (ver o `[x]`
-de cada uma acima). **As fases 15 e 16 foram descartadas em definitivo** (não é "falta construir",
-é "não vai ser construído"). **A Fase 24 (mapas) está com todas as sub-fases 24.1 a 24.11 resolvidas**
+**Fases 0 a 14 e 17 a 23 (as duas metades) já foram construídas e testadas** (ver o `[x]` de cada
+uma acima). **As fases 15 e 16 foram descartadas em definitivo** (não é "falta construir", é "não
+vai ser construído"). **A Fase 24 (mapas) está com todas as sub-fases 24.1 a 24.11 resolvidas**
 — construídas e testadas as que dependiam só de código (Sede, eventos com local próprio, PDFs,
 "mais perto de você", rota traçada etc.), e as duas que não dependiam só de código encerradas com
 motivo concreto: 24.9 já funciona (só aponta pra Sede por enquanto, por decisão do usuário) e
 **passa a incluir cada congregação sozinha assim que a liderança dela confirmar perfil no Google
 Maps** — essa conversa continua em aberto, fora do escopo de código; 24.10 (Aerial View) foi
-testada direto na API e descartada — sem cobertura no Brasil inteiro, não só em Parauapebas. **Da
-metade de enquete da Fase 23 e das fases 25 e 26, nada foi construído ainda.** O detalhe completo de cada achado
+testada direto na API e descartada — sem cobertura no Brasil inteiro, não só em Parauapebas. **A
+Fase 26 (Minha Conta) também já foi construída e testada.** Da Fase 25 (newsletter/e-mail em
+massa), nada foi construído ainda — usuário decidiu explicitamente deixar quieto por enquanto.
+O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as

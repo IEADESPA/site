@@ -98,6 +98,18 @@ export const CONFIRMAR_CODIGO_CONTA_URL = "/api/confirmar-codigo-conta";
 export const CONSULTAR_MINHA_CONTA_URL = "/api/consultar-minha-conta";
 
 /**
+ * Fase 23 — enquetes/opinião pública, construída junto com a Fase 26 (só
+ * dava pra impedir voto duplicado com login de verdade). `enquete_votos` não
+ * tem leitura/escrita pública nenhuma — tudo passa por aqui, autenticado
+ * pelo token da Minha Conta (nunca por um e-mail cru mandado pelo
+ * navegador). `consultar-enquete` só devolve a contagem pra quem já votou
+ * ou quando a enquete já encerrou; `votar-enquete` grava o voto (um por
+ * e-mail por enquete) e devolve a contagem atualizada.
+ */
+export const CONSULTAR_ENQUETE_URL = "/api/consultar-enquete";
+export const VOTAR_ENQUETE_URL = "/api/votar-enquete";
+
+/**
  * Busca uma URL do Directus com tentativas automáticas em caso de erro
  * transitório (5xx ou falha de rede) — o Directus no plano gratuito
  * ocasionalmente fica "sob pressão" por alguns segundos, e sem isso um

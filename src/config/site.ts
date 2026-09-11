@@ -91,6 +91,7 @@ export const footerNavigation = [
       { label: "Assista ao vivo", href: "/ao-vivo/" },
       { label: "Galeria", href: "/galeria/" },
       { label: "Camisetas e uniformes", href: "/camisetas/" },
+      { label: "Enquetes", href: "/enquetes/" },
       { label: "Minha conta", href: "/minha-conta/" },
     ],
   },
