@@ -1857,10 +1857,28 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       abril/2027 pelo seletor do calendário e tirando um print da área do mapa): o pino aparece na
       cor da marca, no lugar certo, agrupando os dois eventos de teste daquele mês — eventos de
       teste apagados depois.
-  - [ ] **Fase 24.9 — "qual congregação mais perto de você"**: usando a localização do navegador
-    contra as coordenadas reais das congregações (Distance Matrix ou cálculo direto de distância) —
-    **bloqueada atrás da Fase 24 principal**: só faz sentido depois que as congregações tiverem
-    perfil confirmado (a mesma trava de "não publicar sem perfil real" já registrada acima).
+  - [x] **Fase 24.9 — "qual está mais perto de você" — construído**: o usuário decidiu construir
+    já, mesmo sem nenhuma congregação confirmada ainda, sabendo que hoje só vai apontar pra Sede —
+    exatamente o comportamento esperado, e a razão de ter sido feito assim de propósito (ver
+    critério abaixo). Seção nova em `/congregacoes/`, com um botão "Achar a mais perto de mim".
+    - **Critério mais rígido que o mapa Leaflet que já existia nesta mesma página (Fase 3)**: o
+      mapa antigo mostra qualquer congregação com `lat`/`lng` (coordenada provisória inclusive); a
+      busca de "mais perto" só considera quem tem **perfil confirmado** (`google_maps_place_query`)
+      — mesmo critério rígido do resto da Fase 24. Novo campo `google_maps_place_query` criado em
+      `congregacoes` (vazio em todas — preenchido conforme cada uma for confirmando).
+    - **Cálculo por distância em linha reta (Haversine), sem API paga nenhuma** — decisão consciente:
+      ordenar "o que está mais perto" não precisa de rota real de carro (Distance Matrix), só de uma
+      fórmula geométrica de graça; cada resultado ainda tem um link "Ver rota" pra quem quiser a
+      rota de verdade depois.
+    - **Testado com hipóteses reais, como pedido pelo usuário** (não existe hoje uma segunda
+      congregação confirmada pra testar "de verdade" com dado real, então a validação foi via
+      cenário controlado): marcada temporariamente uma congregação real já geocodificada
+      ("Gênesis") como se tivesse perfil confirmado, calculada à mão (fora do site) a distância
+      Haversine esperada pra 3 localizações hipotéticas diferentes (perto da Sede, perto da
+      Gênesis, longe das duas), e comparado contra o resultado real do site via Playwright
+      (geolocalização simulada) — **as três bateram exatamente com o cálculo manual**, confirmando
+      que a lógica de ordenação funciona de verdade, não só quando só existe 1 candidato. Marcação
+      de teste revertida depois.
   - [ ] **Fase 24.10 — Aerial View (experimental)**: vídeo curto de sobrevoo automático do endereço
     da Sede, gerado pela Aerial View API — mais efeito visual do que utilidade prática, registrado
     como experimento a avaliar, não uma necessidade confirmada.
