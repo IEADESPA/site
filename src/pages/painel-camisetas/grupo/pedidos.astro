@@ -55,6 +55,7 @@ const allPosts = visiblePosts(await getAllMensagens());
 
           <div class="mt-6" data-lote-consolidado hidden>
             <h4 class="text-sm font-semibold">Consolidado — o que encomendar da malharia</h4>
+            <p class="mt-1 text-xs text-muted-foreground" data-consolidado-subtitulo></p>
             <div class="mt-3 overflow-x-auto">
               <table class="tabela-camiseta">
                 <thead><tr><th>Tamanho</th><th>Modelo</th><th>Pedido pelo sistema</th><th>Estoque extra</th><th>Total a encomendar</th><th>Custo/peça</th><th></th></tr></thead>
@@ -167,6 +168,11 @@ const allPosts = visiblePosts(await getAllMensagens());
       numero: number;
       status: "aberto" | "fechado";
       fechado_em: string | null;
+      /** Congelados no momento de fechar o lote — nunca recalculados depois, mesmo que um pedido daquele lote seja editado/excluído mais tarde. Nulos enquanto o lote está aberto. */
+      total_vendido: number | null;
+      total_arrecadado: number | null;
+      total_pago_malharia: number | null;
+      saldo: number | null;
     }
 
     interface LoteItem {
@@ -176,6 +182,8 @@ const allPosts = visiblePosts(await getAllMensagens());
       modelo: string | null;
       estoque_extra: number;
       custo_unitario: number | null;
+      /** Quantidade "pedido pelo sistema" congelada no fechamento — null enquanto o lote está aberto (calculado ao vivo nesse caso). */
+      pedido_congelado: number | null;
     }
 
     type TipoPergunta = "texto_curto" | "texto_longo" | "selecao_unica" | "selecao_multipla" | "numero" | "data";
@@ -327,24 +335,36 @@ const allPosts = visiblePosts(await getAllMensagens());
       if (financeiroEl) financeiroEl.hidden = false;
       if (consolidadoEl) consolidadoEl.hidden = false;
 
-      const pedidosDoLote = pedidos.filter((p) => p.lote === lote.id && !p.avulso);
-      const vendido = pedidosDoLote.reduce((s, p) => s + totalPedido(p), 0);
-      const arrecadado = pedidosDoLote.reduce((s, p) => s + Number(p.valor_pago || 0), 0);
+      // Lote fechado: os 4 números são um retrato do momento do fechamento,
+      // travados em camiseta_lotes — nunca recalculados a partir dos pedidos
+      // atuais (que podem ter sido editados/excluídos depois, sem que o
+      // dinheiro já pago à malharia mude). Só o lote aberto calcula ao vivo.
+      const congelado = lote.status === "fechado" && lote.total_vendido != null;
 
-      const itensDoLote = loteItens.filter((li) => li.lote === lote.id);
-      const pago = itensDoLote.reduce((s, li) => {
-        const pedidoSistema = pedidoSistemaPara(lote.id, li.tamanho, li.modelo);
-        const totalEncomendado = pedidoSistema + Number(li.estoque_extra || 0);
-        return s + totalEncomendado * Number(li.custo_unitario || 0);
-      }, 0);
+      let vendido: number, arrecadado: number, pago: number;
+      if (congelado) {
+        vendido = Number(lote.total_vendido);
+        arrecadado = Number(lote.total_arrecadado);
+        pago = Number(lote.total_pago_malharia);
+      } else {
+        const pedidosDoLote = pedidos.filter((p) => p.lote === lote.id && !p.avulso);
+        vendido = pedidosDoLote.reduce((s, p) => s + totalPedido(p), 0);
+        arrecadado = pedidosDoLote.reduce((s, p) => s + Number(p.valor_pago || 0), 0);
+        const itensDoLote = loteItens.filter((li) => li.lote === lote.id);
+        pago = itensDoLote.reduce((s, li) => {
+          const pedidoSistema = pedidoSistemaPara(lote.id, li.tamanho, li.modelo);
+          const totalEncomendado = pedidoSistema + Number(li.estoque_extra || 0);
+          return s + totalEncomendado * Number(li.custo_unitario || 0);
+        }, 0);
+      }
 
       const lstat = (nome: string) => document.querySelector<HTMLElement>(`[data-lstat="${nome}"]`);
       const vEl = lstat("vendido"); if (vEl) vEl.textContent = brl(vendido);
       const aEl = lstat("arrecadado"); if (aEl) aEl.textContent = brl(arrecadado);
       const pEl = lstat("pago"); if (pEl) pEl.textContent = brl(pago);
-      const sEl = lstat("saldo"); if (sEl) sEl.textContent = brl(arrecadado - pago);
+      const sEl = lstat("saldo"); if (sEl) sEl.textContent = brl(lote.status === "fechado" && lote.saldo != null ? Number(lote.saldo) : arrecadado - pago);
 
-      renderizarConsolidado(lote.id);
+      renderizarConsolidado(lote.id, congelado);
     }
 
     /** Soma, entre os pedidos deste lote (sem contar avulso), quantas peças de um tamanho/modelo já foram pedidas. */
@@ -370,24 +390,53 @@ const allPosts = visiblePosts(await getAllMensagens());
       return Array.from(vistos.values());
     }
 
-    function renderizarConsolidado(loteId: number) {
+    function renderizarConsolidado(loteId: number, congelado: boolean) {
       const corpo = document.querySelector<HTMLElement>("[data-consolidado-corpo]");
+      const novoWrap = document.querySelector<HTMLElement>("[data-consolidado-novo]");
+      const subtituloEl = document.querySelector<HTMLElement>("[data-consolidado-subtitulo]");
       if (!corpo) return;
+      if (novoWrap) novoWrap.hidden = congelado;
+      if (subtituloEl) {
+        subtituloEl.textContent = congelado
+          ? "Números travados no momento em que este lote foi fechado — não mudam mais, mesmo que um pedido seja editado depois."
+          : "Ao vivo — recalcula sozinho enquanto o lote continuar aberto.";
+      }
 
-      const combos = combosDoLote(loteId).sort((a, b) => (a.tamanho ?? "").localeCompare(b.tamanho ?? ""));
+      // Combos vêm sempre dos itens de consolidado já lançados quando o lote
+      // está congelado (o pedido ao vivo pode ter mudado depois de fechar —
+      // só o que foi lançado até o fechamento conta). No lote aberto, também
+      // aparecem combos só vistos nos pedidos, ainda sem linha lançada.
+      const combos = congelado
+        ? loteItens.filter((li) => li.lote === loteId).map((li) => ({ tamanho: li.tamanho, modelo: li.modelo }))
+        : combosDoLote(loteId);
+      combos.sort((a, b) => (a.tamanho ?? "").localeCompare(b.tamanho ?? ""));
 
       if (combos.length === 0) {
-        corpo.innerHTML = `<tr><td colspan="7" class="text-sm text-muted-foreground">Nenhum pedido ainda neste lote.</td></tr>`;
+        corpo.innerHTML = `<tr><td colspan="7" class="text-sm text-muted-foreground">Nenhum pedido neste lote.</td></tr>`;
         return;
       }
 
       corpo.innerHTML = combos
         .map(({ tamanho, modelo }) => {
-          const pedidoSistema = pedidoSistemaPara(loteId, tamanho, modelo);
           const itemExistente = loteItens.find((li) => li.lote === loteId && (li.tamanho ?? null) === (tamanho ?? null) && (li.modelo ?? null) === (modelo ?? null));
+          const pedidoSistema = congelado ? Number(itemExistente?.pedido_congelado ?? 0) : pedidoSistemaPara(loteId, tamanho, modelo);
           const extra = itemExistente?.estoque_extra ?? 0;
           const custo = itemExistente?.custo_unitario ?? "";
           const total = pedidoSistema + Number(extra || 0);
+
+          if (congelado) {
+            return `
+              <tr>
+                <td>${escapeHtml(tamanho ?? "—")}</td>
+                <td>${escapeHtml(modelo ?? "—")}</td>
+                <td>${pedidoSistema}</td>
+                <td>${extra}</td>
+                <td>${total}</td>
+                <td>${custo !== "" ? brl(Number(custo)) : "—"}</td>
+                <td></td>
+              </tr>
+            `;
+          }
 
           return `
             <tr data-consolidado-linha data-tamanho="${escapeHtml(tamanho ?? "")}" data-modelo="${escapeHtml(modelo ?? "")}" data-item-id="${itemExistente?.id ?? ""}">
@@ -492,15 +541,73 @@ const allPosts = visiblePosts(await getAllMensagens());
     document.querySelector("[data-fechar-lote]")?.addEventListener("click", async () => {
       const lote = loteSelecionado();
       if (!lote) return;
-      if (!confirm(`Fechar o Lote ${lote.numero}? O próximo pedido já cria o lote seguinte sozinho.`)) return;
+      if (
+        !confirm(
+          `Fechar o Lote ${lote.numero}? Os números (vendido/arrecadado/pago à malharia/saldo) ficam travados a partir de agora — não mudam mais, mesmo que um pedido deste lote seja editado depois. O próximo pedido já cria o lote seguinte sozinho.`,
+        )
+      )
+        return;
+
+      const pedidosDoLote = pedidos.filter((p) => p.lote === lote.id && !p.avulso);
+      const vendido = pedidosDoLote.reduce((s, p) => s + totalPedido(p), 0);
+      const arrecadado = pedidosDoLote.reduce((s, p) => s + Number(p.valor_pago || 0), 0);
+
+      // Congela "pedido pelo sistema" em cada combo tamanho/modelo visto no
+      // lote — cria a linha de consolidado se ainda não existir uma (pra
+      // nenhum combo ficar "invisível" só porque ninguém mexeu no estoque
+      // extra/custo dele antes de fechar).
+      const combos = combosDoLote(lote.id);
+      let pago = 0;
+      for (const { tamanho, modelo } of combos) {
+        const pedidoSistema = pedidoSistemaPara(lote.id, tamanho, modelo);
+        const existente = loteItens.find((li) => li.lote === lote.id && (li.tamanho ?? null) === (tamanho ?? null) && (li.modelo ?? null) === (modelo ?? null));
+        const payload = { lote: lote.id, tamanho, modelo, estoque_extra: existente?.estoque_extra ?? 0, custo_unitario: existente?.custo_unitario ?? null, pedido_congelado: pedidoSistema };
+
+        let salvo: LoteItem;
+        if (existente) {
+          const res = await fetch(`${directusUrl}/items/camiseta_lote_itens/${existente.id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ pedido_congelado: pedidoSistema }),
+          });
+          salvo = res.ok ? (await res.json()).data : { ...existente, pedido_congelado: pedidoSistema };
+        } else {
+          const res = await fetch(`${directusUrl}/items/camiseta_lote_itens`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          salvo = (await res.json()).data;
+        }
+        loteItens = loteItens.filter((li) => li.id !== salvo.id);
+        loteItens.push(salvo);
+
+        const totalEncomendado = Number(salvo.pedido_congelado ?? pedidoSistema) + Number(salvo.estoque_extra || 0);
+        pago += totalEncomendado * Number(salvo.custo_unitario || 0);
+      }
+
+      const saldo = arrecadado - pago;
+      const fechadoEm = new Date().toISOString();
+
       const res = await fetch(`${directusUrl}/items/camiseta_lotes/${lote.id}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "fechado", fechado_em: new Date().toISOString() }),
+        body: JSON.stringify({
+          status: "fechado",
+          fechado_em: fechadoEm,
+          total_vendido: vendido,
+          total_arrecadado: arrecadado,
+          total_pago_malharia: pago,
+          saldo,
+        }),
       });
       if (res.ok) {
         lote.status = "fechado";
-        lote.fechado_em = new Date().toISOString();
+        lote.fechado_em = fechadoEm;
+        lote.total_vendido = vendido;
+        lote.total_arrecadado = arrecadado;
+        lote.total_pago_malharia = pago;
+        lote.saldo = saldo;
         atualizarTudo();
       }
     });

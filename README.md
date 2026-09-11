@@ -186,10 +186,17 @@ Arquitetura em carrinho, com atribuição por congregação e alocação de paga
   (`/painel-camisetas/grupo/pedidos/`), o próximo pedido já cria o lote seguinte sozinho, sem
   nenhuma ação manual de agrupar pedido a lote.
 - **`camiseta_lote_itens`** — por tamanho/modelo, dentro de um lote: quanto o sistema já
-  consolidou de pedido (calculado, não editável), quanto de estoque extra a equipe decidiu
-  comprar a mais, e o custo/peça pago à malharia naquele lote — o total a encomendar é a soma dos
-  dois primeiros. Alimenta o "Vendido/Arrecadado/Pago à malharia/Saldo" por lote no painel, o
-  mesmo cálculo que a aba "CONSELHO" da planilha já fazia.
+  consolidou de pedido (calculado, não editável enquanto o lote está aberto), quanto de estoque
+  extra a equipe decidiu comprar a mais, e o custo/peça pago à malharia naquele lote — o total a
+  encomendar é a soma dos dois primeiros.
+- **Números travados no momento de fechar o lote**: "Vendido/Arrecadado/Pago à malharia/Saldo" (e
+  o "pedido pelo sistema" de cada tamanho/modelo) são recalculados ao vivo só enquanto o lote está
+  **aberto**. Ao fechar, esses valores são gravados como um retrato fixo
+  (`camiseta_lotes.total_vendido/total_arrecadado/total_pago_malharia/saldo`,
+  `camiseta_lote_itens.pedido_congelado`) e nunca mais recalculados — editar ou excluir um pedido
+  daquele lote depois não muda o valor já reportado/pago, porque esse dinheiro já saiu de verdade.
+  Decisão do usuário, depois de mostrar a planilha real da tesouraria: os PDFs de lotes fechados
+  antigos (`LOTE 1.pdf`, `LOTE 2.pdf`...) são retratos, não fórmulas, exatamente por isso.
 - **`camiseta_pedidos`** + **`camiseta_itens_pedido`** — um pedido é um carrinho (várias
   linhas de tamanho/modelo/quantidade), com pagamento parcial alocado item a item, em ordem de
   criação. Venda avulsa (sem congregação, sem lote — mesmo "AVULSO" da planilha) também é
