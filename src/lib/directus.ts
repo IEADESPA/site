@@ -103,6 +103,17 @@ export const ORAR_MURAL_URL = "/api/orar-mural";
  */
 export const CRIAR_PEDIDO_CAMISETA_URL = "/api/criar-pedido-camiseta";
 
+/**
+ * Ferramenta de exercício de direito de exclusão (LGPD, Art. 18) — só a
+ * equipe autenticada usa (nunca público). Localiza e apaga tudo que está
+ * ligado a um telefone (inscrições em evento, pedidos de camiseta e o que
+ * está em cascata debaixo deles), comparando contra o hash guardado —
+ * mesma técnica de `verificarInscricao.js`/`cancelarInscricao.js`. Ver
+ * `api/src/functions/buscarDadosPessoais.js`/`excluirDadosPessoais.js`.
+ */
+export const BUSCAR_DADOS_PESSOAIS_URL = "/api/buscar-dados-pessoais";
+export const EXCLUIR_DADOS_PESSOAIS_URL = "/api/excluir-dados-pessoais";
+
 export const SOLICITAR_CODIGO_CONTA_URL = "/api/solicitar-codigo-conta";
 export const CONFIRMAR_CODIGO_CONTA_URL = "/api/confirmar-codigo-conta";
 export const CONSULTAR_MINHA_CONTA_URL = "/api/consultar-minha-conta";

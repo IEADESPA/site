@@ -381,6 +381,15 @@ exigido e **guardado como prova** (`consentimento_lgpd: true`), não só pedido 
 prova do consentimento é do controlador (Art. 8º, §2º). Canal de exercício de direitos:
 `/contato/?assunto=lgpd`.
 
+**Direito de exclusão (Art. 18) apesar do telefone estar em hash**: o hash não impede a exclusão —
+`/painel-eventos/lgpd/` (equipe autenticada, nunca público) usa a mesma técnica de
+`verificarInscricao.js`/`cancelarInscricao.js` (comparar o telefone digitado contra cada hash
+guardado, sem nunca reverter nenhum) pra localizar e apagar tudo ligado a um telefone — inscrições
+em evento e pedidos de camiseta, com tudo em cascata debaixo deles (respostas, itens). Uso
+esperado: o pedido chega pelo canal de contato, a equipe confirma identidade por fora, e só então
+usa essa tela. Promove a lista de espera de cada evento afetado, mesmo critério do cancelamento
+normal.
+
 ## Infraestrutura Azure
 
 - **Deploy automático em dois gatilhos**: `git push`, ou qualquer criação/edição/exclusão de item
