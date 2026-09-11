@@ -24,6 +24,17 @@ interface Congregacao {
   name: string;
 }
 
+type TipoPergunta = "texto_curto" | "texto_longo" | "selecao_unica" | "selecao_multipla" | "numero" | "data";
+
+interface Pergunta {
+  id: number;
+  ordem: number | null;
+  label: string;
+  tipo: TipoPergunta;
+  opcoes: string[] | null;
+  obrigatoria: boolean;
+}
+
 export async function getStaticPaths() {
   const grupos = await fetchItems<Lote>(
     "camiseta_grupos",
@@ -41,6 +52,7 @@ const allPosts = visiblePosts(await getAllMensagens());
 const congregacoes = (await fetchItems<Congregacao>("congregacoes", "fields=id,name&sort=name")).sort((a, b) =>
   a.name.localeCompare(b.name, "pt-BR"),
 );
+const perguntas = await fetchItems<Pergunta>("perguntas_camiseta", `filter[grupo][_eq]=${lote.id}&sort=ordem`);
 const dateFormatter = new Intl.DateTimeFormat(siteConfig.dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 const prazoEncerrado = lote.pedidos_ate ? new Date(lote.pedidos_ate).getTime() < Date.now() : false;
@@ -100,6 +112,37 @@ const modelos = lote.modelos ?? [];
                 {congregacoes.map((c) => <option value={c.id}>{c.name}</option>)}
               </select>
             </div>
+
+            {
+              perguntas.map((pergunta) => (
+                <div class="grid gap-2" data-pergunta-field data-pergunta-id={pergunta.id} data-pergunta-tipo={pergunta.tipo}>
+                  <label class="text-sm font-semibold" for={`pergunta-${pergunta.id}`}>{pergunta.label}</label>
+                  {pergunta.tipo === "texto_longo" ? (
+                    <textarea id={`pergunta-${pergunta.id}`} rows="4" required={pergunta.obrigatoria} class="field resize-y" />
+                  ) : pergunta.tipo === "numero" ? (
+                    <input id={`pergunta-${pergunta.id}`} type="number" required={pergunta.obrigatoria} class="field" />
+                  ) : pergunta.tipo === "data" ? (
+                    <input id={`pergunta-${pergunta.id}`} type="date" required={pergunta.obrigatoria} class="field" />
+                  ) : pergunta.tipo === "selecao_unica" ? (
+                    <select id={`pergunta-${pergunta.id}`} required={pergunta.obrigatoria} class="field">
+                      <option value="">Selecione…</option>
+                      {(pergunta.opcoes ?? []).map((opcao) => <option value={opcao}>{opcao}</option>)}
+                    </select>
+                  ) : pergunta.tipo === "selecao_multipla" ? (
+                    <div class="grid gap-1.5">
+                      {(pergunta.opcoes ?? []).map((opcao) => (
+                        <label class="contact-checkbox">
+                          <input type="checkbox" name={`pergunta-${pergunta.id}-multipla`} value={opcao} />
+                          {opcao}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <input id={`pergunta-${pergunta.id}`} type="text" required={pergunta.obrigatoria} class="field" />
+                  )}
+                </div>
+              ))
+            }
 
             <fieldset class="grid gap-2">
               <legend class="text-sm font-semibold">Itens do pedido</legend>
@@ -240,15 +283,42 @@ const modelos = lote.modelos ?? [];
             if (!pedidoRes.ok) throw new Error("falha ao criar pedido");
             const pedidoId = (await pedidoRes.json()).data.id;
 
-            await Promise.all(
-              itens.map((item) =>
+            // Respostas às perguntas customizadas desta campanha (mesmo padrão
+            // de `respostas_inscricao` em eventos) — coletadas do formulário e
+            // gravadas vinculadas ao pedido recém-criado.
+            const respostas = [];
+            form.querySelectorAll("[data-pergunta-field]").forEach((field) => {
+              const perguntaId = Number(field.dataset.perguntaId);
+              const tipo = field.dataset.perguntaTipo;
+              let valor;
+
+              if (tipo === "selecao_multipla") {
+                const marcadas = Array.from(field.querySelectorAll("input[type=checkbox]:checked")).map((el) => el.value);
+                valor = marcadas.join(", ");
+              } else {
+                const input = field.querySelector("input, textarea, select");
+                valor = input ? input.value : "";
+              }
+
+              if (valor) respostas.push({ pergunta: perguntaId, valor });
+            });
+
+            await Promise.all([
+              ...itens.map((item) =>
                 fetch(`${directusUrl}/items/camiseta_itens_pedido`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ pedido: pedidoId, tamanho: item.tamanho, modelo: item.modelo, quantidade: item.quantidade }),
                 }),
               ),
-            );
+              ...respostas.map((resposta) =>
+                fetch(`${directusUrl}/items/respostas_pedido_camiseta`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ...resposta, pedido: pedidoId }),
+                }),
+              ),
+            ]);
 
             if (status) status.textContent = "✅ Pedido registrado! Acompanhe em \"Meus pedidos\", com o seu telefone.";
             form.reset();

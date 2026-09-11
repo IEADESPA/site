@@ -116,6 +116,46 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
         </div>
 
         <div class="mt-6" style="border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem;">
+          <p class="text-sm font-semibold">Perguntas personalizadas do pedido</p>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Além de nome, telefone e congregação, o formulário público pode pedir campos extras
+            específicos desta campanha (ex.: bairro, nome da congregação por extenso se não estiver
+            na lista, tamanho de calçado etc.).
+          </p>
+
+          <div class="mt-4 grid gap-3" data-perguntas-lista></div>
+
+          <div class="mt-4 grid gap-3 sm:grid-cols-2" style="border-top: 1px solid var(--border); padding-top: 1rem;">
+            <div class="grid gap-2">
+              <label class="text-sm font-semibold" for="np-label">Nova pergunta</label>
+              <input id="np-label" class="field" placeholder="Ex.: Bairro" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-semibold" for="np-tipo">Tipo</label>
+              <select id="np-tipo" class="field">
+                <option value="texto_curto">Texto curto</option>
+                <option value="texto_longo">Texto longo</option>
+                <option value="selecao_unica">Seleção única (uma opção)</option>
+                <option value="selecao_multipla">Seleção múltipla (várias opções)</option>
+                <option value="numero">Número</option>
+                <option value="data">Data</option>
+              </select>
+            </div>
+            <div class="grid gap-2 sm:col-span-2" data-np-opcoes-wrap hidden>
+              <label class="text-sm font-semibold" for="np-opcoes">Opções (uma por linha)</label>
+              <textarea id="np-opcoes" rows="3" class="field"></textarea>
+            </div>
+            <label class="flex items-center gap-2 text-sm">
+              <input id="np-obrigatoria" type="checkbox" /> Obrigatória
+            </label>
+            <div class="flex items-center gap-4">
+              <button type="button" class="btn btn-outline" data-np-adicionar>+ Adicionar pergunta</button>
+              <p class="text-sm" data-np-status role="status" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6" style="border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem;">
           <p class="text-sm font-semibold text-red-700">Excluir</p>
           <p class="mt-1 text-sm text-muted-foreground">Remove esta camiseta, seus lotes de compra e todos os pedidos ligados a ela. Não pode ser desfeito.</p>
           <button type="button" class="btn btn-outline mt-3" data-excluir-lote>Excluir</button>
@@ -268,6 +308,106 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
           if (statusEl) statusEl.textContent = "Não foi possível salvar agora.";
         }
       });
+
+      interface Pergunta {
+        id: number;
+        ordem: number | null;
+        label: string;
+        tipo: string;
+        opcoes: string[] | null;
+        obrigatoria: boolean;
+      }
+
+      const perguntasLista = document.querySelector<HTMLElement>("[data-perguntas-lista]");
+      const npLabel = el<HTMLInputElement>("np-label");
+      const npTipo = el<HTMLSelectElement>("np-tipo");
+      const npOpcoesWrap = document.querySelector<HTMLElement>("[data-np-opcoes-wrap]");
+      const npOpcoes = el<HTMLTextAreaElement>("np-opcoes");
+      const npObrigatoria = el<HTMLInputElement>("np-obrigatoria");
+      const npStatus = document.querySelector<HTMLElement>("[data-np-status]");
+
+      function tipoPrecisaOpcoes(tipo: string) {
+        return tipo === "selecao_unica" || tipo === "selecao_multipla";
+      }
+
+      npTipo.addEventListener("change", () => {
+        if (npOpcoesWrap) npOpcoesWrap.hidden = !tipoPrecisaOpcoes(npTipo.value);
+      });
+
+      function escapeHtml(value: string) {
+        return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+      }
+
+      async function carregarPerguntas() {
+        if (!perguntasLista) return;
+        const res = await fetch(`${directusUrl}/items/perguntas_camiseta?filter[grupo][_eq]=${grupoId}&sort=ordem&limit=-1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const perguntas: Pergunta[] = res.ok ? (await res.json()).data ?? [] : [];
+
+        if (perguntas.length === 0) {
+          perguntasLista.innerHTML = `<p class="text-sm text-muted-foreground">Nenhuma pergunta extra cadastrada ainda.</p>`;
+          return;
+        }
+
+        perguntasLista.innerHTML = perguntas
+          .map(
+            (p) => `
+              <div class="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-border px-3 py-2 text-sm" data-pergunta-linha data-id="${p.id}">
+                <span>${escapeHtml(p.label)} <span class="text-muted-foreground">(${escapeHtml(p.tipo)}${p.obrigatoria ? ", obrigatória" : ""})</span></span>
+                <button type="button" class="btn btn-outline" data-pergunta-remover>Remover</button>
+              </div>
+            `,
+          )
+          .join("");
+      }
+
+      perguntasLista?.addEventListener("click", async (event) => {
+        const target = event.target as HTMLElement;
+        if (!target.matches("[data-pergunta-remover]")) return;
+        const linha = target.closest<HTMLElement>("[data-pergunta-linha]");
+        const perguntaId = linha?.dataset.id;
+        if (!perguntaId || !confirm("Remover esta pergunta? Respostas já dadas a ela também somem.")) return;
+        await fetch(`${directusUrl}/items/perguntas_camiseta/${perguntaId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        await carregarPerguntas();
+      });
+
+      document.querySelector("[data-np-adicionar]")?.addEventListener("click", async () => {
+        const label = npLabel.value.trim();
+        if (!label) {
+          if (npStatus) npStatus.textContent = "Digite o texto da pergunta.";
+          return;
+        }
+        const tipo = npTipo.value;
+        const opcoes = tipoPrecisaOpcoes(tipo)
+          ? npOpcoes.value
+              .split("\n")
+              .map((v) => v.trim())
+              .filter(Boolean)
+          : null;
+
+        if (npStatus) npStatus.textContent = "Adicionando…";
+        try {
+          const res = await fetch(`${directusUrl}/items/perguntas_camiseta`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ grupo: grupoId, label, tipo, opcoes, obrigatoria: npObrigatoria.checked }),
+          });
+          if (!res.ok) throw new Error("falha ao adicionar");
+          npLabel.value = "";
+          npOpcoes.value = "";
+          npObrigatoria.checked = false;
+          if (npStatus) npStatus.textContent = "✅ Adicionada.";
+          await carregarPerguntas();
+        } catch {
+          if (npStatus) npStatus.textContent = "Não foi possível adicionar agora.";
+        }
+      });
+
+      await carregarPerguntas();
 
       document.querySelector("[data-excluir-lote]")?.addEventListener("click", async () => {
         const excluirStatus = document.querySelector<HTMLElement>("[data-excluir-status]");
