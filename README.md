@@ -97,6 +97,8 @@ quem não deveria vê-lo.
 | `camiseta_lotes` | Lote de compra dentro de um grupo, com custo (`valor_custo`, nunca público) | Sem leitura pública do custo |
 | `camiseta_pedidos` | Nome, telefone (hash), e-mail opcional, valor pago | Criação pública; leitura pública só do campo `id`; consulta por telefone via `consultarPedidosCamiseta.js` |
 | `camiseta_itens_pedido` | Item do carrinho (tamanho/modelo/quantidade) | Mesma proteção do pedido pai |
+| `perguntas_camiseta` | Pergunta customizada de uma campanha | Leitura pública |
+| `respostas_pedido_camiseta` | Resposta de um pedido a uma pergunta | Só cria publicamente |
 | `mural_oracao` | Pedido de oração, nome opcional, confidencial | Leitura pública só do que é `aprovado=true`, não confidencial e dos últimos 90 dias; contador `orando_count` só é escrito pela Function `orarMural.js` |
 | `contato_mensagens` | Formulário de contato (inclui LGPD/pedido de oração) | Só cria publicamente, nunca lida |
 | `push_subscriptions` | Inscrição de notificação push | Só cria publicamente; edição usa o próprio endpoint como "senha de posse" |
@@ -189,6 +191,11 @@ Arquitetura em carrinho, com atribuição por congregação e alocação de paga
   explícita de simplicidade.
 - **Painel de gestão** (`/painel-camisetas/`) — CRUD de grupos/lotes, estatísticas, breakdown por
   congregação, venda avulsa, controle de retirada.
+- **Perguntas personalizadas por campanha** (`perguntas_camiseta`/`respostas_pedido_camiseta`) —
+  espelha o mesmo sistema de eventos: cada campanha pode pedir campos extras no formulário público
+  (ex. bairro, forma de retirada), com os mesmos 6 tipos de pergunta (texto curto/longo, seleção
+  única/múltipla, número, data), geridos na página de edição da campanha em
+  `/painel-camisetas/grupo/`.
 
 ### Comunidade: mural de oração, enquetes e Minha Conta
 
