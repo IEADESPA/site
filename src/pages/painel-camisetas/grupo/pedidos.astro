@@ -117,10 +117,10 @@ const allPosts = visiblePosts(await getAllMensagens());
           </div>
         </div>
 
-        <div class="mt-4 flex flex-wrap items-center gap-3" data-filtro-pergunta-bloco hidden>
-          <span class="text-sm font-semibold text-muted-foreground">Filtrar por pergunta:</span>
+        <div class="mt-4 flex flex-wrap items-start gap-3" data-filtro-pergunta-bloco hidden>
+          <span class="text-sm font-semibold text-muted-foreground" style="padding-top:0.4rem;">Filtrar por pergunta:</span>
           <select class="field" data-filtro-pergunta-select></select>
-          <select class="field" data-filtro-pergunta-valor hidden></select>
+          <div class="flex flex-wrap gap-x-3 gap-y-1" data-filtro-pergunta-valores hidden></div>
           <button type="button" class="link-sweep text-accent text-sm font-semibold" data-filtro-pergunta-limpar hidden>
             Limpar filtro
           </button>
@@ -230,7 +230,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     let filtroAtivo: "todos" | "devendo" | "pago" | "pendente-retirada" | "retirado" = "todos";
     let termoBusca = "";
     let filtroPerguntaId: number | null = null;
-    let filtroPerguntaValor: string | null = null;
+    let filtroPerguntaValores: string[] = [];
 
     function escapeHtml(value: string) {
       return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
@@ -505,14 +505,14 @@ const allPosts = visiblePosts(await getAllMensagens());
       const base = pedidosDaVisao();
       const filtrados = base.filter((p) => {
         if (termo && !p.nome.toLowerCase().includes(termo)) return false;
-        if (filtroPerguntaId !== null) {
+        if (filtroPerguntaId !== null && filtroPerguntaValores.length > 0) {
           const respostas = respostasPorPedido.get(p.id) ?? [];
           const resposta = respostas.find((r) => r.pergunta === filtroPerguntaId);
           const valores = (resposta?.valor ?? "")
             .split(",")
             .map((v) => v.trim())
             .filter(Boolean);
-          if (!valores.includes(filtroPerguntaValor ?? "")) return false;
+          if (!valores.some((v) => filtroPerguntaValores.includes(v))) return false;
         }
         if (filtroAtivo === "devendo") return devendo(p);
         if (filtroAtivo === "pago") return !devendo(p);
@@ -693,9 +693,9 @@ const allPosts = visiblePosts(await getAllMensagens());
     function renderizarFiltroPergunta() {
       const bloco = document.querySelector<HTMLElement>("[data-filtro-pergunta-bloco]");
       const selectPergunta = document.querySelector<HTMLSelectElement>("[data-filtro-pergunta-select]");
-      const selectValor = document.querySelector<HTMLSelectElement>("[data-filtro-pergunta-valor]");
+      const valoresWrap = document.querySelector<HTMLElement>("[data-filtro-pergunta-valores]");
       const limparBtn = document.querySelector<HTMLButtonElement>("[data-filtro-pergunta-limpar]");
-      if (!bloco || !selectPergunta || !selectValor || !limparBtn) return;
+      if (!bloco || !selectPergunta || !valoresWrap || !limparBtn) return;
 
       const graficaveis = perguntasComOpcoes();
       bloco.hidden = graficaveis.length === 0;
@@ -709,30 +709,35 @@ const allPosts = visiblePosts(await getAllMensagens());
         selectPergunta.addEventListener("change", () => {
           const perguntaId = selectPergunta.value ? Number(selectPergunta.value) : null;
           filtroPerguntaId = perguntaId;
-          filtroPerguntaValor = null;
+          filtroPerguntaValores = [];
           const pergunta = perguntaId ? graficaveis.find((p) => p.id === perguntaId) : null;
           if (pergunta) {
-            selectValor.innerHTML = (pergunta.opcoes ?? []).map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
-            selectValor.hidden = false;
-            filtroPerguntaValor = pergunta.opcoes?.[0] ?? null;
+            // Marcadas com checkbox — várias opções ao mesmo tempo (ex.:
+            // "só quero ver quem é de 3 bairros específicos pra logística").
+            valoresWrap.innerHTML = (pergunta.opcoes ?? [])
+              .map((o) => `<label class="filtro-opcao-checkbox"><input type="checkbox" value="${escapeHtml(o)}" data-filtro-pergunta-opcao /> ${escapeHtml(o)}</label>`)
+              .join("");
+            valoresWrap.hidden = false;
             limparBtn.hidden = false;
           } else {
-            selectValor.hidden = true;
+            valoresWrap.hidden = true;
+            valoresWrap.innerHTML = "";
             limparBtn.hidden = true;
           }
           renderizarPedidos();
         });
 
-        selectValor.addEventListener("change", () => {
-          filtroPerguntaValor = selectValor.value;
+        valoresWrap.addEventListener("change", () => {
+          filtroPerguntaValores = Array.from(valoresWrap.querySelectorAll<HTMLInputElement>("[data-filtro-pergunta-opcao]:checked")).map((el) => el.value);
           renderizarPedidos();
         });
 
         limparBtn.addEventListener("click", () => {
           selectPergunta.value = "";
           filtroPerguntaId = null;
-          filtroPerguntaValor = null;
-          selectValor.hidden = true;
+          filtroPerguntaValores = [];
+          valoresWrap.hidden = true;
+          valoresWrap.innerHTML = "";
           limparBtn.hidden = true;
           renderizarPedidos();
         });
@@ -943,6 +948,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     .stat-label { margin-top: 0.25rem; font-size: 0.8125rem; color: var(--muted-foreground); }
     .filtro-chip { border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.8125rem; background: transparent; cursor: pointer; }
     .filtro-chip.is-active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .filtro-opcao-checkbox { display: flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; cursor: pointer; }
     .tabela-camiseta { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     .tabela-camiseta th, .tabela-camiseta td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); text-align: left; }
     .camiseta-pedido-painel-card { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; }

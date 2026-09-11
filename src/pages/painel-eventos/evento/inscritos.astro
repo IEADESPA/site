@@ -76,10 +76,10 @@ const allPosts = visiblePosts(await getAllMensagens());
           </div>
         </div>
 
-        <div class="mt-4 flex flex-wrap items-center gap-3" data-filtro-pergunta-bloco hidden>
-          <span class="text-sm font-semibold text-muted-foreground">Filtrar por pergunta:</span>
+        <div class="mt-4 flex flex-wrap items-start gap-3" data-filtro-pergunta-bloco hidden>
+          <span class="text-sm font-semibold text-muted-foreground" style="padding-top:0.4rem;">Filtrar por pergunta:</span>
           <select class="field" data-filtro-pergunta-select></select>
-          <select class="field" data-filtro-pergunta-valor hidden></select>
+          <div class="flex flex-wrap gap-x-3 gap-y-1" data-filtro-pergunta-valores hidden></div>
           <button type="button" class="link-sweep text-accent text-sm font-semibold" data-filtro-pergunta-limpar hidden>
             Limpar filtro
           </button>
@@ -216,7 +216,7 @@ const allPosts = visiblePosts(await getAllMensagens());
     let termoBusca = "";
     let token = "";
     let filtroPerguntaId: number | null = null;
-    let filtroPerguntaValor: string | null = null;
+    let filtroPerguntaValores: string[] = [];
 
     function escapeHtml(value: string) {
       return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
@@ -299,14 +299,16 @@ const allPosts = visiblePosts(await getAllMensagens());
         // Telefone agora é guardado como hash (ver README, Fase 6) — não dá
         // mais pra buscar por ele em texto, só por nome.
         if (termo && !i.nome.toLowerCase().includes(termo)) return false;
-        if (filtroPerguntaId !== null) {
+        if (filtroPerguntaId !== null && filtroPerguntaValores.length > 0) {
           const respostas = respostasPorInscricao.get(i.id) ?? [];
           const resposta = respostas.find((r) => r.pergunta === filtroPerguntaId);
           const valores = (resposta?.valor ?? "")
             .split(",")
             .map((v) => v.trim())
             .filter(Boolean);
-          if (!valores.includes(filtroPerguntaValor ?? "")) return false;
+          // Qualquer um dos valores marcados serve (ex.: "bairro A, B ou C") —
+          // não precisa bater com todos, só ter pelo menos um em comum.
+          if (!valores.some((v) => filtroPerguntaValores.includes(v))) return false;
         }
         if (filtroAtivo === "pagos") return i.pago;
         if (filtroAtivo === "nao-pagos") return !i.pago;
@@ -326,9 +328,9 @@ const allPosts = visiblePosts(await getAllMensagens());
     function renderizarFiltroPergunta() {
       const bloco = document.querySelector<HTMLElement>("[data-filtro-pergunta-bloco]");
       const selectPergunta = document.querySelector<HTMLSelectElement>("[data-filtro-pergunta-select]");
-      const selectValor = document.querySelector<HTMLSelectElement>("[data-filtro-pergunta-valor]");
+      const valoresWrap = document.querySelector<HTMLElement>("[data-filtro-pergunta-valores]");
       const limparBtn = document.querySelector<HTMLButtonElement>("[data-filtro-pergunta-limpar]");
-      if (!bloco || !selectPergunta || !selectValor || !limparBtn) return;
+      if (!bloco || !selectPergunta || !valoresWrap || !limparBtn) return;
 
       const perguntas = perguntasGraficaveis();
       bloco.hidden = perguntas.length === 0;
@@ -342,30 +344,35 @@ const allPosts = visiblePosts(await getAllMensagens());
         selectPergunta.addEventListener("change", () => {
           const perguntaId = selectPergunta.value ? Number(selectPergunta.value) : null;
           filtroPerguntaId = perguntaId;
-          filtroPerguntaValor = null;
+          filtroPerguntaValores = [];
           const pergunta = perguntaId ? perguntasPorId.get(perguntaId) : null;
           if (pergunta) {
-            selectValor.innerHTML = (pergunta.opcoes ?? []).map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
-            selectValor.hidden = false;
-            filtroPerguntaValor = pergunta.opcoes?.[0] ?? null;
+            // Marcadas com checkbox — várias opções ao mesmo tempo (ex.: "só
+            // quero ver quem é de 3 bairros específicos, não um só").
+            valoresWrap.innerHTML = (pergunta.opcoes ?? [])
+              .map((o) => `<label class="filtro-opcao-checkbox"><input type="checkbox" value="${escapeHtml(o)}" data-filtro-pergunta-opcao /> ${escapeHtml(o)}</label>`)
+              .join("");
+            valoresWrap.hidden = false;
             limparBtn.hidden = false;
           } else {
-            selectValor.hidden = true;
+            valoresWrap.hidden = true;
+            valoresWrap.innerHTML = "";
             limparBtn.hidden = true;
           }
           renderizar();
         });
 
-        selectValor.addEventListener("change", () => {
-          filtroPerguntaValor = selectValor.value;
+        valoresWrap.addEventListener("change", () => {
+          filtroPerguntaValores = Array.from(valoresWrap.querySelectorAll<HTMLInputElement>("[data-filtro-pergunta-opcao]:checked")).map((el) => el.value);
           renderizar();
         });
 
         limparBtn.addEventListener("click", () => {
           filtroPerguntaId = null;
-          filtroPerguntaValor = null;
+          filtroPerguntaValores = [];
           selectPergunta.value = "";
-          selectValor.hidden = true;
+          valoresWrap.hidden = true;
+          valoresWrap.innerHTML = "";
           limparBtn.hidden = true;
           renderizar();
         });
@@ -879,6 +886,14 @@ const allPosts = visiblePosts(await getAllMensagens());
   <style is:global>
     .inscritos-canvas {
       max-width: 68rem;
+    }
+
+    .filtro-opcao-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.875rem;
+      cursor: pointer;
     }
 
     .stat-card {

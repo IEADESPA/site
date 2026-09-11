@@ -363,29 +363,100 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
           return;
         }
 
+        const rotuloTipo: Record<string, string> = {
+          texto_curto: "Texto curto",
+          texto_longo: "Texto longo",
+          selecao_unica: "Seleção única",
+          selecao_multipla: "Seleção múltipla",
+          numero: "Número",
+          data: "Data",
+        };
+
         perguntasLista.innerHTML = perguntas
           .map(
             (p) => `
-              <div class="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-border px-3 py-2 text-sm" data-pergunta-linha data-id="${p.id}">
-                <span>${escapeHtml(p.label)} <span class="text-muted-foreground">(${escapeHtml(p.tipo)}${p.obrigatoria ? ", obrigatória" : ""})</span></span>
-                <button type="button" class="btn btn-outline" data-pergunta-remover>Remover</button>
+              <div class="pergunta-card-camiseta" data-pergunta-id="${p.id}">
+                <div class="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                  <input type="text" class="field" value="${escapeHtml(p.label)}" data-campo="label" />
+                  <select class="field" data-campo="tipo">
+                    ${Object.entries(rotuloTipo)
+                      .map(([value, label]) => `<option value="${value}" ${value === p.tipo ? "selected" : ""}>${label}</option>`)
+                      .join("")}
+                  </select>
+                  <input type="number" class="field" style="width:5rem" value="${p.ordem ?? 0}" data-campo="ordem" title="Ordem" />
+                </div>
+                <textarea class="field mt-3" rows="2" placeholder="Opções (uma por linha)" data-campo="opcoes" ${
+                  tipoPrecisaOpcoes(p.tipo) ? "" : "hidden"
+                }>${(p.opcoes ?? []).join("\n")}</textarea>
+                <div class="mt-3 flex items-center justify-between gap-3">
+                  <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" data-campo="obrigatoria" ${p.obrigatoria ? "checked" : ""} /> Obrigatória
+                  </label>
+                  <div class="flex gap-3">
+                    <button type="button" class="btn btn-outline" data-salvar-pergunta>Salvar</button>
+                    <button type="button" class="btn btn-outline" data-excluir-pergunta>Excluir</button>
+                  </div>
+                </div>
               </div>
             `,
           )
           .join("");
       }
 
+      perguntasLista?.addEventListener("change", (event) => {
+        const target = event.target as HTMLElement;
+        if (!target.matches('[data-campo="tipo"]')) return;
+        const card = target.closest<HTMLElement>("[data-pergunta-id]");
+        const opcoesTextarea = card?.querySelector<HTMLTextAreaElement>('[data-campo="opcoes"]');
+        const valor = (target as HTMLSelectElement).value;
+        if (opcoesTextarea) opcoesTextarea.hidden = !tipoPrecisaOpcoes(valor);
+      });
+
       perguntasLista?.addEventListener("click", async (event) => {
         const target = event.target as HTMLElement;
-        if (!target.matches("[data-pergunta-remover]")) return;
-        const linha = target.closest<HTMLElement>("[data-pergunta-linha]");
-        const perguntaId = linha?.dataset.id;
-        if (!perguntaId || !confirm("Remover esta pergunta? Respostas já dadas a ela também somem.")) return;
-        await fetch(`${directusUrl}/items/perguntas_camiseta/${perguntaId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        await carregarPerguntas();
+        const card = target.closest<HTMLElement>("[data-pergunta-id]");
+        if (!card) return;
+        const perguntaId = card.dataset.perguntaId;
+
+        if (target.matches("[data-excluir-pergunta]")) {
+          if (!perguntaId || !confirm("Excluir esta pergunta? Respostas já dadas a ela também somem.")) return;
+          await fetch(`${directusUrl}/items/perguntas_camiseta/${perguntaId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          await carregarPerguntas();
+          return;
+        }
+
+        if (target.matches("[data-salvar-pergunta]")) {
+          const labelInput = card.querySelector<HTMLInputElement>('[data-campo="label"]');
+          const tipoSelect = card.querySelector<HTMLSelectElement>('[data-campo="tipo"]');
+          const ordemInput = card.querySelector<HTMLInputElement>('[data-campo="ordem"]');
+          const opcoesTextarea = card.querySelector<HTMLTextAreaElement>('[data-campo="opcoes"]');
+          const obrigatoriaInput = card.querySelector<HTMLInputElement>('[data-campo="obrigatoria"]');
+          const tipo = tipoSelect?.value ?? "texto_curto";
+          const opcoes = tipoPrecisaOpcoes(tipo)
+            ? opcoesTextarea?.value
+                .split("\n")
+                .map((v) => v.trim())
+                .filter(Boolean)
+            : null;
+
+          target.textContent = "Salvando…";
+          await fetch(`${directusUrl}/items/perguntas_camiseta/${perguntaId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              label: labelInput?.value.trim(),
+              tipo,
+              ordem: ordemInput?.value ? Number(ordemInput.value) : 0,
+              opcoes: opcoes?.length ? opcoes : null,
+              obrigatoria: Boolean(obrigatoriaInput?.checked),
+            }),
+          });
+          target.textContent = "Salvar";
+          await carregarPerguntas();
+        }
       });
 
       document.querySelector("[data-np-adicionar]")?.addEventListener("click", async () => {
@@ -441,4 +512,12 @@ const ministerios = await fetchItems<{ id: number; name: string }>("ministerios"
 
     iniciar();
   </script>
+
+  <style>
+    .pergunta-card-camiseta {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.25rem;
+    }
+  </style>
 </BaseLayout>
