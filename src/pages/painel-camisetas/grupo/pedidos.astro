@@ -580,7 +580,11 @@ const allPosts = visiblePosts(await getAllMensagens());
     }
 
     const avulsoItensEl = document.querySelector<HTMLElement>("[data-avulso-itens]");
-    avulsoItensEl?.insertAdjacentHTML("beforeend", linhaItemAvulsoHtml());
+    // A primeira linha só pode ser montada depois que `grupo` existir de
+    // verdade (carregado dentro de `iniciar()`) — chamar isso aqui, no topo
+    // do script, lia `grupo.tamanhos` com `grupo` ainda `undefined` e
+    // quebrava a página inteira antes até de checar a sessão (bug real,
+    // travava em "Verificando sua sessão…" pra sempre).
     document.querySelector("[data-avulso-item-adicionar]")?.addEventListener("click", () => {
       avulsoItensEl?.insertAdjacentHTML("beforeend", linhaItemAvulsoHtml());
     });
@@ -693,6 +697,7 @@ const allPosts = visiblePosts(await getAllMensagens());
       renderizarLotesCompra();
       renderizarFiltroPergunta();
       renderizarPedidos();
+      avulsoItensEl?.insertAdjacentHTML("beforeend", linhaItemAvulsoHtml());
     }
 
     iniciar();
