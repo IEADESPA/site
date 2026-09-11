@@ -1879,9 +1879,18 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
       (geolocalização simulada) — **as três bateram exatamente com o cálculo manual**, confirmando
       que a lógica de ordenação funciona de verdade, não só quando só existe 1 candidato. Marcação
       de teste revertida depois.
-  - [ ] **Fase 24.10 — Aerial View (experimental)**: vídeo curto de sobrevoo automático do endereço
-    da Sede, gerado pela Aerial View API — mais efeito visual do que utilidade prática, registrado
-    como experimento a avaliar, não uma necessidade confirmada.
+  - [x] **Fase 24.10 — Aerial View — avaliada e descartada: sem cobertura no Brasil inteiro**:
+    testado direto na API (`POST /v1/videos:renderVideo`) antes de escrever qualquer código de
+    interface, como sempre — e a resposta foi clara: **"Address not supported"** tanto pro
+    endereço exato da Sede quanto pra Parauapebas em geral. Pra isolar se era só falta de cobertura
+    local ou algum erro de configuração, testado também um endereço de controle bem conhecido — **São
+    Paulo também voltou "Address not supported"** — confirmando que não é uma lacuna só de
+    Parauapebas, é o **Brasil inteiro sem cobertura ainda** nessa API. Testado um terceiro endereço
+    de controle nos EUA (Empire State Building, NY) pra confirmar que a chave/mecanismo em si
+    funcionam — voltou `"state":"ACTIVE"` com um `videoId` de verdade, prova de que o problema é
+    mesmo cobertura geográfica, não configuração. Já era o item de menor prioridade da fase
+    ("mais efeito visual que utilidade", nas palavras do próprio usuário) — nada a reavaliar até o
+    Google expandir a cobertura pro Brasil.
   - [x] **Fase 24.11 — foto mais atual vence (Street View vs. foto manual) — construído**: pergunta
     levantada pelo usuário depois de ver a foto da Sede funcionando: o carro do Street View pode
     passar anos sem atualizar, ou nunca passar (comum em zona rural/congregação pequena) — confiar
@@ -1948,10 +1957,14 @@ depoimentos, e materiais compartilháveis. Mais 3 fases:
 
 **Fases 0 a 14, 17 a 22 e a metade de destaque da 23 já foram construídas e testadas** (ver o `[x]`
 de cada uma acima). **As fases 15 e 16 foram descartadas em definitivo** (não é "falta construir",
-é "não vai ser construído"). **A Fase 24 tem preparação real feita (chaves testadas, geocodificação
-das congregações), mas o mapa em si ainda não foi construído — bloqueado numa API que falta ativar
-e, depois, na conversa do usuário com a liderança de cada congregação.** **Da metade de enquete da
-23 e das fases 25 e 26, nada foi construído ainda.** O detalhe completo de cada achado
+é "não vai ser construído"). **A Fase 24 (mapas) está com todas as sub-fases 24.1 a 24.11 resolvidas**
+— construídas e testadas as que dependiam só de código (Sede, eventos com local próprio, PDFs,
+"mais perto de você", rota traçada etc.), e as duas que não dependiam só de código encerradas com
+motivo concreto: 24.9 já funciona (só aponta pra Sede por enquanto, por decisão do usuário) e
+**passa a incluir cada congregação sozinha assim que a liderança dela confirmar perfil no Google
+Maps** — essa conversa continua em aberto, fora do escopo de código; 24.10 (Aerial View) foi
+testada direto na API e descartada — sem cobertura no Brasil inteiro, não só em Parauapebas. **Da
+metade de enquete da Fase 23 e das fases 25 e 26, nada foi construído ainda.** O detalhe completo de cada achado
 (com a
 lógica/pesquisa por trás de cada item) está registrado em "Mais personalizações pesquisadas" e em
 "Pesquisa detalhada por página"/"Pesquisa detalhada — temas transversais" mais abaixo, junto com as
